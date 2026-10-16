@@ -1,0 +1,15 @@
+import std.sandbox
+import std.audit
+import examples.services.config
+main() {
+    worker = sandbox.new("deny") {}
+    sandbox.enforce(worker, config) callback {
+        i = 0
+        while i < 3 {
+            text = config.read("public")
+            println(text)
+            i = i + 1
+        }
+    }
+    sandbox.free(worker)
+}

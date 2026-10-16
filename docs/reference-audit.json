@@ -1,0 +1,1055 @@
+{
+  "previous_reference_revision": "57b97c7d8b3079f65c53d0ac6a179fe3760fe27b",
+  "native_source_sha256": "15088851fdaa2c1b1519bde0eecbd094c577dd00b3526ac7f4a20701e50fd296",
+  "spreadsheet_revision": "5bc0e29b1b236c8c71b282fda4648d8d9bfa1684",
+  "spreadsheet_vendored_revision": "60d6ab0168c2a568333ae88432cef40755ff0d1a",
+  "references": [
+    {
+      "name": "standalone",
+      "revision": "e3bd4e975e96d674d85be5deb6b76a7c26f0deef",
+      "existing_total": 507,
+      "existing_matching": 507,
+      "existing_differences": [],
+      "migration_total": 24,
+      "migration_matching": 24,
+      "migration_probes": [
+        {
+          "name": "unset_symbol",
+          "source": "SAY foo",
+          "matches": true,
+          "native": {
+            "output": [
+              "FOO"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "FOO"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "unset_compound",
+          "source": "LET i = 2\nSAY list.i",
+          "matches": true,
+          "native": {
+            "output": [
+              "LIST.2"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "LIST.2"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "substituted_tail",
+          "source": "LET i = 2\nLET list.i = 'x'\nSAY list.2 list.i",
+          "matches": true,
+          "native": {
+            "output": [
+              "x x"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "x x"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "substituted_property_collision",
+          "source": "LET key = 'x'\nLET data.x = 7\nLET data.key = 8\nSAY data.key data.x",
+          "matches": true,
+          "native": {
+            "output": [
+              "8 8"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "8 8"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "multiple_tail_parts",
+          "source": "LET i = 2\nLET j = 3\nLET list.i.j = 'x'\nSAY list.2.3",
+          "matches": true,
+          "native": {
+            "output": [
+              "x"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "x"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_generation",
+          "source": "LET x = 'outer'\nCALL work\nSAY x RESULT\nEXIT\nwork: PROCEDURE\nSAY x\nLET x = 'inner'\nRETURN x",
+          "matches": true,
+          "native": {
+            "output": [
+              "X",
+              "outer inner"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "X",
+              "outer inner"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_expose",
+          "source": "LET total = 10\nCALL add 5\nSAY total\nEXIT\nadd: PROCEDURE EXPOSE total\nARG amount\ntotal = total + amount\nRETURN",
+          "matches": true,
+          "native": {
+            "output": [
+              "15"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "15"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_recursion",
+          "source": "CALL fact 5\nSAY RESULT\nEXIT\nfact: PROCEDURE\nARG n\nIF n <= 1 THEN RETURN 1\nCALL fact n - 1\nRETURN n * RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "120"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "120"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "builtin_call_expression",
+          "source": "LET n = 4\nCALL ABS n - 7\nSAY RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "builtin_call_zero",
+          "source": "LET n = 0\nCALL ABS n\nSAY RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "blank_concatenation",
+          "source": "LET v = 'a'\nv = v 'b'\nSAY v",
+          "matches": true,
+          "native": {
+            "output": [
+              "a b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "abuttal",
+          "source": "LET v = 'a'\nv = v'b'\nSAY v",
+          "matches": true,
+          "native": {
+            "output": [
+              "ab"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "ab"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "blank_in_call",
+          "source": "LET a = 'x'\nLET n = LENGTH(a 'yz')\nSAY n",
+          "matches": true,
+          "native": {
+            "output": [
+              "4"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "4"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "abuttal_in_call",
+          "source": "LET a = 'x'\nLET n = LENGTH(a'yz')\nSAY n",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "unparenthesized_builtin",
+          "source": "LET s = 'hello'\nLET x = UPPER s\nSAY x",
+          "matches": true,
+          "native": {
+            "output": [
+              "HELLO"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "HELLO"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "range_termination",
+          "source": "DO i = 1 TO 2\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "descending_termination",
+          "source": "DO i = 3 TO 1\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "existing_loop_variable",
+          "source": "LET i = 99\nDO i = 1 TO 2\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "99"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "99"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "over_stem",
+          "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem\nSAY v\nEND",
+          "matches": true,
+          "native": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "over_stem_period",
+          "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem.\nSAY v\nEND",
+          "matches": true,
+          "native": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "next_line_instruction",
+          "source": "IF 1 = 1 THEN\nSAY 'yes'\nELSE\nSAY 'no'",
+          "matches": true,
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "next_line_then",
+          "source": "IF 1 = 1\nTHEN SAY 'yes'\nELSE SAY 'no'",
+          "matches": true,
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "command_concatenation",
+          "source": "LET n = 3\nADDRESS APP\n'SET n=' || n",
+          "matches": true,
+          "native": {
+            "output": [],
+            "commands": [
+              [
+                "app",
+                "SET n=3"
+              ]
+            ],
+            "exit": 0
+          },
+          "reference": {
+            "output": [],
+            "commands": [
+              [
+                "app",
+                "SET n=3"
+              ]
+            ],
+            "exit": 0
+          }
+        },
+        {
+          "name": "logical_condition",
+          "source": "IF 1 = 1 | 0 = 1 THEN SAY 'or'\nIF 1 = 1 & 0 = 1 THEN SAY 'bad'\nELSE SAY 'and'",
+          "matches": true,
+          "native": {
+            "output": [
+              "or",
+              "and"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "or",
+              "and"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        }
+      ],
+      "known_reference_snapshots_unchanged": 7,
+      "known_total": 7
+    },
+    {
+      "name": "spreadsheet_vendor",
+      "revision": "60d6ab0168c2a568333ae88432cef40755ff0d1a",
+      "existing_total": 507,
+      "existing_matching": 503,
+      "existing_differences": [
+        {
+          "name": "migration_next_line_instruction",
+          "source": "IF 1 = 1 THEN\nSAY 'yes'\nELSE\nSAY 'no'",
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "error": "Missing ENDIF for IF statement at line 1",
+            "output": [],
+            "commands": []
+          }
+        },
+        {
+          "name": "migration_next_line_then",
+          "source": "IF 1 = 1\nTHEN SAY 'yes'\nELSE SAY 'no'",
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [],
+            "commands": [
+              [
+                "default",
+                null
+              ],
+              [
+                "default",
+                null
+              ]
+            ],
+            "exit": 0
+          }
+        },
+        {
+          "name": "migration_command_concatenation",
+          "source": "LET n = 3\nADDRESS APP\n'SET n=' || n",
+          "native": {
+            "output": [],
+            "commands": [
+              [
+                "app",
+                "SET n=3"
+              ]
+            ],
+            "exit": 0
+          },
+          "reference": {
+            "output": [],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "migration_logical_condition",
+          "source": "IF 1 = 1 | 0 = 1 THEN SAY 'or'\nIF 1 = 1 & 0 = 1 THEN SAY 'bad'\nELSE SAY 'and'",
+          "native": {
+            "output": [
+              "or",
+              "and"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "or",
+              "bad"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        }
+      ],
+      "migration_total": 24,
+      "migration_matching": 20,
+      "migration_probes": [
+        {
+          "name": "unset_symbol",
+          "source": "SAY foo",
+          "matches": true,
+          "native": {
+            "output": [
+              "FOO"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "FOO"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "unset_compound",
+          "source": "LET i = 2\nSAY list.i",
+          "matches": true,
+          "native": {
+            "output": [
+              "LIST.2"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "LIST.2"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "substituted_tail",
+          "source": "LET i = 2\nLET list.i = 'x'\nSAY list.2 list.i",
+          "matches": true,
+          "native": {
+            "output": [
+              "x x"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "x x"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "substituted_property_collision",
+          "source": "LET key = 'x'\nLET data.x = 7\nLET data.key = 8\nSAY data.key data.x",
+          "matches": true,
+          "native": {
+            "output": [
+              "8 8"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "8 8"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "multiple_tail_parts",
+          "source": "LET i = 2\nLET j = 3\nLET list.i.j = 'x'\nSAY list.2.3",
+          "matches": true,
+          "native": {
+            "output": [
+              "x"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "x"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_generation",
+          "source": "LET x = 'outer'\nCALL work\nSAY x RESULT\nEXIT\nwork: PROCEDURE\nSAY x\nLET x = 'inner'\nRETURN x",
+          "matches": true,
+          "native": {
+            "output": [
+              "X",
+              "outer inner"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "X",
+              "outer inner"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_expose",
+          "source": "LET total = 10\nCALL add 5\nSAY total\nEXIT\nadd: PROCEDURE EXPOSE total\nARG amount\ntotal = total + amount\nRETURN",
+          "matches": true,
+          "native": {
+            "output": [
+              "15"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "15"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "procedure_recursion",
+          "source": "CALL fact 5\nSAY RESULT\nEXIT\nfact: PROCEDURE\nARG n\nIF n <= 1 THEN RETURN 1\nCALL fact n - 1\nRETURN n * RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "120"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "120"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "builtin_call_expression",
+          "source": "LET n = 4\nCALL ABS n - 7\nSAY RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "builtin_call_zero",
+          "source": "LET n = 0\nCALL ABS n\nSAY RESULT",
+          "matches": true,
+          "native": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "blank_concatenation",
+          "source": "LET v = 'a'\nv = v 'b'\nSAY v",
+          "matches": true,
+          "native": {
+            "output": [
+              "a b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "abuttal",
+          "source": "LET v = 'a'\nv = v'b'\nSAY v",
+          "matches": true,
+          "native": {
+            "output": [
+              "ab"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "ab"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "blank_in_call",
+          "source": "LET a = 'x'\nLET n = LENGTH(a 'yz')\nSAY n",
+          "matches": true,
+          "native": {
+            "output": [
+              "4"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "4"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "abuttal_in_call",
+          "source": "LET a = 'x'\nLET n = LENGTH(a'yz')\nSAY n",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "unparenthesized_builtin",
+          "source": "LET s = 'hello'\nLET x = UPPER s\nSAY x",
+          "matches": true,
+          "native": {
+            "output": [
+              "HELLO"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "HELLO"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "range_termination",
+          "source": "DO i = 1 TO 2\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "3"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "descending_termination",
+          "source": "DO i = 3 TO 1\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "0"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "existing_loop_variable",
+          "source": "LET i = 99\nDO i = 1 TO 2\nEND\nSAY i",
+          "matches": true,
+          "native": {
+            "output": [
+              "99"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "99"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "over_stem",
+          "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem\nSAY v\nEND",
+          "matches": true,
+          "native": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "over_stem_period",
+          "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem.\nSAY v\nEND",
+          "matches": true,
+          "native": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "a",
+              "b"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "next_line_instruction",
+          "source": "IF 1 = 1 THEN\nSAY 'yes'\nELSE\nSAY 'no'",
+          "matches": false,
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "error": "Missing ENDIF for IF statement at line 1",
+            "output": [],
+            "commands": []
+          }
+        },
+        {
+          "name": "next_line_then",
+          "source": "IF 1 = 1\nTHEN SAY 'yes'\nELSE SAY 'no'",
+          "matches": false,
+          "native": {
+            "output": [
+              "yes"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [],
+            "commands": [
+              [
+                "default",
+                null
+              ],
+              [
+                "default",
+                null
+              ]
+            ],
+            "exit": 0
+          }
+        },
+        {
+          "name": "command_concatenation",
+          "source": "LET n = 3\nADDRESS APP\n'SET n=' || n",
+          "matches": false,
+          "native": {
+            "output": [],
+            "commands": [
+              [
+                "app",
+                "SET n=3"
+              ]
+            ],
+            "exit": 0
+          },
+          "reference": {
+            "output": [],
+            "commands": [],
+            "exit": 0
+          }
+        },
+        {
+          "name": "logical_condition",
+          "source": "IF 1 = 1 | 0 = 1 THEN SAY 'or'\nIF 1 = 1 & 0 = 1 THEN SAY 'bad'\nELSE SAY 'and'",
+          "matches": false,
+          "native": {
+            "output": [
+              "or",
+              "and"
+            ],
+            "commands": [],
+            "exit": 0
+          },
+          "reference": {
+            "output": [
+              "or",
+              "bad"
+            ],
+            "commands": [],
+            "exit": 0
+          }
+        }
+      ],
+      "known_reference_snapshots_unchanged": 7,
+      "known_total": 7
+    }
+  ]
+}

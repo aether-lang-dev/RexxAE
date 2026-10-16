@@ -1,0 +1,37 @@
+import std.string
+import std.map
+import std.json
+
+exports(read, write, integer, number, fail, load, save, field, text, index)
+
+read(ctx: ptr, key: string) -> string {
+    value = map.map_get_raw(ctx, key)
+    if value == null { return "" }
+    return string.copy(value)
+}
+write(ctx: ptr, key: string, value: string) { map.map_put_string_owned(ctx, key, value) }
+integer(ctx: ptr, key: string) -> int { return string.string_get_int(read(ctx, key)) }
+number(ctx: ptr, key: string, value: int) { write(ctx, key, string.from_int(value)) }
+fail(ctx: ptr, detail: string) {
+    if read(ctx, "error") == "" {
+        write(ctx, "error", detail)
+        number(ctx, "error_line", integer(ctx, "token_line"))
+    }
+}
+load(ctx: ptr, key: string) -> ptr {
+    encoded = read(ctx, key)
+    if encoded == "" { return null }
+    return json.json_parse_raw(encoded)
+}
+save(ctx: ptr, key: string, value: ptr) {
+    encoded, err = json.stringify(value)
+    if err != "" { fail(ctx, err); return }
+    write(ctx, key, encoded)
+}
+field(value: ptr, key: string) -> ptr { return json.json_object_get_raw(value, key) }
+text(value: ptr, key: string) -> string {
+    item = field(value, key)
+    if item == null { return "" }
+    return string.copy(json.json_get_string_raw(item))
+}
+index(value: ptr, key: string) -> int { return json.json_get_int(field(value, key)) }

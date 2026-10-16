@@ -1,0 +1,232 @@
+// A privileged Aether host consuming the real binary Rexx library. The guest
+// gets service names and JSON data, never native handles or grant-list pointers.
+import std.spec
+import std.sandbox
+import std.audit
+import std.file
+import std.os
+import std.tcp
+import std.string
+import std.json
+import std.map
+import rexxae
+import examples.services.config
+
+encoded(text: string) -> string {
+    value = json.str(text)
+    result, _err = json.stringify(value)
+    json.json_free(value)
+    return result
+}
+
+exercise(source: string, expected_status: int, expected_requests: int, minimum_denials: int, expected_output: string) {
+    ctx = rexxae.rexxae_create(source)
+    defer rexxae.rexxae_destroy(ctx)
+    if rexxae.rexxae_step(ctx, 0) != -1 {
+        spec.assert_eq(rexxae.rexxae_register_function(ctx, "READ_CONFIG", 1, 1), 0, "inject service")
+        spec.assert_eq(rexxae.rexxae_register_function(ctx, "HOSTREAD", 1, 1), 0, "read probe")
+        spec.assert_eq(rexxae.rexxae_register_function(ctx, "HOSTENV", 1, 1), 0, "env probe")
+        spec.assert_eq(rexxae.rexxae_register_function(ctx, "HOSTEXEC", 1, 1), 0, "exec probe")
+        spec.assert_eq(rexxae.rexxae_register_function(ctx, "HOSTCONNECT", 1, 1), 0, "network probe")
+    }
+    worker = sandbox.new("RexxAE deny-all") {}
+    defer sandbox.free(worker)
+    // A fresh enforcement frame per event avoids Aether 0.802's consumed
+    // trusted-authority snapshot when a trusted call site repeats in a loop.
+    audit.clear()
+    status = 3
+    requests = 0
+    steps = 0
+    output = ""
+    while status > 0 && steps < 200 {
+        event = contained_event(ctx, worker)
+        status = string.string_get_int(string.copy(map.map_get_raw(event, "status")))
+        requests = requests + string.string_get_int(string.copy(map.map_get_raw(event, "requests")))
+        output = string.concat(output, string.copy(map.map_get_raw(event, "output")))
+        map.map_free(event)
+        steps = steps + 1
+    }
+    spec.assert_eq(status, expected_status, "guest outcome")
+    if requests != expected_requests { spec.fail(string.copy(rexxae.rexxae_error(ctx))) }
+    spec.assert_eq(requests, expected_requests, "exact boundary crossings")
+    spec.assert_true(audit.denied_count() >= minimum_denials, "stdlib audit proves denial")
+    spec.assert_str_eq(output, expected_output, "only authorized output")
+}
+
+contained_event(ctx: ptr, worker: sandbox.Grants) -> ptr {
+    event = map.map_new()
+    map.map_put_string_owned(event, "requests", "0")
+    map.map_put_string_owned(event, "output", "")
+    if true {
+        seal except ctx, worker, event, sandbox, config, encoded, rexxae, spec, map, file, os, tcp, `string`
+        sandbox.enforce(worker, config) callback {
+            status = rexxae.rexxae_step(ctx, 1)
+            if status == 1 { map.map_put_string_owned(event, "output", string.copy(rexxae.rexxae_text(ctx))) }
+            if status == 2 {
+                map.map_put_string_owned(event, "requests", "1")
+                spec.assert_eq(rexxae.rexxae_reply(ctx, 13, "", "environment not mounted"), 0, "veto ADDRESS")
+            }
+            if status == 4 {
+                map.map_put_string_owned(event, "requests", "1")
+                name = string.copy(rexxae.rexxae_function(ctx))
+                arg = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+                result = "null"
+                err = "service not mounted"
+                if name == "READ_CONFIG" {
+                    text = "DENIED"
+                    if rexxae.rexxae_argument_type(ctx, 0) == 3 { text = config.read(arg) }
+                    if text != "DENIED" { result = encoded(text); err = "" }
+                    else { err = string.concat("configuration key denied: ", arg) }
+                } else if name == "HOSTREAD" {
+                    _text, refusal = file.read(arg)
+                    spec.assert_true(refusal != "", "ambient filesystem veto")
+                } else if name == "HOSTENV" {
+                    spec.assert_true(os.getenv(arg) == null, "ambient environment veto")
+                } else if name == "HOSTEXEC" {
+                    spec.assert_eq(os.system(arg), -1, "ambient process veto")
+                } else if name == "HOSTCONNECT" {
+                    socket, refusal = tcp.connect(arg, 54321)
+                    spec.assert_true(socket == null && refusal != "", "ambient socket veto")
+                }
+                spec.assert_eq(rexxae.rexxae_reply_value(ctx, result, err), 0, "service decision")
+            }
+            map.map_put_string_owned(event, "status", string.from_int(status))
+        }
+    }
+    return event
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "RexxAE containment through compiled library") {
+        spec.it("host authority does not become guest authority") callback {
+            secret, err = file.read("tests/fixtures/private.txt")
+            spec.assert_str_eq(err, "", "host can read private data")
+            spec.assert_str_eq(secret, "host-only secret\n", "positive control")
+            exercise("CALL HOSTREAD 'tests/fixtures/private.txt'", -1, 1, 1, "")
+        }
+        spec.it("injects exactly one trusted logical configuration service") callback {
+            exercise("CALL READ_CONFIG 'public'\nSAY RESULT", 0, 1, 0, "public configuration\n")
+        }
+        spec.it("vetoes service arguments instead of granting filesystem paths") callback {
+            exercise("CALL READ_CONFIG '../private.txt'", -1, 1, 0, "")
+            exercise("CALL READ_CONFIG 'tests/fixtures/private.txt'", -1, 1, 0, "")
+            exercise("CALL READ_CONFIG '/etc/passwd'", -1, 1, 0, "")
+        }
+        spec.it("cannot read files through traversal or a similarly named raw binding") callback {
+            exercise("CALL HOSTREAD 'tests/fixtures/../fixtures/private.txt'", -1, 1, 1, "")
+            exercise("CALL file_open_raw 'tests/fixtures/private.txt'", -1, 0, 0, "")
+            exercise("LET result = fopen('tests/fixtures/private.txt', 'r')", -1, 0, 0, "")
+        }
+        spec.it("cannot acquire environment process or socket authority") callback {
+            exercise("CALL HOSTENV 'PATH'", -1, 1, 1, "")
+            exercise("CALL HOSTEXEC 'touch build/containment-escaped'", -1, 1, 1, "")
+            exercise("CALL HOSTCONNECT '127.0.0.1'", -1, 1, 1, "")
+            spec.assert_eq(file.exists("build/containment-escaped"), 0, "no process side effect")
+        }
+        spec.it("does not turn ADDRESS commands into shell or native calls") callback {
+            exercise("ADDRESS SYSTEM 'touch build/containment-escaped'\nSAY RC", 0, 1, 0, "13")
+            exercise("ADDRESS TCP '127.0.0.1:54321'\nSAY RC", 0, 1, 0, "13")
+        }
+        spec.it("keeps service discovery and registry authority out of script data") callback {
+            exercise("LET policy.fs = true\nLET h.READ_CONFIG = 'all'\nCALL HOSTREAD 'tests/fixtures/private.txt'", -1, 1, 1, "")
+            exercise("CALL aether_rexxae_register_function 'HOSTREAD'", -1, 0, 0, "")
+            exercise("LET target = 'HOSTREAD'\nCALL (target) 'tests/fixtures/private.txt'", -1, 1, 1, "")
+        }
+        spec.it("does not evaluate code hidden inside host-visible strings") callback {
+            exercise("LET data.code = 'touch build/containment-escaped'\nCALL INTERPRET_JS data.code", -1, 0, 0, "")
+            exercise("CALL EVAL 'HOSTREAD(\"tests/fixtures/private.txt\")'", -1, 0, 0, "")
+            exercise("CALL dlopen 'libc.so.6'", -1, 0, 0, "")
+        }
+        spec.it("denies escalation inside nested routines and PARSE input") callback {
+            exercise("CALL work\nEXIT\nwork:\nPARSE VALUE HOSTREAD('tests/fixtures/private.txt') WITH first rest\nRETURN first", -1, 1, 1, "")
+        }
+        spec.it("PROCEDURE EXPOSE cannot reveal or replace private host registrations") callback {
+            exercise("CALL work\nEXIT\nwork: PROCEDURE EXPOSE h. policy. permissions. cache.\nLET h.READ_CONFIG = {min:0,max:256}\nLET policy.grant = '*'\nLET permissions.fs = '*'\nCALL READ_CONFIG '/etc/passwd'\nRETURN", -1, 1, 0, "")
+            exercise("CALL work\nEXIT\nwork: PROCEDURE EXPOSE h.\nLET h.EXEC = {min:0,max:1}\nCALL EXEC 'true'\nRETURN", -1, 0, 0, "")
+        }
+        spec.it("PROCEDURE retains only explicitly mounted service authority across resumes") callback {
+            exercise("CALL work\nEXIT\nwork: PROCEDURE\nCALL READ_CONFIG 'public'\nCALL READ_CONFIG 'public'\nCALL HOSTREAD '/etc/passwd'\nRETURN", -1, 3, 1, "")
+            exercise("LET secret = 'script'\nCALL work\nEXIT\nwork: PROCEDURE EXPOSE host_only_token\nSAY host_only_token\nRETURN", 0, 0, 0, "HOST_ONLY_TOKEN")
+        }
+        spec.it("inner trust cannot widen the authority of an outer sandbox") callback {
+            outer = sandbox.new("outer denies file access") {}
+            sandbox.enforce(outer) callback {
+                exercise("CALL READ_CONFIG 'public'", -1, 1, 1, "")
+            }
+            sandbox.free(outer)
+        }
+        spec.it("a broader nested grant list cannot widen its parent") callback {
+            outer = sandbox.new("outer denies all") {}
+            inner = sandbox.new("attempted widening") { grant_all() }
+            sandbox.enforce(outer) callback {
+                sandbox.enforce(inner) callback {
+                    audit.clear()
+                    _text, err = file.read("tests/fixtures/private.txt")
+                    spec.assert_true(err != "", "nested read refused")
+                    spec.assert_true(audit.denied_count() > 0, "veto audited")
+                }
+            }
+            sandbox.free(inner)
+            sandbox.free(outer)
+        }
+        spec.it("proves TCP refusals are grant checks rather than OS failures") callback {
+            worker = sandbox.new("one endpoint") { grant_tcp("127.0.0.1", 54321) }
+            sandbox.enforce(worker) callback {
+                audit.clear()
+                allowed_socket, _allowed_err = tcp.connect("127.0.0.1", 54321)
+                if allowed_socket != null { tcp.close(allowed_socket) }
+                spec.assert_true(audit.count() > 0, "positive grant check recorded")
+                _cat, _resource, allowed = audit.entry(audit.count() - 1)
+                spec.assert_eq(allowed, 1, "allowed endpoint reached OS boundary")
+                audit.clear()
+                denied_socket, _err = tcp.connect("127.0.0.1", 54322)
+                spec.assert_true(denied_socket == null, "wrong port refused")
+                spec.assert_true(audit.denied_count() > 0, "wrong port veto audited")
+            }
+            sandbox.free(worker)
+        }
+        spec.it("rejects coercion-based service key spoofing") callback {
+            exercise("LET key = ['public']\nCALL READ_CONFIG key", -1, 1, 0, "")
+            exercise("LET key = {\"key\":\"public\"}\nCALL READ_CONFIG key", -1, 1, 0, "")
+        }
+        spec.it("cannot widen the active frozen grant list") callback {
+            worker = sandbox.new("frozen deny-all") {}
+            sandbox.enforce(worker) callback {
+                sandbox.grant_fs_read(worker, "tests/fixtures/private.txt")
+                audit.clear()
+                _text, err = file.read("tests/fixtures/private.txt")
+                spec.assert_true(err != "", "mutation cannot widen running block")
+                spec.assert_true(audit.denied_count() > 0, "veto audited")
+            }
+            sandbox.free(worker)
+        }
+        spec.it("does not inherit another context's registered services or host state") callback {
+            owner = rexxae.rexxae_create("CALL PRIVATE_SERVICE")
+            other = rexxae.rexxae_create("CALL PRIVATE_SERVICE")
+            defer rexxae.rexxae_destroy(owner)
+            defer rexxae.rexxae_destroy(other)
+            spec.assert_eq(rexxae.rexxae_register_function(owner, "PRIVATE_SERVICE", 0, 0), 0, "owner registration")
+            spec.assert_eq(rexxae.rexxae_step(owner, 100), 4, "owner can request")
+            spec.assert_eq(rexxae.rexxae_step(other, 100), -1, "other cannot see registry")
+            exercise("SAY host_only_token", 0, 0, 0, "HOST_ONLY_TOKEN")
+        }
+        spec.it("keeps unmounted services absent even when the host has authority") callback {
+            exercise("CALL config.read 'public'", -1, 0, 0, "")
+            exercise("CALL sandbox.grant_all", -1, 0, 0, "")
+            exercise("CALL require 'std.os'", -1, 0, 0, "")
+            exercise("LET result = object.constructor.constructor('return process')", -1, 0, 0, "")
+        }
+        spec.it("lets the host stop and destroy a runaway guest") callback {
+            ctx = rexxae.rexxae_create("DO FOREVER\nLET n = 1\nEND")
+            defer rexxae.rexxae_destroy(ctx)
+            worker = sandbox.new("bounded guest") {}
+            sandbox.enforce(worker) callback {
+                spec.assert_eq(rexxae.rexxae_step(ctx, 20), 3, "first budget")
+                spec.assert_eq(rexxae.rexxae_step(ctx, 20), 3, "second budget")
+            }
+            sandbox.free(worker)
+        }
+    }
+    return spec.run_summary(fw)
+}

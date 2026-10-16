@@ -1,0 +1,182 @@
+// This test imports the compiled librexxae artifact. It deliberately has no
+// import of src.engine, src.values or any other engine implementation file.
+import std.spec
+import std.string
+import rexxae
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "Aether consuming compiled RexxAE") {
+        spec.it("passes typed values and host replies through the binary") callback {
+            ctx = rexxae.rexxae_create("LET result = TESTECHO(input)\nSAY TYPEOF(result)")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_set_variable_json(ctx, "input", "{\"items\":[1,true,null]}"), 0, "seed input")
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTECHO", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "request")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_function(ctx)), "TESTECHO", "name")
+            spec.assert_eq(rexxae.rexxae_argument_type(ctx, 0), 5, "object type")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[{\"items\":[1,true,null]}]", "typed args")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "{\"ok\":true,\"items\":[1,null]}", ""), 0, "reply")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "SAY")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "object", "typed result")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "result")), "{\"ok\":true,\"items\":[1,null]}", "inspect")
+        }
+        spec.it("resumes a loop across command and function events") callback {
+            ctx = rexxae.rexxae_create("DO i = 1 TO 2\nADDRESS APP 'work'\nLET n = TESTSTEP(i)\nSAY n\nEND")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTSTEP", 1, 1), 0, "register")
+            status = 3
+            calls = 0
+            commands = 0
+            output = 0
+            steps = 0
+            while status > 0 && steps < 100 {
+                status = rexxae.rexxae_step(ctx, 1)
+                if status == 2 {
+                    commands = commands + 1
+                    spec.assert_str_eq(string.copy(rexxae.rexxae_address(ctx)), "app", "address")
+                    spec.assert_eq(rexxae.rexxae_reply(ctx, 0, "done", ""), 0, "command reply")
+                }
+                if status == 4 {
+                    calls = calls + 1
+                    spec.assert_str_eq(string.copy(rexxae.rexxae_argument_text(ctx, 0)), string.from_int(calls), "loop argument")
+                    spec.assert_eq(rexxae.rexxae_reply_value(ctx, string.from_int(calls * 10), ""), 0, "typed reply")
+                }
+                if status == 1 { output = output + 1 }
+                steps = steps + 1
+            }
+            spec.assert_eq(status, 0, "completed")
+            spec.assert_eq(calls, 2, "function count")
+            spec.assert_eq(commands, 2, "command count")
+            spec.assert_eq(output, 2, "output count")
+        }
+        spec.it("preserves error status and source locations across the boundary") callback {
+            ctx = rexxae.rexxae_create("\nLET n = TESTERROR()")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTERROR", 0, 0), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "request")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "invalid JSON", ""), -1, "reject malformed")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "still pending")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "null", "application refused"), 0, "host failure")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_eq(rexxae.rexxae_line(ctx), 2, "line")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "application refused", "error")
+        }
+        spec.it("tears down suspended binary contexts without keeping caller data") callback {
+            i = 0
+            while i < 50 {
+                ctx = rexxae.rexxae_create("LET n = TESTWAIT([1,true], JSON_PARSE('null'))")
+                spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTWAIT", 2, 2), 0, "register")
+                spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "wait")
+                rexxae.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+        spec.it("returns typed data from nested routines across host suspension") callback {
+            ctx = rexxae.rexxae_create("CALL outer 0\nSAY JSON_STRINGIFY(RESULT)\nEXIT\nouter:\nARG n\nCALL inner n\nLET answer = RESULT\nRETURN answer\ninner:\nARG value\nCALL TESTECHO value\nLET response = RESULT\nRETURN response")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTECHO", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "nested request")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[0]", "zero retained")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "{\"ok\":true,\"data\":[null,1]}", ""), 0, "typed reply")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "returned output")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "{\"ok\":true,\"data\":[null,1]}", "return value")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("suspends PROCEDURE calls without losing caller data or host mounts") callback {
+            ctx = rexxae.rexxae_create("LET secret = 'caller'\nLET key = 'other'\nCALL work 0\nSAY secret RESULT.ok\nEXIT\nwork: PROCEDURE EXPOSE input.\nARG value\nLET key = 'other'\nLET input.changed = true\nCALL TESTECHO value\nRETURN RESULT")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_set_variable_json(ctx, "input.key", "42"), 0, "literal host path")
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTECHO", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "procedure suspended")
+            spec.assert_true(rexxae.rexxae_get_variable_json(ctx, "secret") == null, "caller hidden")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "input.key")), "42", "literal API unaffected by tail names")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[0]", "typed local argv")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "{\"ok\":true}", ""), 0, "typed reply")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "returned")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "caller true", "caller restored")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "input.changed")), "true", "exposed stem")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("restores caller data when a PROCEDURE host operation is vetoed") callback {
+            ctx = rexxae.rexxae_create("LET x = 'caller'\nCALL work\nEXIT\nwork: PROCEDURE\nx = 'local'\nCALL TESTERROR\nRETURN")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTERROR", 0, 0), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "suspended")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "null", "vetoed"), 0, "veto")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "x")), "\"caller\"", "generation restored")
+        }
+        spec.it("bounds recursive binary calls and preserves error locations") callback {
+            ctx = rexxae.rexxae_create("CALL recurse\nEXIT\nrecurse:\nCALL recurse\nRETURN")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_step(ctx, 1000), -1, "depth guard")
+            spec.assert_eq(rexxae.rexxae_line(ctx), 4, "call line")
+        }
+        spec.it("frees nested binary frames while awaiting a host reply") callback {
+            i = 0
+            while i < 30 {
+                ctx = rexxae.rexxae_create("CALL outer\nEXIT\nouter: PROCEDURE\nCALL inner\nRETURN\ninner: PROCEDURE\nCALL TESTWAIT\nRETURN")
+                spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTWAIT", 0, 0), 0, "register")
+                spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "wait in inner routine")
+                rexxae.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+        spec.it("selects a typed host condition and returns through the binary") callback {
+            ctx = rexxae.rexxae_create("CALL work\nSAY JSON_STRINGIFY(RESULT)\nEXIT\nwork:\nSELECT\nWHEN TESTSELECT(1) THEN CALL TESTSELECT 2\nWHEN TESTSELECT(3) THEN RETURN 0\nOTHERWISE RETURN 0\nEND\nLET answer = RESULT\nRETURN answer")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTSELECT", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "WHEN condition")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[1]", "condition argument")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "true", ""), 0, "match")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "selected body")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[2]", "body argument")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "{\"selected\":true}", ""), 0, "typed result")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "returned SAY")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "{\"selected\":true}", "typed return")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "later WHEN skipped")
+        }
+        spec.it("preserves selected condition errors across the binary boundary") callback {
+            ctx = rexxae.rexxae_create("SELECT\nWHEN TESTSELECT() THEN SAY 'bad'\nEND")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTSELECT", 0, 0), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "pending condition")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "null", "selection refused"), 0, "host error")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_eq(rexxae.rexxae_line(ctx), 2, "WHEN line")
+        }
+        spec.it("tears down nested selections pending in binary contexts") callback {
+            i = 0
+            while i < 20 {
+                ctx = rexxae.rexxae_create("SELECT\nWHEN 1 THEN\nSELECT\nWHEN TESTSELECT() THEN SAY 'ready'\nEND\nEND")
+                spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTSELECT", 0, 0), 0, "register")
+                spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "pending inner WHEN")
+                rexxae.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+        spec.it("parses a suspended host reply into owned nested fields") callback {
+            ctx = rexxae.rexxae_create("PARSE VALUE TESTLINE() WITH parsed_first ':' parsed_rest\nLET result.first = parsed_first\nLET result.rest = parsed_rest\nSAY result.first result.rest")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTLINE", 0, 0), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "input pending")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "\"one:two\"", ""), 0, "text input")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "parsed output")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "one two", "PARSE fields")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "result.rest")), "\"two\"", "typed nested output")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("seeds compound inputs through the binary API") callback {
+            ctx = rexxae.rexxae_create("SAY config.message\nLET config.response.ok = true")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_set_variable_json(ctx, "config.message", "\"hello\""), 0, "seed property")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "SAY input")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "hello", "seeded value")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "config.response.ok")), "true", "owned boolean")
+        }
+    }
+    return spec.run_summary(fw)
+}

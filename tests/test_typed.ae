@@ -1,0 +1,136 @@
+import std.spec
+import std.string
+import std.strbuilder
+import src.engine
+
+expect_output(source: string, expected: string) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    out = strbuilder.new(32)
+    count = 0
+    status = 3
+    while status > 0 && count < 10000 {
+        status = engine.rexxae_step(ctx, 1)
+        if status == 1 {
+            strbuilder.append(out, string.copy(engine.rexxae_text(ctx)))
+            strbuilder.append_byte(out, 10)
+        }
+        if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
+        count = count + 1
+    }
+    spec.assert_eq(status, 0, "completed within bounded steps")
+    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    spec.assert_str_eq(strbuilder.finish(out), expected, source)
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "typed values and structured execution") {
+        spec.it("keeps booleans, numbers and strings distinct") callback {
+            expect_output("LET a = true\nLET b = 'true'\nSAY TYPEOF(a) TYPEOF(b)\nLET c = 0\nSAY TYPEOF(c)", "boolean string\nnumber\n")
+        }
+        spec.it("supports arrays, objects and typed null from JSON") callback {
+            expect_output("LET a = [1, 'two', false]\nLET o = {'a': a, 'ok': true}\nSAY LENGTH(a) LENGTH(o)\nSAY ARRAY_GET(a, 2)\nSAY JSON_STRINGIFY(JSON_PARSE('null'))", "3 2\ntwo\n{}\n")
+        }
+        spec.it("clones containers when adding values") callback {
+            expect_output("LET a = [1, 2]\nLET b = ARRAY_PUSH(a, 3)\nSAY ARRAY_LENGTH(a) ARRAY_LENGTH(b)\nSAY JOIN(b, '-')", "2 4\n1-2-1,2-3\n")
+        }
+        spec.it("compares numeric text loosely and exact text strictly") callback {
+            expect_output("LET a = '02' = 2\nLET b = '02' == 2\nLET c = 3 >= 2\nSAY a b c", "1 0 1\n")
+        }
+        spec.it("executes inline IF and ELSE") callback {
+            expect_output("IF 2 > 1 THEN SAY 'yes'\nELSE SAY 'no'\nIF 0 THEN SAY 'bad'\nELSE SAY 'good'", "yes\ngood\n")
+        }
+        spec.it("executes nested conditional blocks") callback {
+            expect_output("IF 1 THEN DO\nIF 0 THEN SAY 'bad'\nELSE SAY 'inner'\nSAY 'outer'\nEND\nELSE SAY 'bad'", "inner\nouter\n")
+        }
+        spec.it("handles ascending, descending and stepped ranges") callback {
+            expect_output("DO i = 1 TO 3\nSAY i\nEND\nDO j = 3 TO 1 BY -2\nSAY j\nEND", "1\n2\n3\n3\n1\n")
+        }
+        spec.it("restores an existing loop variable as RexxJS does") callback {
+            expect_output("LET i = 'old'\nDO i = 1 TO 2\nSAY i\nEND\nSAY i", "1\n2\nold\n")
+        }
+        spec.it("supports repeat, WHILE, UNTIL and OVER") callback {
+            expect_output("LET n = 0\nDO 2\nn = n + 1\nEND\nDO WHILE n < 4\nn = n + 1\nEND\nDO UNTIL n = 5\nn = n + 1\nEND\nDO item OVER [n, 6]\nSAY item\nEND", "5\n6\n")
+        }
+        spec.it("applies LEAVE and ITERATE to the innermost loop") callback {
+            expect_output("DO i = 1 TO 3\nDO FOREVER\nIF i = 2 THEN LEAVE\nSAY i\nLEAVE\nEND\nIF i = 2 THEN ITERATE\nSAY 'after'\nEND", "1\nafter\n3\nafter\n")
+        }
+        spec.it("leaves an infinite loop runnable at its budget") callback {
+            ctx = engine.rexxae_create("DO FOREVER\nLET n = 1\nEND")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 10), 3, "budget yields")
+            spec.assert_eq(engine.rexxae_step(ctx, 10), 3, "still yields")
+        }
+        spec.it("parses a complete program before allowing application effects") callback {
+            ctx = engine.rexxae_create("ADDRESS APP 'work'\nIF 1 SAY 'missing THEN'")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "syntax error precedes dispatch")
+        }
+    }
+    spec.describe(fw, "registered host functions") {
+        spec.it("resumes nested calls without dispatching the first call twice") callback {
+            ctx = engine.rexxae_create("LET n = ABS(TESTHOST(1)) + TESTHOST(2)\nSAY n")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "testhost", 1, 1), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "first call")
+            spec.assert_str_eq(string.copy(engine.rexxae_function(ctx)), "TESTHOST", "name")
+            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[1]", "first argument")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "pending call is stable")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "-3", ""), 0, "first reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "second call")
+            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[2]", "no repeated first effect")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "4", ""), 0, "second reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 1), 3, "assignment completed")
+            spec.assert_eq(engine.rexxae_step(ctx, 1), 1, "SAY")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "7", "typed replies enter arithmetic")
+        }
+        spec.it("preserves objects and arrays across the C boundary") callback {
+            ctx = engine.rexxae_create("LET result = TESTHOST([1, true], {'key': 'value'})")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 2, 2), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "call")
+            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[[1,true],{\"key\":\"value\"}]", "typed arguments")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "{\"ok\":true,\"empty\":null}", ""), 0, "object reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "result")), "{\"ok\":true,\"empty\":null}", "typed variable inspection")
+        }
+        spec.it("allows correction of malformed replies and rejects pending mutation") callback {
+            ctx = engine.rexxae_create("LET result = TESTHOST()")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "call")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "not JSON", ""), -1, "invalid reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "still pending")
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "x", "1"), -1, "no mutation while pending")
+            spec.assert_eq(engine.rexxae_register_function(ctx, "OTHER", 0, 0), -1, "no registry mutation")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "null", ""), 0, "null reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("rejects builtin replacement and enforces host arity") callback {
+            ctx = engine.rexxae_create("LET result = TESTHOST(1)")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "UPPER", 0, 1), -1, "builtin protected")
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 2, 2), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "arity error")
+        }
+        spec.it("keeps skipped IF function branches free of host effects") callback {
+            ctx = engine.rexxae_create("LET result = IF(1, 7, TESTHOST())\nSAY result")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "no host dispatch")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "7", "selected value")
+        }
+        spec.it("can be destroyed during any suspended expression") callback {
+            i = 0
+            while i < 50 {
+                ctx = engine.rexxae_create("LET result = TESTHOST(1) + TESTHOST(2)")
+                engine.rexxae_register_function(ctx, "TESTHOST", 1, 1)
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "suspended")
+                engine.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+    }
+    return spec.run_summary(fw)
+}

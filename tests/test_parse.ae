@@ -1,0 +1,126 @@
+// Shared golden programs and frame lifetime/protocol cases.
+import std.spec
+import std.file
+import std.json
+import std.string
+import src.engine
+
+output(source: string, expected: ptr) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = 3
+    steps = 0
+    index = 0
+    while status > 0 && steps < 10000 {
+        status = engine.rexxae_step(ctx, 1)
+        if status == 1 {
+            if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
+            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            index = index + 1
+        }
+        if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
+        steps = steps + 1
+    }
+    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    spec.assert_eq(status, 0, "completed within budgeted steps")
+    spec.assert_eq(index, json.json_array_size(expected), "output count")
+}
+
+main() {
+    fw = spec.init()
+    contents, read_err = file.read("tests/parse_cases.json")
+    if read_err != "" { println(read_err); return 1 }
+    rows, parse_err = json.parse(contents)
+    if parse_err != "" { println(parse_err); return 1 }
+    defer json.json_free(rows)
+    spec.describe(fw, "RexxJS PARSE and compound fixtures") {
+        i = 0
+        while i < json.json_array_size(rows) {
+            row = json.json_array_get_raw(rows, i)
+            name = json.json_get_string_raw(json.json_array_get_raw(row, 0))
+            source = string.copy(json.json_get_string_raw(json.json_array_get_raw(row, 1)))
+            expected = json.json_array_get_raw(row, 2)
+            spec.it(name) callback { output(source, expected) }
+            i = i + 1
+        }
+    }
+    spec.describe(fw, "PARSE expressions and owned compound values") {
+        spec.it("uses explicit WITH for evaluated input and literal delimiters") callback {
+            expected, _err = json.parse("[\"one\",\"two\"]")
+            defer json.json_free(expected)
+            output("PARSE VALUE LOWER('ONE:TWO') WITH first ':' rest\nSAY first\nSAY rest", expected)
+        }
+        spec.it("resumes input expressions without replaying earlier host calls") callback {
+            ctx = engine.rexxae_create("LET first = 'unchanged'\nPARSE VALUE TESTHOST(1) || TESTHOST(2) WITH first ':' rest\nSAY first rest")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 1, 1), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "first input request")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "first")), "\"unchanged\"", "no partial binding")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "\"one:\"", ""), 0, "first part")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "second input request")
+            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[2]", "no replay")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "\"two\"", ""), 0, "second part")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "parsed output")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "one two", "bound text")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("shares compound access through the public variable API") callback {
+            ctx = engine.rexxae_create("LET config.result.ok = true\nSAY config.input.value")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config.input.value", "42"), 0, "seed nested input")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "read seeded property")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "42", "input")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "config.result.ok")), "true", "typed property")
+            spec.assert_true(engine.rexxae_get_variable_json(ctx, "config.missing") == null, "missing property")
+        }
+        spec.it("rejects unsupported array writes without changing the old root") callback {
+            ctx = engine.rexxae_create("LET config.data.0 = 2")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config", "{\"data\":[1]}"), 0, "seed")
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config.data.0", "2"), -1, "API rejects unsupported write")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "script diagnostic")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "config")), "{\"data\":[1]}", "old value intact")
+        }
+        spec.it("does not treat missing paths as typed nulls") callback {
+            expected, _err = json.parse("[\"DATA.ABSENT\",\"null\"]")
+            defer json.json_free(expected)
+            output("LET data.present = JSON_PARSE('null')\nSAY data.absent\nSAY data.present", expected)
+        }
+        spec.it("rejects unsupported templates before allowing host effects") callback {
+            ctx = engine.rexxae_create("CALL TESTHOST\nPARSE VAR line first 5 rest")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "positions explicitly unsupported")
+            spec.assert_eq(engine.rexxae_line(ctx), 2, "template line")
+        }
+        spec.it("reports errors in suspended PARSE input at the statement line") callback {
+            ctx = engine.rexxae_create("\nPARSE VALUE TESTHOST() WITH first rest")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "pending")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "denied"), 0, "error")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_eq(engine.rexxae_line(ctx), 2, "PARSE line")
+        }
+        spec.it("bounds compound depth and keeps variable mutation usable after rejection") callback {
+            ctx = engine.rexxae_create("SAY 'ready'")
+            defer engine.rexxae_destroy(ctx)
+            path = "root"
+            i = 0
+            while i < 70 { path = string.concat(path, ".child"); i = i + 1 }
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, path, "1"), -1, "depth limit")
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "root.ok", "true"), 0, "valid mutation after rejection")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "context remains usable")
+        }
+        spec.it("tears down pending input and repeated owned object replacements") callback {
+            i = 0
+            while i < 30 {
+                ctx = engine.rexxae_create("LET data.child.x = 1\nLET data.child.x = 2\nPARSE VALUE TESTHOST() WITH first rest")
+                spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "pending PARSE")
+                engine.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+    }
+    return spec.run_summary(fw)
+}

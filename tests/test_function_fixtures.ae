@@ -1,0 +1,43 @@
+// The same explicit golden cases are exercised natively and through ctypes,
+// then run unchanged on RexxJS by the differential suite.
+import std.spec
+import std.file
+import std.json
+import std.string
+import src.engine
+
+main() {
+    fw = spec.init()
+    contents, read_err = file.read("tests/function_cases.json")
+    if read_err != "" { println(read_err); return 1 }
+    rows, parse_err = json.parse(contents)
+    if parse_err != "" { println(parse_err); return 1 }
+    defer json.json_free(rows)
+    spec.describe(fw, "scalar function fixtures") {
+        i = 0
+        while i < json.json_array_size(rows) {
+            row = json.json_array_get_raw(rows, i)
+            // spec keeps the description borrowed in its records. The JSON
+            // document outlives run_summary, so no separate allocation is needed.
+            name = json.json_get_string_raw(json.json_array_get_raw(row, 0))
+            expression = string.copy(json.json_get_string_raw(json.json_array_get_raw(row, 1)))
+            expected = string.copy(json.json_get_string_raw(json.json_array_get_raw(row, 2)))
+            spec.it(name) callback {
+                source = "LET ANSWER = ${expression}\nSAY ANSWER"
+                ctx = engine.rexxae_create(source)
+                defer engine.rexxae_destroy(ctx)
+                status = engine.rexxae_step(ctx, 100)
+                if status == -1 {
+                    detail = string.copy(engine.rexxae_error(ctx))
+                    spec.fail("${expression}: ${detail}")
+                } else {
+                    spec.assert_eq(status, 1, "SAY result")
+                    spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), expected, expression)
+                    spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
+                }
+            }
+            i = i + 1
+        }
+    }
+    return spec.run_summary(fw)
+}

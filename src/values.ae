@@ -1,0 +1,135 @@
+// Owned typed values. Containers own tagged child values, not borrowed
+// pointers. Contexts serialize values so replacing a variable frees storage.
+import std.json
+import std.string
+import std.strbuilder
+import src.state
+
+exports(wrap, kind, data, string_value, numeric, boolean, null_value,
+    clone, text, truth, from_json, to_json, type_name, number_text)
+
+wrap(kind_: int, payload: ptr) -> ptr {
+    result = json.obj()
+    json.set(result, "kind", json.from_int(kind_))
+    json.set(result, "data", payload)
+    return result
+}
+kind(value: ptr) -> int { return state.index(value, "kind") }
+data(value: ptr) -> ptr { return state.field(value, "data") }
+string_value(value: string) -> ptr { return wrap(3, json.str(value)) }
+numeric(value: string) -> ptr { return wrap(2, json.str(value)) }
+boolean(value: bool) -> ptr {
+    if value { return wrap(1, json.boolean(1)) }
+    return wrap(1, json.boolean(0))
+}
+null_value() -> ptr { return wrap(0, json.null_value()) }
+clone(value: ptr) -> ptr {
+    encoded, err = json.stringify(value)
+    if err != "" { return null }
+    return json.json_parse_raw(encoded)
+}
+type_name(value: ptr) -> string {
+    k = kind(value)
+    if k == 0 { return "null" }
+    if k == 1 { return "boolean" }
+    if k == 2 { return "number" }
+    if k == 3 { return "string" }
+    if k == 4 { return "array" }
+    return "object"
+}
+number_text(value: float) -> string {
+    if value == 0.0 { return "0" }
+    result = string.from_double(value)
+    if result == "nan" || result == "-nan" { return "NaN" }
+    if result == "inf" { return "Infinity" }
+    if result == "-inf" { return "-Infinity" }
+    return result
+}
+text(value: ptr) -> string {
+    k = kind(value)
+    payload = data(value)
+    if k == 0 { return "null" }
+    if k == 1 {
+        if json.json_get_bool(payload) != 0 { return "true" }
+        return "false"
+    }
+    if k == 2 || k == 3 {
+        result, _err = json.get_string(payload)
+        return result
+    }
+    if k == 5 { return "[object Object]" }
+    out = strbuilder.new(32)
+    i = 0
+    while i < json.json_array_size(payload) {
+        if i > 0 { strbuilder.append_byte(out, 44) }
+        child = json.json_array_get_raw(payload, i)
+        if kind(child) != 0 { strbuilder.append(out, text(child)) }
+        i = i + 1
+    }
+    return strbuilder.finish(out)
+}
+// RexxJS conditions treat numeric/string zero and the string 'false' as false.
+truth(value: ptr) -> bool {
+    k = kind(value)
+    if k == 0 { return false }
+    if k == 1 { return json.json_get_bool(data(value)) != 0 }
+    if k == 4 { return json.json_array_size(data(value)) > 0 }
+    if k == 5 { return json.json_object_size_raw(data(value)) > 0 }
+    s = text(value)
+    if s == "" || s == "0" || string.to_lower(s) == "false" { return false }
+    return true
+}
+from_json(value: ptr, depth: int) -> ptr {
+    if depth > 64 { return null }
+    k = json.json_type(value)
+    if k == 0 { return null_value() }
+    if k == 1 { return boolean(json.json_get_bool(value) != 0) }
+    if k == 2 { return numeric(number_text(json.json_get_number(value))) }
+    if k == 3 {
+        s, _err = json.get_string(value)
+        return string_value(s)
+    }
+    result = json.obj()
+    if k == 4 { json.json_free(result); result = json.arr() }
+    n = json.json_object_size_raw(value)
+    if k == 4 { n = json.json_array_size(value) }
+    i = 0
+    while i < n {
+        child = json.json_object_value_at(value, i)
+        if k == 4 { child = json.json_array_get_raw(value, i) }
+        converted = from_json(child, depth + 1)
+        if converted == null { json.json_free(result); return null }
+        if k == 4 { json.push(result, converted) }
+        else { json.set(result, json.json_object_key_at(value, i), converted) }
+        i = i + 1
+    }
+    return wrap(k, result)
+}
+to_json(value: ptr, depth: int) -> ptr {
+    if depth > 64 { return null }
+    k = kind(value)
+    payload = data(value)
+    if k == 0 { return json.null_value() }
+    if k == 1 { return json.boolean(json.json_get_bool(payload)) }
+    if k == 2 {
+        s = text(value)
+        if string.string_try_double(s) == 0 || s == "NaN" || string.contains(s, "Infinity") != 0 { return null }
+        return json.num(string.string_get_double(s))
+    }
+    if k == 3 { return json.str(text(value)) }
+    result = json.obj()
+    if k == 4 { json.json_free(result); result = json.arr() }
+    n = json.json_object_size_raw(payload)
+    if k == 4 { n = json.json_array_size(payload) }
+    i = 0
+    while i < n {
+        child = json.json_object_value_at(payload, i)
+        if k == 4 { child = json.json_array_get_raw(payload, i) }
+        converted = to_json(child, depth + 1)
+        if converted == null { json.json_free(result); return null }
+        if k == 4 { json.push(result, converted) }
+        else { json.set(result, json.json_object_key_at(payload, i), converted) }
+        i = i + 1
+    }
+    return result
+}

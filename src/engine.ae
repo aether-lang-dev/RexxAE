@@ -1,0 +1,519 @@
+// RexxAE: parsed instructions, typed values and resumable host events.
+import std.string
+import std.map
+import std.json
+import std.math
+import src.state
+import src.lex
+import src.program
+import src.values
+import src.scopes
+import src.variables
+import src.templates
+import src.evaluate
+import src.builtins
+
+exports(rexxae_create, rexxae_destroy, rexxae_step, rexxae_reply,
+    rexxae_text, rexxae_address, rexxae_error, rexxae_line, rexxae_exit_code,
+    rexxae_register_function, rexxae_function, rexxae_arguments_json,
+    rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
+    rexxae_argument_text, rexxae_argument_type)
+
+frame_key_(depth: int) -> string { return string.concat("loop:", string.from_int(depth)) }
+variable_key_(name: string) -> string { return string.concat("v:", name) }
+
+pop_loop_(ctx: ptr) {
+    depth = state.integer(ctx, "loop_depth")
+    if depth <= 0 { return }
+    key = frame_key_(depth - 1)
+    frame = state.load(ctx, key)
+    old = state.text(frame, "old")
+    if old != "" { state.write(ctx, variable_key_(state.text(frame, "name")), old) }
+    json.json_free(frame)
+    map.map_remove(ctx, key)
+    state.number(ctx, "loop_depth", depth - 1)
+}
+// Restore each generation only after unwinding its own loop frames.
+unwind_(ctx: ptr) {
+    while state.integer(ctx, "call_depth") > 0 {
+        depth = state.integer(ctx, "call_depth") - 1
+        frame = state.load(ctx, call_key_(depth))
+        while state.integer(ctx, "loop_depth") > state.index(frame, "loop_base") { pop_loop_(ctx) }
+        close_call_(ctx, frame, depth)
+        json.json_free(frame)
+    }
+    while state.integer(ctx, "loop_depth") > 0 { pop_loop_(ctx) }
+}
+
+call_key_(depth: int) -> string { return string.concat("call:", string.from_int(depth)) }
+cache_key_(depth: int) -> string { return string.concat("caller_cache:", string.from_int(depth)) }
+
+close_call_(ctx: ptr, frame: ptr, depth: int) {
+    generation = state.field(frame, "generation")
+    if generation != null { scopes.leave(ctx, generation) }
+    map.map_free(map.map_get_raw(ctx, "cache"))
+    cache_key = cache_key_(depth)
+    map.map_put_raw(ctx, "cache", map.map_get_raw(ctx, cache_key))
+    map.map_remove(ctx, cache_key)
+    map.map_remove(ctx, call_key_(depth))
+    state.number(ctx, "call_depth", depth)
+}
+
+begin_call_(ctx: ptr, pc: int) {
+    depth = state.integer(ctx, "call_depth")
+    if depth >= 128 { state.fail(ctx, "routine call depth limit exceeded"); return }
+    frame = json.obj()
+    json.set(frame, "pc", json.from_int(pc))
+    json.set(frame, "loop_base", json.from_int(state.integer(ctx, "loop_depth")))
+    json.set(frame, "node", json.str(state.read(ctx, "routine_node")))
+    procedure = state.load(ctx, string.concat("proc:", state.read(ctx, "routine_target")))
+    if procedure != null {
+        json.set(frame, "generation", scopes.enter(ctx, procedure))
+        json.json_free(procedure)
+    }
+    // Implicit returns use the return value present at entry.
+    json.set(frame, "default", json.str(state.read(ctx, "return_value")))
+    state.save(ctx, call_key_(depth), frame)
+    json.json_free(frame)
+    map.map_put_raw(ctx, cache_key_(depth), map.map_get_raw(ctx, "cache"))
+    map.map_put_raw(ctx, "cache", map.map_new())
+    state.number(ctx, "call_depth", depth + 1)
+    state.write(ctx, "argv", state.read(ctx, "routine_args"))
+    state.number(ctx, "pc", state.integer(ctx, "routine_target"))
+    state.number(ctx, "status", 3)
+}
+
+return_call_(ctx: ptr, value: ptr) -> int {
+    depth = state.integer(ctx, "call_depth")
+    if depth == 0 {
+        unwind_(ctx)
+        state.number(ctx, "status", 0)
+        return state.integer(ctx, "pc") + 1
+    }
+    key = call_key_(depth - 1)
+    frame = state.load(ctx, key)
+    defer json.json_free(frame)
+    while state.integer(ctx, "loop_depth") > state.index(frame, "loop_base") { pop_loop_(ctx) }
+    close_call_(ctx, frame, depth - 1)
+    evaluate.cache_result(ctx, state.text(frame, "node"), value)
+    state.number(ctx, "status", 6)
+    return state.index(frame, "pc")
+}
+
+// Object.values order: canonical unsigned integer keys first, then insertion order.
+object_index_(name: string) -> bool {
+    if string.string_try_double(name) == 0 { return false }
+    n = string.string_get_double(name)
+    return n >= 0.0 && n < 4294967295.0 && values.number_text(n) == name && math.floor(n) == n
+}
+over_items_(ctx: ptr, value: ptr) -> ptr {
+    if values.kind(value) == 4 { return values.clone(value) }
+    if values.kind(value) != 5 { state.fail(ctx, "DO OVER requires an array or object"); return null }
+    fields = values.data(value)
+    size = json.json_object_size_raw(fields)
+    if size == 0 { state.fail(ctx, "DO OVER requires a nonempty object"); return null }
+    result = json.arr()
+    previous = -1.0
+    while true {
+        best = 4294967295.0
+        chosen = -1
+        i = 0
+        while i < size {
+            key = json.json_object_key_at(fields, i)
+            if object_index_(key) {
+                n = string.string_get_double(key)
+                if n > previous && n < best { best = n; chosen = i }
+            }
+            i = i + 1
+        }
+        if chosen < 0 { break }
+        json.push(result, values.clone(json.json_object_value_at(fields, chosen)))
+        previous = best
+    }
+    i = 0
+    while i < size {
+        if !object_index_(json.json_object_key_at(fields, i)) { json.push(result, values.clone(json.json_object_value_at(fields, i))) }
+        i = i + 1
+    }
+    return values.wrap(4, result)
+}
+
+loop_begin_(ctx: ptr, inst: ptr, pc: int) -> int {
+    mode = state.text(inst, "mode")
+    end = state.index(inst, "end")
+    name = state.text(inst, "name")
+    frame = json.obj()
+    defer json.json_free(frame)
+    json.set(frame, "head", json.from_int(pc))
+    json.set(frame, "end", json.from_int(end))
+    json.set(frame, "mode", json.str(mode))
+    json.set(frame, "name", json.str(name))
+    if name != "" { json.set(frame, "old", json.str(state.read(ctx, variable_key_(name)))) }
+    if mode == "while" {
+        condition = evaluate.run(ctx, state.field(inst, "condition"), 0)
+        if condition == null { return pc }
+        ok = values.truth(condition)
+        json.json_free(condition)
+        if !ok { return end }
+    } else if mode == "range" {
+        first = evaluate.run(ctx, state.field(inst, "first"), 0)
+        if first == null { return pc }
+        defer json.json_free(first)
+        last = evaluate.run(ctx, state.field(inst, "last"), 0)
+        if last == null { return pc }
+        defer json.json_free(last)
+        a = values.text(first)
+        b = values.text(last)
+        if string.string_try_double(a) == 0 || string.string_try_double(b) == 0 { state.fail(ctx, "invalid range values in DO loop"); return pc }
+        start = math.floor(string.string_get_double(a))
+        finish = math.floor(string.string_get_double(b))
+        // parseInt truncates toward zero, unlike INT's floor operation.
+        if string.string_get_double(a) < 0.0 { start = math.ceil(string.string_get_double(a)) }
+        if string.string_get_double(b) < 0.0 { finish = math.ceil(string.string_get_double(b)) }
+        step = 1.0
+        if start > finish { step = -1.0 }
+        step_expr = state.field(inst, "step")
+        if step_expr != null {
+            by = evaluate.run(ctx, step_expr, 0)
+            if by == null { return pc }
+            text = values.text(by)
+            json.json_free(by)
+            if string.string_try_double(text) == 0 { state.fail(ctx, "invalid DO step"); return pc }
+            step = math.floor(string.string_get_double(text))
+            if string.string_get_double(text) < 0.0 { step = math.ceil(string.string_get_double(text)) }
+        }
+        if step == 0.0 { state.fail(ctx, "DO loop step cannot be zero"); return pc }
+        json.set(frame, "current", json.num(start))
+        json.set(frame, "last", json.num(finish))
+        json.set(frame, "step", json.num(step))
+        current = values.numeric(values.number_text(start))
+        state.save(ctx, variable_key_(name), current)
+        json.json_free(current)
+        if (step > 0.0 && start > finish) || (step < 0.0 && start < finish) {
+            old = state.text(frame, "old")
+            if old != "" { state.write(ctx, variable_key_(name), old) }
+            return end
+        }
+    } else if mode == "repeat" || mode == "over" {
+        field = "count"
+        if mode == "over" { field = "items" }
+        value = evaluate.run(ctx, state.field(inst, field), 0)
+        if value == null { return pc }
+        defer json.json_free(value)
+        size = 0
+        if mode == "over" {
+            items = over_items_(ctx, value)
+            if items == null { return pc }
+            size = json.json_array_size(values.data(items))
+            if size > 0 { state.save(ctx, variable_key_(name), json.json_array_get_raw(values.data(items), 0)) }
+            json.set(frame, "items", items)
+        } else {
+            text = values.text(value)
+            if string.string_try_int(text) == 0 { state.fail(ctx, "DO repeat count requires an integer"); return pc }
+            size = string.string_get_int(text)
+        }
+        if size <= 0 { return end }
+        json.set(frame, "size", json.from_int(size))
+        json.set(frame, "index", json.from_int(0))
+    }
+    depth = state.integer(ctx, "loop_depth")
+    state.save(ctx, frame_key_(depth), frame)
+    state.number(ctx, "loop_depth", depth + 1)
+    return pc + 1
+}
+
+loop_next_(ctx: ptr, pc: int) -> int {
+    depth = state.integer(ctx, "loop_depth")
+    if depth <= 0 { state.fail(ctx, "loop control requires an active loop"); return pc }
+    key = frame_key_(depth - 1)
+    frame = state.load(ctx, key)
+    defer json.json_free(frame)
+    head = state.index(frame, "head")
+    end = state.index(frame, "end")
+    mode = state.text(frame, "mode")
+    if mode == "while" { pop_loop_(ctx); return head }
+    if mode == "until" {
+        header = state.load(ctx, string.concat("p:", string.from_int(head)))
+        condition = evaluate.run(ctx, state.field(header, "condition"), 0)
+        json.json_free(header)
+        if condition == null { return pc }
+        done = values.truth(condition)
+        json.json_free(condition)
+        if done { pop_loop_(ctx); return end }
+    } else if mode == "range" {
+        next = json.json_get_number(state.field(frame, "current")) + json.json_get_number(state.field(frame, "step"))
+        last = json.json_get_number(state.field(frame, "last"))
+        step = json.json_get_number(state.field(frame, "step"))
+        past = (step > 0.0 && next > last) || (step < 0.0 && next < last)
+        json.set(frame, "current", json.num(next))
+        current = values.numeric(values.number_text(next))
+        state.save(ctx, variable_key_(state.text(frame, "name")), current)
+        json.json_free(current)
+        if past { pop_loop_(ctx); return end }
+    } else if mode == "repeat" || mode == "over" {
+        index = state.index(frame, "index") + 1
+        if index >= state.index(frame, "size") { pop_loop_(ctx); return end }
+        json.set(frame, "index", json.from_int(index))
+        if mode == "over" { state.save(ctx, variable_key_(state.text(frame, "name")), json.json_array_get_raw(values.data(state.field(frame, "items")), index)) }
+    }
+    state.save(ctx, key, frame)
+    return head + 1
+}
+
+execute_(ctx: ptr, inst: ptr, pc: int) -> int {
+    op = state.text(inst, "op")
+    if op == "jump" || op == "label" { return state.index(inst, "target") }
+    if op == "implicit_return" {
+        frame = state.load(ctx, call_key_(state.integer(ctx, "call_depth") - 1))
+        encoded = state.text(frame, "default")
+        json.json_free(frame)
+        value = json.json_parse_raw(encoded)
+        if value == null { value = values.null_value() }
+        next = return_call_(ctx, value)
+        json.json_free(value)
+        return next
+    }
+    if op == "parse" {
+        mode = state.text(inst, "mode")
+        input = ""
+        if mode == "expression" {
+            value = evaluate.run(ctx, state.field(inst, "value"), 0)
+            if value == null { return pc }
+            input = values.text(value)
+            json.json_free(value)
+        } else {
+            name = state.text(inst, "name")
+            value = state.load(ctx, variable_key_(name))
+            fallback = ""
+            if mode == "legacy" { fallback = name }
+            input = templates.input_text(value, fallback)
+            json.json_free(value)
+        }
+        templates.apply(ctx, input, state.field(inst, "template"))
+        return pc + 1
+    }
+    if op == "arg" {
+        argv = state.load(ctx, "argv")
+        defer json.json_free(argv)
+        names = state.field(inst, "names")
+        i = 0
+        while i < json.json_array_size(names) {
+            name = string.copy(json.json_get_string_raw(json.json_array_get_raw(names, i)))
+            value = json.json_array_get_raw(argv, i)
+            if value == null {
+                empty = values.string_value("")
+                state.save(ctx, variable_key_(name), empty)
+                json.json_free(empty)
+            } else { state.save(ctx, variable_key_(name), value) }
+            i = i + 1
+        }
+        return pc + 1
+    }
+    if op == "loop" { return loop_begin_(ctx, inst, pc) }
+    if op == "next" || op == "iterate" { return loop_next_(ctx, pc) }
+    if op == "leave" {
+        frame = state.load(ctx, frame_key_(state.integer(ctx, "loop_depth") - 1))
+        end = state.index(frame, "end")
+        json.json_free(frame)
+        pop_loop_(ctx)
+        return end
+    }
+    if op == "address" { state.write(ctx, "address", state.text(inst, "name")); return pc + 1 }
+    field = "value"
+    if op == "branch" { field = "condition" }
+    value = evaluate.run(ctx, state.field(inst, field), 0)
+    if value == null { return pc }
+    defer json.json_free(value)
+    if op == "return" {
+        state.save(ctx, "return_value", value)
+        return return_call_(ctx, value)
+    }
+    if op == "assign" {
+        if !variables.put(ctx, variables.derived(ctx, state.text(inst, "name")), value) { state.fail(ctx, "compound assignment exceeds the path limit or writes through an array") }
+    }
+    else if op == "call" { state.save(ctx, "v:RESULT", value) }
+    else if op == "branch" {
+        if !values.truth(value) { return state.index(inst, "target") }
+    } else if op == "exit" {
+        code = values.text(value)
+        if string.string_try_int(code) == 0 { state.fail(ctx, "EXIT requires an integer"); return pc }
+        state.write(ctx, "exit", code)
+        unwind_(ctx)
+        state.number(ctx, "status", 0)
+    } else if op == "say" || op == "command" {
+        text = values.text(value)
+        state.write(ctx, "text", text)
+        status = 1
+        address = state.read(ctx, "address")
+        if op == "command" {
+            if string.contains(text, "{") != 0 { state.fail(ctx, "command interpolation is not implemented"); return pc }
+            if address != "" && address != "default" { status = 2 }
+        }
+        state.number(ctx, "status", status)
+    }
+    return pc + 1
+}
+
+@pure
+rexxae_create(source: string) -> ptr {
+    ctx = lex.new(source)
+    if ctx == null { return null }
+    cache = map.map_new()
+    map.map_put_raw(ctx, "cache", cache)
+    state.number(ctx, "status", 3)
+    program.compile(ctx)
+    if state.read(ctx, "error") != "" { state.number(ctx, "status", -1) }
+    return ctx
+}
+@pure
+rexxae_destroy(ctx: ptr) {
+    if ctx == null { return }
+    map.map_free(map.map_get_raw(ctx, "cache"))
+    depth = state.integer(ctx, "call_depth")
+    i = 0
+    while i < depth { map.map_free(map.map_get_raw(ctx, cache_key_(i))); i = i + 1 }
+    map.map_free(ctx)
+}
+@pure
+rexxae_step(ctx: ptr, budget: int) -> int {
+    if ctx == null { return -1 }
+    status = state.integer(ctx, "status")
+    if status == 0 || status == -1 || status == 2 || status == 4 { return status }
+    state.number(ctx, "status", 3)
+    used = 0
+    while used < budget {
+        pc = state.integer(ctx, "pc")
+        if pc >= state.integer(ctx, "program_size") { state.number(ctx, "status", 0); return 0 }
+        inst = state.load(ctx, string.concat("p:", string.from_int(pc)))
+        state.number(ctx, "line", state.index(inst, "line"))
+        state.number(ctx, "token_line", state.index(inst, "line"))
+        next = execute_(ctx, inst, pc)
+        json.json_free(inst)
+        used = used + 1
+        if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
+        if state.integer(ctx, "status") == 4 { return 4 }
+        if state.integer(ctx, "status") == 5 {
+            begin_call_(ctx, pc)
+            if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
+            continue
+        }
+        state.number(ctx, "pc", next)
+        if state.integer(ctx, "status") == 6 { state.number(ctx, "status", 3); continue }
+        map.map_clear(map.map_get_raw(ctx, "cache"))
+        status = state.integer(ctx, "status")
+        if status != 3 { return status }
+    }
+    return 3
+}
+@pure
+rexxae_reply(ctx: ptr, rc: int, result: string, error_text: string) -> int {
+    if ctx == null || state.integer(ctx, "status") != 2 { return -1 }
+    number = values.numeric(string.from_int(rc))
+    state.save(ctx, "v:RC", number)
+    json.json_free(number)
+    text = values.string_value(result)
+    state.save(ctx, "v:RESULT", text)
+    json.json_free(text)
+    error_value = values.string_value(error_text)
+    state.save(ctx, "v:ERRORTEXT", error_value)
+    json.json_free(error_value)
+    state.number(ctx, "status", 3)
+    return 0
+}
+@pure
+rexxae_register_function(ctx: ptr, name: string, minimum: int, maximum: int) -> int {
+    if ctx == null || minimum < 0 || maximum < minimum || maximum > 256 { return -1 }
+    status = state.integer(ctx, "status")
+    if status != 1 && status != 3 { return -1 }
+    normalized = string.to_upper(name)
+    if normalized == "" || evaluate.known(normalized) { return -1 }
+    spec = json.obj()
+    json.set(spec, "min", json.from_int(minimum))
+    json.set(spec, "max", json.from_int(maximum))
+    state.save(ctx, string.concat("h:", normalized), spec)
+    json.json_free(spec)
+    return 0
+}
+@pure
+rexxae_reply_value(ctx: ptr, encoded: string, error_text: string) -> int {
+    if ctx == null || state.integer(ctx, "status") != 4 { return -1 }
+    if error_text != "" {
+        state.fail(ctx, error_text)
+        unwind_(ctx)
+        state.number(ctx, "status", -1)
+        return 0
+    }
+    raw = json.json_parse_raw(encoded)
+    if raw == null { return -1 }
+    value = values.from_json(raw, 0)
+    json.json_free(raw)
+    if value == null { return -1 }
+    evaluate.cache_result(ctx, state.read(ctx, "pending_node"), value)
+    json.json_free(value)
+    state.number(ctx, "status", 3)
+    return 0
+}
+@pure
+rexxae_set_variable_json(ctx: ptr, name: string, encoded: string) -> int {
+    if ctx == null || name == "" { return -1 }
+    status = state.integer(ctx, "status")
+    if status != 1 && status != 3 { return -1 }
+    raw = json.json_parse_raw(encoded)
+    if raw == null { return -1 }
+    value = values.from_json(raw, 0)
+    json.json_free(raw)
+    if value == null { return -1 }
+    ok = variables.put(ctx, name, value)
+    json.json_free(value)
+    if !ok { return -1 }
+    return 0
+}
+@pure
+rexxae_get_variable_json(ctx: ptr, name: string) -> ptr {
+    if ctx == null { return null }
+    value = variables.get(ctx, name)
+    if value == null { return null }
+    raw = values.to_json(value, 0)
+    json.json_free(value)
+    if raw == null { return null }
+    state.save(ctx, "inspect", raw)
+    json.json_free(raw)
+    return string.aether_string_raw_ptr(map.map_get_raw(ctx, "inspect"))
+}
+@pure
+rexxae_argument_type(ctx: ptr, index: int) -> int {
+    if ctx == null || state.integer(ctx, "status") != 4 { return -1 }
+    args = state.load(ctx, "arguments")
+    defer json.json_free(args)
+    if index < 0 || index >= json.json_array_size(args) { return -1 }
+    return json.json_type(json.json_array_get_raw(args, index))
+}
+@pure
+rexxae_argument_text(ctx: ptr, index: int) -> ptr {
+    if ctx == null || state.integer(ctx, "status") != 4 { return null }
+    args = state.load(ctx, "arguments")
+    defer json.json_free(args)
+    if index < 0 || index >= json.json_array_size(args) { return null }
+    value = values.from_json(json.json_array_get_raw(args, index), 0)
+    if value == null { return null }
+    state.write(ctx, "argument_text", values.text(value))
+    json.json_free(value)
+    return string.aether_string_raw_ptr(map.map_get_raw(ctx, "argument_text"))
+}
+@pure
+rexxae_text(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "text")) }
+@pure
+rexxae_address(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "address")) }
+@pure
+rexxae_error(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "error")) }
+@pure
+rexxae_function(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "function")) }
+@pure
+rexxae_arguments_json(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "arguments")) }
+@pure
+rexxae_exit_code(ctx: ptr) -> int { return state.integer(ctx, "exit") }
+@pure
+rexxae_line(ctx: ptr) -> int {
+    if state.integer(ctx, "status") == -1 { return state.integer(ctx, "error_line") }
+    return state.integer(ctx, "line")
+}

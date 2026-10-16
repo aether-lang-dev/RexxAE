@@ -1,0 +1,222 @@
+[
+  [
+    "words",
+    "LET line = 'one two three'\nPARSE VAR line first rest\nSAY first\nSAY rest",
+    [
+      "one",
+      "two three"
+    ]
+  ],
+  [
+    "delimiters",
+    "LET line = 'one:two:three'\nPARSE VAR line a ':' b ':' c\nSAY a\nSAY b\nSAY c",
+    [
+      "one",
+      "two",
+      "three"
+    ]
+  ],
+  [
+    "missing_delimiter",
+    "LET line = 'whole'\nPARSE VAR line a ':' b\nSAY a\nSAY b",
+    [
+      "whole",
+      ""
+    ]
+  ],
+  [
+    "whitespace",
+    "LET line = '  one  two  '\nPARSE VAR line a b\nSAY a\nSAY b",
+    [
+      "",
+      "one  two  "
+    ]
+  ],
+  [
+    "last_remainder",
+    "LET line = 'one  two   three  '\nPARSE VAR line a b c\nSAY a\nSAY b\nSAY c",
+    [
+      "one",
+      "two",
+      "three  "
+    ]
+  ],
+  [
+    "leading_delimiter",
+    "LET line = 'a:b'\nPARSE VAR line ':' a\nSAY a",
+    [
+      "a:b"
+    ]
+  ],
+  [
+    "empty_delimiter",
+    "LET line = 'a:b'\nPARSE VAR line a '' b\nSAY a\nSAY b",
+    [
+      "",
+      "a:b"
+    ]
+  ],
+  [
+    "discard",
+    "LET line = 'one two three'\nPARSE VAR line . rest\nSAY rest",
+    [
+      "two three"
+    ]
+  ],
+  [
+    "falsey_source",
+    "LET line = 0\nPARSE VAR line a\nSAY a\nLET line = false\nPARSE VAR line a\nSAY a",
+    [
+      "",
+      ""
+    ]
+  ],
+  [
+    "missing_source",
+    "PARSE VAR absent a b\nSAY a\nSAY b",
+    [
+      "",
+      ""
+    ]
+  ],
+  [
+    "value_variable",
+    "LET line = 'one two three'\nPARSE VALUE line first rest\nSAY first\nSAY rest",
+    [
+      "one",
+      "two three"
+    ]
+  ],
+  [
+    "value_raw_quotes",
+    "PARSE VALUE 'one two three' first rest\nSAY first\nSAY rest",
+    [
+      "'one",
+      "two three'"
+    ]
+  ],
+  [
+    "value_falsey",
+    "LET line = 0\nPARSE VALUE line result\nSAY result",
+    [
+      "line"
+    ]
+  ],
+  [
+    "repeated_target",
+    "LET line = 'one two'\nPARSE VAR line a a\nSAY a",
+    [
+      "two"
+    ]
+  ],
+  [
+    "unicode_delimiter",
+    "LET line = '\u03b1\u2192\u03b2\u2192\u03b3'\nPARSE VAR line a '\u2192' b '\u2192' c\nSAY a\nSAY b\nSAY c",
+    [
+      "\u03b1",
+      "\u03b2",
+      "\u03b3"
+    ]
+  ],
+  [
+    "object_fields",
+    "LET data.x = 3\nLET data.y = true\nSAY data.x data.y",
+    [
+      "3 true"
+    ]
+  ],
+  [
+    "nested_fields",
+    "LET data.child.name = 'Rexx'\nSAY data.child.name\nSAY JSON_STRINGIFY(data)",
+    [
+      "Rexx",
+      "{\"child\":{\"name\":\"Rexx\"}}"
+    ]
+  ],
+  [
+    "literal_tails",
+    "LET key = 'x'\nLET data.x = 7\nLET data.key = 8\nSAY data.key data.x",
+    [
+      "8 8"
+    ]
+  ],
+  [
+    "numeric_tails",
+    "LET data.0 = 2\nLET data.1 = 'one'\nLET data.2 = 'two'\nSAY data.0 data.1 data.2",
+    [
+      "2 one two"
+    ]
+  ],
+  [
+    "empty_tail",
+    "LET data. = 'empty'\nLET data.x = 'other'\nSAY data. data.x",
+    [
+      "empty other"
+    ]
+  ],
+  [
+    "unset_path",
+    "LET data.x = 1\nSAY data.absent\nSAY absent.deep.key",
+    [
+      "DATA.ABSENT",
+      "ABSENT.DEEP.KEY"
+    ]
+  ],
+  [
+    "replace_scalar",
+    "LET data = 4\nLET data.x = 5\nSAY data.x",
+    [
+      "5"
+    ]
+  ],
+  [
+    "replace_null_child",
+    "LET data = JSON_PARSE('{\"child\":null}')\nLET data.child.x = 5\nSAY data.child.x",
+    [
+      "5"
+    ]
+  ],
+  [
+    "array_reads",
+    "LET data = [1,2,3]\nSAY data.0 data.1 data.length\nSAY data.01",
+    [
+      "1 2 3",
+      "DATA.01"
+    ]
+  ],
+  [
+    "root_array_replaced",
+    "LET data = [1,2]\nLET data.x = 3\nSAY JSON_STRINGIFY(data)",
+    [
+      "{\"x\":3}"
+    ]
+  ],
+  [
+    "typed_path_return",
+    "CALL work\nSAY RESULT.child.x\nEXIT\nwork:\nLET data.child.x = true\nRETURN data",
+    [
+      "true"
+    ]
+  ],
+  [
+    "path_function_argument",
+    "LET data.text = 'hello'\nSAY UPPER(data.text)",
+    [
+      "HELLO"
+    ]
+  ],
+  [
+    "path_arithmetic",
+    "LET data.x = 3\nLET result = data.x + 4\nSAY result",
+    [
+      "7"
+    ]
+  ],
+  [
+    "parse_in_routine",
+    "CALL work 'one:two'\nSAY RESULT\nEXIT\nwork:\nARG line\nPARSE VAR line a ':' b\nRETURN a || b",
+    [
+      "onetwo"
+    ]
+  ]
+]

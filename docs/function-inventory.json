@@ -1,0 +1,5296 @@
+{
+  "schema": 1,
+  "referenceRevision": "e3bd4e975e96d674d85be5deb6b76a7c26f0deef",
+  "methodology": "Live core registration, loaded source export identity, literal imports and extras manifests/static candidates. No extra modules loaded or functions invoked. Dispositions are provisional.",
+  "counts": {
+    "registeredNames": 505,
+    "languageFunctions": 386,
+    "converterHelpers": 119,
+    "nativeFunctions": 71,
+    "nativeScalarFunctions": 60,
+    "nativeValueFunctions": 11,
+    "extraPackageManifests": 42
+  },
+  "core": [
+    {
+      "name": "ABBREV",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ABS",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "AND",
+      "source": "core/src/logic-functions.js",
+      "disposition": "native-language",
+      "aether": "typed values and lazy expression evaluation",
+      "status": "planned"
+    },
+    {
+      "name": "ARCH",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "ARG",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ARRAY_AVERAGE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_CONCAT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_FILTER",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_FIND",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_FLATTEN",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_GET",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ARRAY_INCLUDES",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_INDEXOF",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_JOIN",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_LENGTH",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ARRAY_MAP",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_MAX",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_MIN",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_POP",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_PUSH",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ARRAY_REDUCE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_REVERSE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_SET",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_SHIFT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_SLICE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_SORT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_SUM",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_UNIQUE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ARRAY_UNSHIFT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "ASCII",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "AVERAGE",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "BASE32",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "BASE64_DECODE",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "BASE64_ENCODE",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "BASENAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "CAL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CAT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CENTER",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "CHECK_TYPES",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "CHECKPOINT",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "CHGRP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CHMOD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CHOWN",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CKSUM",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "CMP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "COMM",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "COPIES",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "COPY",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "CORRELATION_MATRIX",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "CP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "CRC32",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "CSV_TO_JSON",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "CUT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "DATA_FILTER",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "DATA_GROUP_BY",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "DATA_SORT",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "DATATYPE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "DATE",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_ADD",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_AGE",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_CREATE",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_DIFF",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_FORMAT",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_IS_BUSINESS_DAY",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_IS_WEEKEND",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_NEXT_BUSINESS_DAY",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_PARSE",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_PARSE_DETAILS",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_QUARTER",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_SUB",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_SUBTRACT",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_VALID",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DATE_WEEK_NUMBER",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "DBINOM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "DCHISQ",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "DELWORD",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "DEXP",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "DIRNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "DISTINCT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "DNORM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "DNSDOMAINNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "DOS2UNIX",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "DPOIS",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "DU",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "DUNIF",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "ENDS_WITH",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "ENV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_COMMAND",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_DETAILS",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_FUNCTION",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_LINE",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_MESSAGE",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_STACK",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_TIMESTAMP",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "ERROR_VARIABLES",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "EXIT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "EXPAND",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "EXTRACT_KEYWORDS",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "FACTOR",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "FALSE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_APPEND",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_BACKUP",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_COPY",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_DELETE",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_EXISTS",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_LIST",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_MOVE",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_READ",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_SIZE",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILE_WRITE",
+      "source": "core/src/file-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "FILESPLIT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "FILTER",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "FILTER_BY_ATTR",
+      "source": "core/src/dom-pipeline-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "FILTER_BY_CLASS",
+      "source": "core/src/dom-pipeline-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "FIND",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "FMT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "FOLD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "FORECAST",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "FSYNC",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "FUNCTIONS",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "GET_ATTRS",
+      "source": "core/src/dom-pipeline-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "GET_TEXT",
+      "source": "core/src/dom-pipeline-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "GET_VALUES",
+      "source": "core/src/dom-pipeline-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "GETCONF",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GETENV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GETOPT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "GETPID",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GETPPID",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GREP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GROUP_BY",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "GROUPS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GUNZIP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "GZIP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "HASH_MD5",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HASH_SHA1",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HASH_SHA256",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HASH_SHA384",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HASH_SHA512",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HEAD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "HEXDUMP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "HMAC_SHA256",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "HOST",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "HOSTNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "HTTP_DELETE",
+      "source": "core/src/http-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "HTTP_GET",
+      "source": "core/src/http-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "HTTP_POST",
+      "source": "core/src/http-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "HTTP_PUT",
+      "source": "core/src/http-functions.js",
+      "disposition": "host-effects",
+      "aether": "std.fs/std.path/std.http behind host grants",
+      "status": "planned"
+    },
+    {
+      "name": "IF",
+      "source": "core/src/logic-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "IFCONFIG",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "IFS",
+      "source": "core/src/logic-functions.js",
+      "disposition": "native-language",
+      "aether": "typed values and lazy expression evaluation",
+      "status": "planned"
+    },
+    {
+      "name": "INCLUDES",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "INDEX",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "INDEXOF",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "INFO",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "INSTALL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "INT",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "INTERPRET",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "INTERPRET_JS",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "omit-js-runtime",
+      "aether": "",
+      "status": "proposed-omission"
+    },
+    {
+      "name": "IS_ALPHA",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_ALPHANUMERIC",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_CREDIT_CARD",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_DATE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_EMAIL",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_EMPTY",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_INTEGER",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_IP",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_LENGTH",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_LOWERCASE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_MAC_ADDRESS",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_NEGATIVE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_NOT_EMPTY",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_NUMBER",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_NUMERIC",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_PATTERN",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_PHONE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_POSITIVE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_POSTAL_CODE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_RANGE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_TIME",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_UPPERCASE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_URL",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "IS_ZIP_CODE",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "JOIN",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "JS_SHOW",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "omit-js-runtime",
+      "aether": "",
+      "status": "proposed-omission"
+    },
+    {
+      "name": "JSON_DELETE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_FLATTEN",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_GET",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "JSON_HAS",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_KEYS",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "JSON_MERGE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_PARSE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "JSON_SET",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_STRINGIFY",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "JSON_TO_CSV",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_VALID",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSON_VALUES",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_ADD_LINE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_COUNT",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_DISTINCT",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_FILTER",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_GET_LINE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_MAP",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_MERGE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_PARSE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_SLICE",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_SORT",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_STRINGIFY",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JSONL_VALID",
+      "source": "core/src/json-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "JWT_DECODE",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "KILL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "KILLALL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "LEFT",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "LENGTH",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "LINK",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "LN",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "LOGNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "LOWER",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "LS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "MAP",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "MATCHES_PATTERN",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "MATH_ABS",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_ADD",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_ANGLE_2D",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_AVERAGE",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_CEIL",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_CLAMP",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_COS",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_DISTANCE_2D",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_FACTORIAL",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_FLOOR",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_GCD",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_LCM",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_LOG",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_MAX",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_MIN",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_MULTIPLY",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_PERCENTAGE",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_POWER",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_RANDOM",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "MATH_RANDOM_INT",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "MATH_ROUND",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_SIN",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_SQRT",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_SUM",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MATH_TAN",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MAX",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MCOOKIE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "MEDIAN",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "MIN",
+      "source": "core/src/math-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "MKDIR",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "MKPASSWD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "MKTEMP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "MODE",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "MODERN_SPLIT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "MV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "NANOID",
+      "source": "core/src/random-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "NICE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "NL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "NOT",
+      "source": "core/src/logic-functions.js",
+      "disposition": "native-language",
+      "aether": "typed values and lazy expression evaluation",
+      "status": "planned"
+    },
+    {
+      "name": "NOW",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "NOW_TIMESTAMP",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "NPROC",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "OD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "OR",
+      "source": "core/src/logic-functions.js",
+      "disposition": "native-language",
+      "aether": "typed values and lazy expression evaluation",
+      "status": "planned"
+    },
+    {
+      "name": "PAD_END",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "PAD_START",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "PASSWORD_HASH",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "PASSWORD_VERIFY",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "PASTE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "PATH_EXTNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "PATH_JOIN",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "PATH_RESOLVE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "PCHISQ",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "PERCENTILE",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "PEXP",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "PGREP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "PNORM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "POS",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "PS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "PUNIF",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "QEXP",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "QNORM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "QUNIF",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "RANDOM_BYTES",
+      "source": "core/src/random-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "RANDOM_HEX",
+      "source": "core/src/random-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "RANDOM_INT",
+      "source": "core/src/random-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "RANDOM_STRING",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "RBINOM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "RCHISQ",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "READLINK",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "REDUCE",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "REGEX_MATCH",
+      "source": "core/src/regex-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "REGEX_REPLACE",
+      "source": "core/src/regex-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "REGEX_SPLIT",
+      "source": "core/src/regex-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "REGEX_TEST",
+      "source": "core/src/regex-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "REGRESSION",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "REPEAT",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "REQUIRE",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "REV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "REVERSE",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "REXP",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "RIGHT",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "RM",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "RMDIR",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "RNORM",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "RPOIS",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "RUNIF",
+      "source": "core/src/probability-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "SELECT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "SENTIMENT_ANALYSIS",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "SEQ",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "SET_INTERPOLATION",
+      "source": "core/src/interpolation-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "SETENV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "SHOW",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "SHUF",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "SLEEP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "SLUG",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SORT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "SPACE",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SPLIT",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_CLEAR",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_PEEK",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_PULL",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_PUSH",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_QUEUE",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STACK_SIZE",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "STARTS_WITH",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "STAT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "STDEV",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "STRINGS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "STRIP",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SUBROUTINES",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "SUBSTR",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SUBSTRING",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SUBWORD",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "SUM_BSD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "SUMMARY",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "SYMBOL",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-language-review",
+      "aether": "execution frames, modules, stack and diagnostics",
+      "status": "planned"
+    },
+    {
+      "name": "SYNC",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TAC",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "TAIL",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "TEE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TIME",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "TIME_FORMAT",
+      "source": "core/src/date-time-functions.js",
+      "disposition": "native-time",
+      "aether": "std.time; host clock for NOW/default dates",
+      "status": "planned"
+    },
+    {
+      "name": "TIMEOUT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TOP",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TOUCH",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TRANSLATE",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "TRIM",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "TRIM_END",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "TRIM_START",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "TRUE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "TRUNCATE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TTY",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "TYPEOF",
+      "source": "core/src/interpreter-builtin-functions.js",
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "UNAME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "UNIQ",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "UNIX2DOS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "UNLINK",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "UNSETENV",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "UPPER",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "UPTIME",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "URL_DECODE",
+      "source": "core/src/url-functions.js",
+      "disposition": "native-url",
+      "aether": "std.url/std.encoding",
+      "status": "planned"
+    },
+    {
+      "name": "URL_ENCODE",
+      "source": "core/src/url-functions.js",
+      "disposition": "native-url",
+      "aether": "std.url/std.encoding",
+      "status": "planned"
+    },
+    {
+      "name": "URL_PARSE",
+      "source": "core/src/url-functions.js",
+      "disposition": "native-url",
+      "aether": "std.url/std.encoding",
+      "status": "planned"
+    },
+    {
+      "name": "URL_SAFE_BASE64",
+      "source": "core/src/cryptography-functions.js",
+      "disposition": "native-crypto-review",
+      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
+      "status": "planned"
+    },
+    {
+      "name": "USERINFO",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "UUDECODE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "UUENCODE",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "UUID",
+      "source": "core/src/random-functions.js",
+      "disposition": "host-ui",
+      "aether": "host API; optional rendering module",
+      "status": "planned"
+    },
+    {
+      "name": "VALIDATE_ALL",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "VALIDATE_ANY",
+      "source": "core/src/validation-functions.js",
+      "disposition": "native-patterns",
+      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
+      "status": "planned"
+    },
+    {
+      "name": "VALIDATE_SCHEMA",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "VAR",
+      "source": "core/src/statistics-functions.js",
+      "disposition": "optional-numerics",
+      "aether": "std.math/std.floatarr; algorithms and RNG profile required",
+      "status": "planned"
+    },
+    {
+      "name": "VERIFY",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "WC",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "WHICH",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "WHOAMI",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "WORD",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "WORD_FREQUENCY",
+      "source": "core/src/array-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "WORDPOS",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "WORDS",
+      "source": "core/src/string-functions.js",
+      "disposition": "native-scalar",
+      "aether": "std.string/std.map/std.math",
+      "status": "implemented-profile"
+    },
+    {
+      "name": "XARGS",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "XML_TO_JSON",
+      "source": "core/src/data-functions.js",
+      "disposition": "native-typed-values",
+      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
+      "status": "planned"
+    },
+    {
+      "name": "XXD",
+      "source": "core/src/shell-functions.js",
+      "disposition": "native-utility-review",
+      "aether": "std.string/std.path/std.encoding/std.hash",
+      "status": "planned"
+    },
+    {
+      "name": "YES",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    },
+    {
+      "name": "ZCAT",
+      "source": "core/src/shell-functions.js",
+      "disposition": "host-effects",
+      "aether": "host services; std.fs/std.os where authorized",
+      "status": "planned"
+    }
+  ],
+  "converterHelpers": [
+    "ABBREV_positional_args_to_named_param_map",
+    "ABS_positional_args_to_named_param_map",
+    "ARRAY_AVERAGE_positional_args_to_named_param_map",
+    "ARRAY_CONCAT_positional_args_to_named_param_map",
+    "ARRAY_FILTER_positional_args_to_named_param_map",
+    "ARRAY_FIND_positional_args_to_named_param_map",
+    "ARRAY_FLATTEN_positional_args_to_named_param_map",
+    "ARRAY_GET_positional_args_to_named_param_map",
+    "ARRAY_INCLUDES_positional_args_to_named_param_map",
+    "ARRAY_INDEXOF_positional_args_to_named_param_map",
+    "ARRAY_JOIN_positional_args_to_named_param_map",
+    "ARRAY_LENGTH_positional_args_to_named_param_map",
+    "ARRAY_MAP_positional_args_to_named_param_map",
+    "ARRAY_MAX_positional_args_to_named_param_map",
+    "ARRAY_MIN_positional_args_to_named_param_map",
+    "ARRAY_POP_positional_args_to_named_param_map",
+    "ARRAY_PUSH_positional_args_to_named_param_map",
+    "ARRAY_REDUCE_positional_args_to_named_param_map",
+    "ARRAY_REVERSE_positional_args_to_named_param_map",
+    "ARRAY_SET_positional_args_to_named_param_map",
+    "ARRAY_SHIFT_positional_args_to_named_param_map",
+    "ARRAY_SLICE_positional_args_to_named_param_map",
+    "ARRAY_SORT_positional_args_to_named_param_map",
+    "ARRAY_SUM_positional_args_to_named_param_map",
+    "ARRAY_UNIQUE_positional_args_to_named_param_map",
+    "ARRAY_UNSHIFT_positional_args_to_named_param_map",
+    "CENTER_positional_args_to_named_param_map",
+    "COPIES_positional_args_to_named_param_map",
+    "COPY_positional_args_to_named_param_map",
+    "CORRELATION_MATRIX_positional_args_to_named_param_map",
+    "CSV_TO_JSON_positional_args_to_named_param_map",
+    "CUT_positional_args_to_named_param_map",
+    "DATA_FILTER_positional_args_to_named_param_map",
+    "DATA_GROUP_BY_positional_args_to_named_param_map",
+    "DATA_SORT_positional_args_to_named_param_map",
+    "DELWORD_positional_args_to_named_param_map",
+    "DISTINCT_positional_args_to_named_param_map",
+    "ELEMENT_positional_args_to_named_param_map",
+    "ENDS_WITH_positional_args_to_named_param_map",
+    "EXTRACT_KEYWORDS_positional_args_to_named_param_map",
+    "FILTER_BY_ATTR_positional_args_to_named_param_map",
+    "FILTER_BY_CLASS_positional_args_to_named_param_map",
+    "FILTER_positional_args_to_named_param_map",
+    "FORECAST_positional_args_to_named_param_map",
+    "GET_ATTRS_positional_args_to_named_param_map",
+    "GET_TEXT_positional_args_to_named_param_map",
+    "GET_VALUES_positional_args_to_named_param_map",
+    "GROUP_BY_positional_args_to_named_param_map",
+    "INCLUDES_positional_args_to_named_param_map",
+    "INDEXOF_positional_args_to_named_param_map",
+    "INDEX_positional_args_to_named_param_map",
+    "INT_positional_args_to_named_param_map",
+    "JOIN_positional_args_to_named_param_map",
+    "JSON_TO_CSV_positional_args_to_named_param_map",
+    "LEFT_positional_args_to_named_param_map",
+    "LENGTH_positional_args_to_named_param_map",
+    "LOWER_positional_args_to_named_param_map",
+    "MAP_positional_args_to_named_param_map",
+    "MATH_ABS_positional_args_to_named_param_map",
+    "MATH_ADD_positional_args_to_named_param_map",
+    "MATH_ANGLE_2D_positional_args_to_named_param_map",
+    "MATH_AVERAGE_positional_args_to_named_param_map",
+    "MATH_CEIL_positional_args_to_named_param_map",
+    "MATH_CLAMP_positional_args_to_named_param_map",
+    "MATH_COS_positional_args_to_named_param_map",
+    "MATH_DISTANCE_2D_positional_args_to_named_param_map",
+    "MATH_FACTORIAL_positional_args_to_named_param_map",
+    "MATH_FLOOR_positional_args_to_named_param_map",
+    "MATH_GCD_positional_args_to_named_param_map",
+    "MATH_LCM_positional_args_to_named_param_map",
+    "MATH_LOG_positional_args_to_named_param_map",
+    "MATH_MAX_positional_args_to_named_param_map",
+    "MATH_MIN_positional_args_to_named_param_map",
+    "MATH_MULTIPLY_positional_args_to_named_param_map",
+    "MATH_PERCENTAGE_positional_args_to_named_param_map",
+    "MATH_POWER_positional_args_to_named_param_map",
+    "MATH_RANDOM_INT_positional_args_to_named_param_map",
+    "MATH_RANDOM_positional_args_to_named_param_map",
+    "MATH_ROUND_positional_args_to_named_param_map",
+    "MATH_SIN_positional_args_to_named_param_map",
+    "MATH_SQRT_positional_args_to_named_param_map",
+    "MATH_SUM_positional_args_to_named_param_map",
+    "MATH_TAN_positional_args_to_named_param_map",
+    "MAX_positional_args_to_named_param_map",
+    "MIN_positional_args_to_named_param_map",
+    "PAD_END_positional_args_to_named_param_map",
+    "PAD_START_positional_args_to_named_param_map",
+    "PASTE_positional_args_to_named_param_map",
+    "PATH_JOIN_positional_args_to_named_param_map",
+    "POS_positional_args_to_named_param_map",
+    "REDUCE_positional_args_to_named_param_map",
+    "REGRESSION_positional_args_to_named_param_map",
+    "REPEAT_positional_args_to_named_param_map",
+    "REPLACE_positional_args_to_named_param_map",
+    "REVERSE_positional_args_to_named_param_map",
+    "RIGHT_positional_args_to_named_param_map",
+    "SELECT_positional_args_to_named_param_map",
+    "SENTIMENT_ANALYSIS_positional_args_to_named_param_map",
+    "SHUF_positional_args_to_named_param_map",
+    "SLUG_positional_args_to_named_param_map",
+    "SPACE_positional_args_to_named_param_map",
+    "SPLIT_positional_args_to_named_param_map",
+    "STARTS_WITH_positional_args_to_named_param_map",
+    "STRIP_positional_args_to_named_param_map",
+    "SUBSTRING_positional_args_to_named_param_map",
+    "SUBSTR_positional_args_to_named_param_map",
+    "SUBWORD_positional_args_to_named_param_map",
+    "SUMMARY_positional_args_to_named_param_map",
+    "TRANSLATE_positional_args_to_named_param_map",
+    "TRIM_END_positional_args_to_named_param_map",
+    "TRIM_START_positional_args_to_named_param_map",
+    "TRIM_positional_args_to_named_param_map",
+    "UPPER_positional_args_to_named_param_map",
+    "VERIFY_positional_args_to_named_param_map",
+    "WORDPOS_positional_args_to_named_param_map",
+    "WORDS_positional_args_to_named_param_map",
+    "WORD_FREQUENCY_positional_args_to_named_param_map",
+    "WORD_positional_args_to_named_param_map",
+    "XML_TO_JSON_positional_args_to_named_param_map"
+  ],
+  "coreSources": [
+    {
+      "source": "core/src/array-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/cryptography-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/data-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/date-time-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/dom-pipeline-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/file-functions.js",
+      "externalImports": [
+        {
+          "name": "fs",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "path",
+          "kind": "node-builtin"
+        }
+      ]
+    },
+    {
+      "source": "core/src/http-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/interpolation-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/interpreter-builtin-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/json-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/logic-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/math-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/probability-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/random-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/regex-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/shell-functions.js",
+      "externalImports": [
+        {
+          "name": "child_process",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "crypto",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "fs",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "os",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "path",
+          "kind": "node-builtin"
+        },
+        {
+          "name": "zlib",
+          "kind": "node-builtin"
+        }
+      ]
+    },
+    {
+      "source": "core/src/statistics-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/string-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/url-functions.js",
+      "externalImports": []
+    },
+    {
+      "source": "core/src/validation-functions.js",
+      "externalImports": []
+    }
+  ],
+  "packages": [
+    {
+      "source": "extras/addresses/anthropic-ai/claude/package.json",
+      "package": "rexxjs-claude-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [
+        {
+          "name": "@anthropic-ai/sdk",
+          "version": "^0.24.3",
+          "kind": "feature-dependency"
+        },
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/addresses/docker-address/package.json",
+      "package": "@rexxjs/docker-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/duckdb-address/package.json",
+      "package": "rexxjs-duckdb-address",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/addresses/duckdb-wasm-address/package.json",
+      "package": "rexxjs-duckdb-wasm-address",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "dependencies": [
+        {
+          "name": "@duckdb/duckdb-wasm",
+          "version": "^1.28.0",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/addresses/duckdb-wasm-address/src/package.json",
+      "package": "src",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "dependencies": [
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/echo/package.json",
+      "package": "rexxjs-echo-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/package.json",
+      "package": "@rexxjs/gcp-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/gemini-address/package.json",
+      "package": "rexxjs-gemini-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [
+        {
+          "name": "node-fetch",
+          "version": "^2.6.7",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "webpack",
+        "webpack-cli"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/package.json",
+      "package": "@rexxjs/address-provisioning-orchestration",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [
+        {
+          "name": "googleapis",
+          "version": "^100.0.0",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "terser-webpack-plugin",
+        "webpack",
+        "webpack-cli"
+      ]
+    },
+    {
+      "source": "extras/addresses/nspawn-address/package.json",
+      "package": "@rexxjs/nspawn-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/open-ai/chat-completions/package.json",
+      "package": "@rexx/address-openai-chat-completions",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/podman-address/package.json",
+      "package": "@rexxjs/podman-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/pyodide/package.json",
+      "package": "rexxjs-pyodide-address",
+      "disposition": "omit-browser-runtime",
+      "rationale": "proposed omission of browser Python/WASM delivery; native numerical API may remain",
+      "dependencies": [
+        {
+          "name": "pyodide",
+          "version": "0.28.3",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "@babel/core",
+        "@babel/preset-env",
+        "babel-loader",
+        "buffer",
+        "jest",
+        "path-browserify",
+        "stream-browserify",
+        "terser-webpack-plugin",
+        "util",
+        "webpack",
+        "webpack-cli"
+      ]
+    },
+    {
+      "source": "extras/addresses/pyodide/src/package.json",
+      "package": "src",
+      "disposition": "omit-browser-runtime",
+      "rationale": "proposed omission of browser Python/WASM delivery; native numerical API may remain",
+      "dependencies": [
+        {
+          "name": "pyodide",
+          "version": "^0.26.1",
+          "kind": "feature-dependency"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/qemu-address/package.json",
+      "package": "@rexxjs/qemu-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/addresses/sqlite3/package.json",
+      "package": "rexxjs-sqlite3-address",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "dependencies": [
+        {
+          "name": "sqlite3",
+          "version": "^5.1.6",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "buffer",
+        "crypto-browserify",
+        "jest",
+        "os-browserify",
+        "path-browserify",
+        "process",
+        "stream-browserify",
+        "util",
+        "webpack",
+        "webpack-cli"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/package.json",
+      "package": "rexxjs-system-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/addresses/virtualbox-address/package.json",
+      "package": "@rexxjs/virtualbox-address",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "dependencies": [],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/functions/diff/package.json",
+      "package": "rexxjs-diff-functions",
+      "disposition": "optional-native-port",
+      "rationale": "port required algorithms with fixtures; no complete stdlib substitute claimed",
+      "dependencies": [
+        {
+          "name": "diff",
+          "version": "^8.0.2",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/excel/package.json",
+      "package": "@rexxjs/excel-functions",
+      "disposition": "optional-formula-library",
+      "rationale": "spreadsheet formulas are useful; browser polyfills are replaceable infrastructure",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/graphviz/package.json",
+      "package": "rexxjs-graphviz-functions",
+      "disposition": "optional-host-rendering",
+      "rationale": "native Graphviz dependency and output adapter; exclude WASM loader",
+      "dependencies": [
+        {
+          "name": "graphviz-wasm",
+          "version": "^3.0.2",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/graphviz/src/package.json",
+      "package": "src",
+      "disposition": "optional-host-rendering",
+      "rationale": "native Graphviz dependency and output adapter; exclude WASM loader",
+      "dependencies": [
+        {
+          "name": "graphviz-wasm",
+          "version": "^3.0.2",
+          "kind": "feature-dependency"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/functions/jq-functions/package.json",
+      "package": "rexxjs-jq-functions",
+      "disposition": "optional-native",
+      "rationale": "contrib.jq already implements jq; test dialect/API differences",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/jq-wasm-functions/package.json",
+      "package": "rexxjs-jq-wasm-functions",
+      "disposition": "optional-native",
+      "rationale": "contrib.jq already implements jq; test dialect/API differences",
+      "dependencies": [
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "jq-wasm",
+          "version": "1.1.0-jq-1.8.1",
+          "kind": "feature-dependency"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "@babel/core",
+        "@babel/preset-env",
+        "babel-loader",
+        "buffer",
+        "jest",
+        "path-browserify",
+        "stream-browserify",
+        "terser-webpack-plugin",
+        "util",
+        "webpack",
+        "webpack-cli"
+      ]
+    },
+    {
+      "source": "extras/functions/matlab-inspired/package.json",
+      "package": "rexxjs-matlab-functions",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/minimatch/package.json",
+      "package": "rexxjs-minimatch-functions",
+      "disposition": "optional-native",
+      "rationale": "std.string.glob_match is a starting point, not minimatch parity",
+      "dependencies": [
+        {
+          "name": "minimatch",
+          "version": "^9.0.3",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/numpy-inspired/package.json",
+      "package": "rexxjs-numpy-inspired",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "canvas",
+          "version": "^3.2.0",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/numpy-via-pyoide/package.json",
+      "package": "rexxjs-numpy-inspired",
+      "disposition": "omit-browser-runtime",
+      "rationale": "proposed omission of browser Python/WASM delivery; native numerical API may remain",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/advanced-analytics/package.json",
+      "package": "rexxjs-r-advanced-analytics",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/data-manipulation/package.json",
+      "package": "rexxjs-r-data-manipulation",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/data-types/package.json",
+      "package": "rexxjs-r-data-types",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/package.json",
+      "package": "rexxjs-r-graphics",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "canvas",
+          "version": "^3.2.0",
+          "kind": "feature-dependency"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/math-stats/package.json",
+      "package": "rexxjs-r-math-stats",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/package.json",
+      "package": "rexxjs-r-inspired",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/signal-processing/package.json",
+      "package": "rexxjs-r-signal-processing",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/scipy-inspired/interpolation/package.json",
+      "package": "rexxjs-scipy-interpolation",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^5.1.4",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/scipy-inspired/stats/package.json",
+      "package": "scipy-inspired-stats-functions",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/scipy-inspired/stats/src/package.json",
+      "package": "src",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/functions/sed/package.json",
+      "package": "rexxjs-sed-functions",
+      "disposition": "optional-native-port",
+      "rationale": "port required algorithms with fixtures; no complete stdlib substitute claimed",
+      "dependencies": [
+        {
+          "name": "sed-lite",
+          "version": "^1.1.0",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/sympy-inspired/package.json",
+      "package": "sympy-inspired-functions",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [],
+      "developmentDependencies": [
+        "jest"
+      ]
+    },
+    {
+      "source": "extras/functions/sympy-inspired/src/package.json",
+      "package": "src",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "dependencies": [
+        {
+          "name": "buffer",
+          "version": "^6.0.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "crypto-browserify",
+          "version": "^3.12.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "os-browserify",
+          "version": "^0.3.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "path-browserify",
+          "version": "^1.0.1",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "process",
+          "version": "^0.11.10",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "stream-browserify",
+          "version": "^3.0.0",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "util",
+          "version": "^0.12.5",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack",
+          "version": "^5.101.3",
+          "kind": "browser-build-plumbing"
+        },
+        {
+          "name": "webpack-cli",
+          "version": "^6.0.1",
+          "kind": "browser-build-plumbing"
+        }
+      ],
+      "developmentDependencies": []
+    },
+    {
+      "source": "extras/package.json",
+      "package": "rexxjs-extras",
+      "disposition": "review",
+      "rationale": "inspect implementation and demand before selecting a native replacement",
+      "dependencies": [
+        {
+          "name": "jq-wasm",
+          "version": "^1.1.0-jq-1.8.1",
+          "kind": "feature-dependency"
+        }
+      ],
+      "developmentDependencies": []
+    }
+  ],
+  "extraSources": [
+    {
+      "source": "extras/addresses/_shared/app-catalog/app-registry.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "express",
+        "os"
+      ]
+    },
+    {
+      "source": "extras/addresses/_shared/provisioning-shared-utils.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/anthropic-ai/claude/src/claude-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "node-fetch"
+      ]
+    },
+    {
+      "source": "extras/addresses/docker-address/docker-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "http",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/duckdb-address/src/duckdb-address.js",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "os",
+        "path",
+        "util"
+      ]
+    },
+    {
+      "source": "extras/addresses/duckdb-wasm-address/src/duckdb-wasm-address.js",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@duckdb/duckdb-wasm"
+      ]
+    },
+    {
+      "source": "extras/addresses/firecracker-address/firecracker-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "http",
+        "path",
+        "util"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "google-auth-library",
+        "googleapis",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/apps-script-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "googleapis",
+        "http",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/bigquery-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@google-cloud/bigquery"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/billing-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@google-cloud/billing",
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/cloud-kms-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "os"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/cloud-sql-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/compute-engine-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/dns-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/docs-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "googleapis"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/firestore-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@google-cloud/firestore"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/iam-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/load-balancing-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "fs",
+        "os",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/logging-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/monitoring-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/pubsub-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@google-cloud/pubsub"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/secret-manager-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/sheets-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "googleapis"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/slides-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "googleapis"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/storage-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@google-cloud/storage",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/gcp-address/gcp-handlers/vpc-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/gemini-address/src/gemini-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "node-fetch"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/address-lambda.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/address-openfaas.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/address-proxmox.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/address-ssh.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/demo-lambda-hello.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/demo-openfaas-hello.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "fs"
+      ]
+    },
+    {
+      "source": "extras/addresses/google-cloud-platform/examples/gcp/cloudrun-hello/app.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "http"
+      ]
+    },
+    {
+      "source": "extras/addresses/lxd-address/lxd-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "util"
+      ]
+    },
+    {
+      "source": "extras/addresses/nspawn-address/nspawn-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path",
+        "util"
+      ]
+    },
+    {
+      "source": "extras/addresses/open-ai/chat-completions/src/openai-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "node-fetch"
+      ]
+    },
+    {
+      "source": "extras/addresses/podman-address/podman-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/proxmox-address/proxmox-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs"
+      ]
+    },
+    {
+      "source": "extras/addresses/pyodide/src/pyodide-address.js",
+      "disposition": "omit-browser-runtime",
+      "rationale": "proposed omission of browser Python/WASM delivery; native numerical API may remain",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "pyodide"
+      ]
+    },
+    {
+      "source": "extras/addresses/qemu-address/qemu-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/shared-utils/index.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/sqlite3/src/sqlite-address.js",
+      "disposition": "optional-database",
+      "rationale": "contrib.sqlite available; DuckDB needs its own native dependency",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "sqlite3"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/src/deployment-orchestrator.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "https",
+        "path",
+        "ws"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/src/nspawn-post-config.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/src/remote-shell-handler.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "os",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/src/system-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/virtualbox-address/virtualbox-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process",
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/functions/diff/src/diff-functions.js",
+      "disposition": "optional-native-port",
+      "rationale": "port required algorithms with fixtures; no complete stdlib substitute claimed",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "diff"
+      ]
+    },
+    {
+      "source": "extras/functions/excel/src/excel-functions.js",
+      "disposition": "optional-formula-library",
+      "rationale": "spreadsheet formulas are useful; browser polyfills are replaceable infrastructure",
+      "staticFunctionCandidates": [
+        "AND",
+        "CONCATENATE",
+        "DAY",
+        "EXCEL_FUNCTIONS_MAIN",
+        "EXCEL_LOWER",
+        "EXCEL_NOW",
+        "EXCEL_TRIM",
+        "EXCEL_UPPER",
+        "FV",
+        "HLOOKUP",
+        "IF",
+        "INDEX",
+        "IRR",
+        "LEFT",
+        "LEN",
+        "LOWER",
+        "MATCH",
+        "MID",
+        "MOD",
+        "MONTH",
+        "NOT",
+        "NOW",
+        "NPV",
+        "OR",
+        "PMT",
+        "POWER",
+        "PROPER",
+        "PV",
+        "RIGHT",
+        "ROUND",
+        "SQRT",
+        "SUBSTITUTE",
+        "TODAY",
+        "TRIM",
+        "UPPER",
+        "VLOOKUP",
+        "WEEKDAY",
+        "YEAR"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/graphviz/src/graphviz-functions.js",
+      "disposition": "optional-host-rendering",
+      "rationale": "native Graphviz dependency and output adapter; exclude WASM loader",
+      "staticFunctionCandidates": [
+        "DOT",
+        "FDP",
+        "GRAPHVIZ_FUNCTIONS_MAIN",
+        "NEATO"
+      ],
+      "externalImports": [
+        "graphviz-wasm"
+      ]
+    },
+    {
+      "source": "extras/functions/jq-functions/src/jq-functions.js",
+      "disposition": "optional-native",
+      "rationale": "contrib.jq already implements jq; test dialect/API differences",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/functions/jq-wasm-functions/src/jq-wasm-functions.js",
+      "disposition": "optional-native",
+      "rationale": "contrib.jq already implements jq; test dialect/API differences",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "jq-wasm"
+      ]
+    },
+    {
+      "source": "extras/functions/matlab-inspired/src/matlab-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "DIAG",
+        "EYE",
+        "LENGTH",
+        "LINSPACE",
+        "LOGSPACE",
+        "MATLAB_FUNCTIONS_MAIN",
+        "NUMEL",
+        "ONES",
+        "PLOT",
+        "RESHAPE",
+        "SIZE",
+        "TRANSPOSE",
+        "ZEROS"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/minimatch/minimatch-functions.js",
+      "disposition": "optional-native",
+      "rationale": "std.string.glob_match is a starting point, not minimatch parity",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "minimatch"
+      ]
+    },
+    {
+      "source": "extras/functions/numpy-inspired/numpy.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "NUMPY_MAIN"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/advanced-analytics/r-matrix-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ARRAY",
+        "AS_MATRIX",
+        "CBIND",
+        "COLMEANS",
+        "COLSUMS",
+        "CROSSPROD",
+        "DET",
+        "DETERMINANT",
+        "DIAG",
+        "DIM",
+        "EIGEN",
+        "EYE",
+        "FLATTEN",
+        "IS_MATRIX",
+        "KRONECKER",
+        "MATMULT",
+        "MATRIX",
+        "NCOL",
+        "NROW",
+        "ONES",
+        "OUTER",
+        "RBIND",
+        "RESHAPE",
+        "ROWMEANS",
+        "ROWSUMS",
+        "T",
+        "TCROSSPROD",
+        "TRACE",
+        "TRANSPOSE",
+        "ZEROS"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/advanced-analytics/r-ml-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "CONFUSION_MATRIX",
+        "CUTREE",
+        "CV",
+        "HCLUST",
+        "KMEANS",
+        "KNN",
+        "NAIVE_BAYES",
+        "PCA",
+        "SELECT_FEATURES"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/advanced-analytics/src/r-regression-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ANOVA",
+        "COR",
+        "COTEST",
+        "GLM",
+        "LM",
+        "PREDICT_LM",
+        "SUMMARY_LM"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-manipulation/r-apply-string-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "AGGREGATE",
+        "AS_CHARACTER",
+        "AS_NUMERIC",
+        "CHACOUNT",
+        "ENDSWITH",
+        "GREP",
+        "GREPL",
+        "GSUB",
+        "LAPPLY",
+        "MAPPLY",
+        "NCHAR",
+        "PASTE",
+        "PASTE0",
+        "SAPPLY",
+        "SPRINTF",
+        "STARTSWITH",
+        "STPAD",
+        "STRSPLIT",
+        "SUB",
+        "SUBSTR",
+        "SUBSTRING",
+        "TOLOWER",
+        "TOUPPER",
+        "TRIMWS",
+        "WORD_COUNT"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-manipulation/r-data-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ALL",
+        "ANY",
+        "CUT",
+        "FINDINTERVAL",
+        "HEAD",
+        "IFELSE",
+        "IS_FINITE",
+        "IS_INFINITE",
+        "IS_NA",
+        "IS_NULL",
+        "MATCH",
+        "ORDER",
+        "PMATCH",
+        "PMAX",
+        "PMIN",
+        "RANK",
+        "REP",
+        "REV",
+        "SEQ",
+        "SEQ_ALONG",
+        "SEQ_LEN",
+        "SORT",
+        "TAIL",
+        "WHICH",
+        "WHICH_MAX",
+        "WHICH_MIN"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-manipulation/r-dataframe-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "AGGREGATE",
+        "CAST",
+        "COLNAMES",
+        "DATAFRAME_MAIN",
+        "DATA_FRAME",
+        "HEAD",
+        "IS_DATA_FRAME",
+        "IS_LIST",
+        "LAPPLY",
+        "LIST",
+        "MELT",
+        "MERGE",
+        "NCOL",
+        "NROW",
+        "ORDER",
+        "ROWNAMES",
+        "SAPPLY",
+        "SORT",
+        "STR",
+        "SUBSET",
+        "TAIL",
+        "UNLIST"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-manipulation/src/r-set-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ANY_DUPLICATED",
+        "CARDINALITY",
+        "CARTESIAN_PRODUCT",
+        "DUPLICATED",
+        "EXPAND_GRID",
+        "IN",
+        "INTERSECT",
+        "INTERSECT_ALL",
+        "IS_ELEMENT",
+        "IS_EMPTY_SET",
+        "IS_SUBSET",
+        "IS_SUPERSET",
+        "LENGTH_UNIQUE",
+        "POWESET",
+        "SETCOMPLEMENT",
+        "SETDIFF",
+        "SETEQUAL",
+        "SYMDIFF",
+        "TABLE",
+        "TABULATE",
+        "UNION",
+        "UNION_ALL",
+        "UNIQUE"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-types/r-datetime-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ADD_BUSINESS_DAYS",
+        "AS_DATE",
+        "AS_POSIXCT",
+        "AS_POSIXLT",
+        "DATE_DIFF",
+        "DAY",
+        "DAYS_IN_MONTH",
+        "DIFFTIME",
+        "FORCE_TZ",
+        "FORMAT_DATE",
+        "IS_BUSINESS_DAY",
+        "IS_DATE",
+        "IS_LEAP_YEAR",
+        "IS_WEEKEND",
+        "JULIAN",
+        "MONTH",
+        "MONTHS",
+        "NOW",
+        "QUARTERS",
+        "ROUND_DATE",
+        "SEQ_DATE",
+        "STRFTIME",
+        "STRPTIME",
+        "SYS_DATE",
+        "SYS_TIME",
+        "TRUNC_DATE",
+        "WEEKDAY",
+        "WEEKDAYS",
+        "WITH_TZ",
+        "YEAR"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/data-types/src/r-factor-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "AGGREGATE",
+        "AS_CHARACTEFACTOR",
+        "AS_FACTOR",
+        "AS_NUMERIC_FACTOR",
+        "CHISQ_TEST",
+        "CUT",
+        "DROPLEVELS",
+        "EXPAND_GRID",
+        "FACTOR",
+        "INTERACTION",
+        "IS_FACTOR",
+        "IS_ORDERED",
+        "LEVELS",
+        "MATCH",
+        "NLEVELS",
+        "ORDERED",
+        "PMATCH",
+        "RELEVEL",
+        "SPLIT",
+        "TABLE",
+        "TAPPLY",
+        "UNSPLIT",
+        "XTABS"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/demo-histogram-gallery.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/src/graphics-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ABLINE",
+        "BARPLOT",
+        "BOXPLOT",
+        "COLORS",
+        "CONTOUR",
+        "DENSITY_PLOT",
+        "HEATMAP",
+        "HIST",
+        "HISTOGRAM",
+        "HSV",
+        "LINES",
+        "PAR",
+        "PIE",
+        "PLOT",
+        "POINTS",
+        "QQLINE",
+        "QQNORM",
+        "QQPLOT",
+        "RENDER",
+        "RGB",
+        "SCATTEPLOT",
+        "SCATTER"
+      ],
+      "externalImports": [
+        "fs",
+        "path"
+      ]
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/test-libs/example-third-party-lib.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "CALCULATE_FIBONACCI",
+        "CUSTOM_MATH_OPERATION",
+        "HELLO_WORLD",
+        "MY_REXX_LIB_MAIN"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/test-libs/go-style-module-example.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ADVANCED_MATH_UTILS_MAIN",
+        "CALCULATE_PRIME_FACTORS",
+        "MATRIX_DETERMINANT",
+        "STATISTICAL_ANALYSIS"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/test-libs/minification-safe-example.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "MINIFICATION_SAFE_LIB_META",
+        "PROCESS_DATA",
+        "VALIDATE_INPUT"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/graphics/test-libs/transitive-deps-example.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ANALYZE_DATASET",
+        "CORRELATION_ANALYSIS",
+        "CREATE_CHART",
+        "DATA_ANALYSIS_MAIN"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/math-stats/r-logical-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ALL",
+        "AND",
+        "ANY",
+        "ANYDUPLICATES",
+        "COMPLETE_CASES",
+        "DUPLICATED",
+        "IFELSE",
+        "IS_CHARACTER",
+        "IS_FINITE",
+        "IS_INFINITE",
+        "IS_INTEGER",
+        "IS_LOGICAL",
+        "IS_NA",
+        "IS_NAN",
+        "IS_NULL",
+        "IS_NUMERIC",
+        "NA_OMIT",
+        "NOT",
+        "OR",
+        "PMAX",
+        "PMIN",
+        "STOPIFNOT",
+        "SWITCH",
+        "WHICH",
+        "WHICH_MAX",
+        "WHICH_MIN",
+        "XOR"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/math-stats/r-math-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ABS",
+        "ABS_MAIN",
+        "ACOS",
+        "ASIN",
+        "ATAN",
+        "ATAN2",
+        "CEILING",
+        "CHOOSE",
+        "COMPLEX",
+        "COS",
+        "COSH",
+        "CUMMAX",
+        "CUMMIN",
+        "CUMPROD",
+        "CUMSUM",
+        "DIFF",
+        "E",
+        "EXP",
+        "FACTORIAL",
+        "FLOOR",
+        "GAMMA",
+        "IM",
+        "LGAMMA",
+        "LOG",
+        "LOG10",
+        "LOG2",
+        "MOD",
+        "PI",
+        "PMAX",
+        "PMIN",
+        "POW",
+        "PROD",
+        "PSUM",
+        "RANGE",
+        "RE",
+        "ROUND",
+        "SIGN",
+        "SIGNIF",
+        "SIN",
+        "SINH",
+        "SQRT",
+        "TAN",
+        "TANH",
+        "TRUNC"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/math-stats/src/r-summary-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "COR",
+        "COV",
+        "CUMMAX",
+        "CUMMIN",
+        "CUMPROD",
+        "CUMSUM",
+        "DIFF",
+        "FIVENUM",
+        "IQR",
+        "LENGTH",
+        "MAD",
+        "MAX",
+        "MEAN",
+        "MEAN_MAIN",
+        "MEDIAN",
+        "MIN",
+        "QUANTILE",
+        "RANGE",
+        "SCALE",
+        "SD",
+        "SUM",
+        "SUMMARY",
+        "VAR"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/signal-processing/r-signal-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "BAND_PASS_FILTER",
+        "BLACKMAN",
+        "CONVOLVE",
+        "COSINE_WAVE",
+        "DETREND",
+        "ENVELOPE",
+        "FFT",
+        "FIND_PEAKS",
+        "HAMMING",
+        "HANNING",
+        "HIGH_PASS_FILTER",
+        "IFFT",
+        "LOW_PASS_FILTER",
+        "PSD",
+        "RESAMPLE",
+        "SINE_WAVE",
+        "SPECTROGRAM",
+        "WHITE_NOISE",
+        "XCORR",
+        "ZERO_CROSSINGS"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/r-inspired/signal-processing/src/r-timeseries-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "ACF",
+        "AS_NUMERIC_TS",
+        "CCF",
+        "DECOMPOSE",
+        "DIFF",
+        "EMA",
+        "HW_SIMPLE",
+        "LAG",
+        "MA_FORECAST",
+        "PACF",
+        "SEASADJ",
+        "SMA",
+        "SNAIVE",
+        "TREND_FORECAST",
+        "TS",
+        "TSP",
+        "TS_PLOT",
+        "WINDOW"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/scipy-inspired/interpolation/sp-interpolation-playwright.playwright.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "@playwright/test"
+      ]
+    },
+    {
+      "source": "extras/functions/scipy-inspired/interpolation/src/sp-interpolation-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "AKIMA1D",
+        "BARYCENTRIC",
+        "CUBIC_SPLINE",
+        "GRIDDATA",
+        "INTERP1D",
+        "INTERP2D",
+        "KROGH",
+        "LSQ_SPLINE",
+        "PCHIP",
+        "PPOLY",
+        "RBF",
+        "REGULARGRID",
+        "SPLEV",
+        "SPLPREP",
+        "SPLREP",
+        "SP_CUBIC_SPLINE",
+        "SP_LSQ_SPLINE",
+        "SP_PPOLY",
+        "SP_REGULARGRID",
+        "SP_SPLPREP",
+        "SP_UNISPLINE",
+        "UNISPLINE"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/functions/sed/src/sed-functions.js",
+      "disposition": "optional-native-port",
+      "rationale": "port required algorithms with fixtures; no complete stdlib substitute claimed",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "sed-lite"
+      ]
+    },
+    {
+      "source": "extras/functions/sympy-inspired/src/sympy-functions.js",
+      "disposition": "optional-numerics",
+      "rationale": "std.math/std.floatarr cover primitives; dedicated algorithms/backends need evaluation",
+      "staticFunctionCandidates": [
+        "SY_DIFF",
+        "SY_NUM",
+        "SY_SYMBOL"
+      ],
+      "externalImports": []
+    },
+    {
+      "source": "extras/shared/provisioning-shared-utils/provisioning-shared-utils.js",
+      "disposition": "review",
+      "rationale": "inspect implementation and demand before selecting a native replacement",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    }
+  ]
+}

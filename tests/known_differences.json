@@ -1,0 +1,92 @@
+[
+  {
+    "name": "boolean_literal_function_argument",
+    "source": "LET result = TYPEOF(true)\nSAY result",
+    "native_output": [
+      "boolean"
+    ],
+    "reference_output": [
+      "string"
+    ],
+    "reason": "RexxAE retains the boolean type of a direct function argument; this RexxJS parser path resolves the literal as text. Assigned booleans and JSON_PARSE('true') are compatible."
+  },
+  {
+    "name": "single_quoted_object_keys",
+    "source": "LET item = {'a':1}\nLET result = TYPEOF(item)\nSAY result",
+    "native_output": [
+      "object"
+    ],
+    "reference_output": [
+      "string"
+    ],
+    "reason": "RexxAE parses object keys quoted in either style; RexxJS recognizes JSON double-quoted object keys here and leaves the single-quoted form as text."
+  },
+  {
+    "name": "array_literal_function_argument",
+    "source": "LET result = LENGTH([1,2,3])\nSAY result",
+    "native_output": [
+      "3"
+    ],
+    "reference_output": [
+      "2"
+    ],
+    "reason": "RexxAE retains direct array literals as typed arguments. RexxJS splits this literal at commas on this call-parser path. Assign the array to a variable for shared syntax."
+  },
+  {
+    "name": "return_result_parser",
+    "source": "CALL work\nSAY RESULT\nEXIT\nwork:\nLET RESULT = 7\nRETURN RESULT",
+    "native_output": [
+      "7"
+    ],
+    "reference_output": [
+      "host-result"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "RexxJS parses RETURN RESULT as a RESULT() function call and dispatches a default host command. RexxAE reads the variable. Use LET answer = RESULT followed by RETURN answer for shared syntax."
+  },
+  {
+    "name": "condition_multiple_function_terms",
+    "source": "SELECT\nWHEN ABS(2) + ABS(3) > 4 THEN SAY 'match'\nOTHERWISE SAY 'fallback'\nEND",
+    "native_output": [
+      "match"
+    ],
+    "reference_output": [
+      "fallback"
+    ],
+    "reason": "The RexxJS condition resolver consumes this compound function expression as one function call. RexxAE evaluates the arithmetic expression. Assign the sum to a variable before WHEN for shared syntax."
+  },
+  {
+    "name": "explicit_parse_with",
+    "source": "LET line = 'one two three'\nPARSE VAR line WITH a b\nSAY a\nSAY b\nPARSE VALUE line WITH a b\nSAY a\nSAY b",
+    "native_output": [
+      "one",
+      "two three",
+      "one",
+      "two three"
+    ],
+    "reference_output": [
+      "two",
+      "three",
+      "two",
+      "three"
+    ],
+    "reason": "RexxJS treats WITH as a template variable in these parser paths. RexxAE recognizes the explicit separator. Omit WITH for the shared simple-input profile."
+  },
+  {
+    "name": "object_assignment_aliases",
+    "source": "LET data.x = 7\nLET alias = data\nLET data.x = 8\nSAY alias.x data.x",
+    "native_output": [
+      "7 8"
+    ],
+    "reference_output": [
+      "8 8"
+    ],
+    "reason": "RexxAE owns copied values; RexxJS shares object identity across variable assignment. This difference now has an observable compound-write example."
+  }
+]

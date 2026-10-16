@@ -1,0 +1,58 @@
+import std.spec
+import std.string
+import src.engine
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "embedding execution lifecycle") {
+        spec.it("suspends on ADDRESS until a host replies") callback {
+            ctx = engine.rexxae_create("ADDRESS APP\n'work'\nSAY UPPER(RESULT)\nEXIT RC")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 2, "command event")
+            spec.assert_str_eq(string.copy(engine.rexxae_address(ctx)), "app", "lowercase environment")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "work", "opaque command")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 2, "still pending")
+            spec.assert_eq(engine.rexxae_reply(ctx, 7, "reply", ""), 0, "reply accepted")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "output event")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "REPLY", "result reaches builtin")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "terminated")
+            spec.assert_eq(engine.rexxae_exit_code(ctx), 7, "host RC reaches EXIT")
+        }
+        spec.it("keeps variables and budgets independent between contexts") callback {
+            a = engine.rexxae_create("LET X = 'first'\nSAY X")
+            b = engine.rexxae_create("LET X = 'second'\nSAY X")
+            defer engine.rexxae_destroy(a)
+            defer engine.rexxae_destroy(b)
+            spec.assert_eq(engine.rexxae_step(a, 0), 3, "zero budget")
+            spec.assert_eq(engine.rexxae_step(a, 1), 3, "one assignment")
+            spec.assert_eq(engine.rexxae_step(b, 100), 1, "other context runs")
+            spec.assert_eq(engine.rexxae_step(a, 100), 1, "first context resumes")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(a)), "first", "first variables")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(b)), "second", "second variables")
+        }
+        spec.it("makes errors terminal and preserves their source line") callback {
+            ctx = engine.rexxae_create("\nLET X = MATH_SQRT(-1)")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error")
+            spec.assert_eq(engine.rexxae_line(ctx), 2, "line")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+        }
+        spec.it("releases complete, failed and suspended contexts repeatedly") callback {
+            i = 0
+            while i < 100 {
+                ctx = engine.rexxae_create("LET X = UPPER('abc') || SUBSTR('def', 2)\nSAY X")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "result")
+                spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "ABCef", "owned nested values")
+                engine.rexxae_destroy(ctx)
+                failed = engine.rexxae_create("SAY UPPER('a',)")
+                spec.assert_eq(engine.rexxae_step(failed, 100), -1, "failed call")
+                engine.rexxae_destroy(failed)
+                pending = engine.rexxae_create("ADDRESS APP 'work'")
+                spec.assert_eq(engine.rexxae_step(pending, 100), 2, "pending")
+                engine.rexxae_destroy(pending)
+                i = i + 1
+            }
+        }
+    }
+    return spec.run_summary(fw)
+}

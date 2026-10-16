@@ -1,0 +1,558 @@
+// Native scalar builtins, based on RexxJS's runtime implementations (MIT).
+// Text operations currently enforce an ASCII profile, except UTF-16 LENGTH.
+import std.string
+import std.map
+import std.list
+import std.strbuilder
+import std.math
+
+exports(known, invoke, parameter_index, result_type, number_prefix)
+
+const TEXT_FUNCTIONS = " UPPER LOWER LENGTH SUBSTR SUBSTRING POS INDEX INDEXOF INCLUDES STARTS_WITH ENDS_WITH ABBREV TRIM TRIM_START TRIM_END STRIP REVERSE SPACE WORD WORDS WORDPOS DELWORD SUBWORD REPEAT COPIES PAD_START PAD_END LEFT RIGHT CENTER TRANSLATE VERIFY SLUG "
+const MATH_FUNCTIONS = " ABS MAX MIN MATH_ABS MATH_CEIL MATH_FLOOR INT MATH_ROUND MATH_MAX MATH_MIN MATH_SUM MATH_ADD MATH_MULTIPLY MATH_AVERAGE MATH_POWER MATH_SQRT MATH_LOG MATH_SIN MATH_COS MATH_TAN MATH_CLAMP MATH_PERCENTAGE MATH_FACTORIAL MATH_GCD MATH_LCM MATH_DISTANCE_2D MATH_ANGLE_2D "
+
+known(name: string) -> bool {
+    key = string.concat(string.concat(" ", name), " ")
+    return string.contains(TEXT_FUNCTIONS, key) != 0 || string.contains(MATH_FUNCTIONS, key) != 0
+}
+
+arg(args: ptr, index: int, fallback: string) -> string {
+    key = string.from_int(index)
+    if map.map_has(args, key) == 0 { return fallback }
+    return string.copy(map.map_get_raw(args, key))
+}
+
+// Preserve the JS converter's `value || fallback`, including the difference
+// between numeric zero and the nonempty string '0'.
+defaulted(args: ptr, index: int, fallback: string) -> string {
+    value = arg(args, index, fallback)
+    if value == "" { return fallback }
+    type_key = string.concat("t:", string.from_int(index))
+    kind = map.map_get_raw(args, type_key)
+    type_name = ""
+    if kind != null { type_name = string.copy(kind) }
+    if type_name == "number" && value == "0" { return fallback }
+    if type_name == "boolean" && value == "false" { return fallback }
+    if type_name == "null" { return fallback }
+    return value
+}
+
+result_type(name: string) -> string {
+    key = string.concat(string.concat(" ", name), " ")
+    if string.contains(MATH_FUNCTIONS, key) != 0 { return "number" }
+    if name == "INCLUDES" || name == "STARTS_WITH" || name == "ENDS_WITH" { return "boolean" }
+    if name == "LENGTH" || name == "POS" || name == "INDEX" || name == "INDEXOF" || name == "ABBREV" || name == "WORDS" || name == "WORDPOS" || name == "VERIFY" { return "number" }
+    return "string"
+}
+
+// JavaScript parseFloat's numeric prefix, rather than C's hex parser or a
+// whole-string numeric test. The boolean distinguishes invalid text from 0.
+number_prefix(text: string) -> (float, bool) {
+    s = string.trim(text)
+    n = string.length(s)
+    i = 0
+    if string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45 { i = i + 1 }
+    digits = 0
+    while i < n && string.char_at_n(s, n, i) >= 48 && string.char_at_n(s, n, i) <= 57 {
+        i = i + 1
+        digits = digits + 1
+    }
+    if string.char_at_n(s, n, i) == 46 {
+        i = i + 1
+        while i < n && string.char_at_n(s, n, i) >= 48 && string.char_at_n(s, n, i) <= 57 {
+            i = i + 1
+            digits = digits + 1
+        }
+    }
+    if digits == 0 { return 0.0, false }
+    if string.char_at_n(s, n, i) == 101 || string.char_at_n(s, n, i) == 69 {
+        exponent = i
+        i = i + 1
+        if string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45 { i = i + 1 }
+        start = i
+        while i < n && string.char_at_n(s, n, i) >= 48 && string.char_at_n(s, n, i) <= 57 { i = i + 1 }
+        if i == start { i = exponent }
+    }
+    prefix = string.substring_n(s, n, 0, i)
+    if string.string_try_double(prefix) == 0 { return 0.0, false }
+    return string.string_get_double(prefix), true
+}
+
+integer(text: string, fallback: int) -> int {
+    s = string.trim(text)
+    n = string.length(s)
+    i = 0
+    if string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45 { i = i + 1 }
+    start = i
+    while i < n && string.char_at_n(s, n, i) >= 48 && string.char_at_n(s, n, i) <= 57 { i = i + 1 }
+    if start == i { return fallback }
+    prefix = string.substring_n(s, n, 0, i)
+    if string.string_try_int(prefix) == 0 { return fallback }
+    return string.string_get_int(prefix)
+}
+
+formatted(value: float) -> string {
+    s = string.from_double(value)
+    if s == "nan" || s == "-nan" { return "NaN" }
+    if s == "inf" { return "Infinity" }
+    if s == "-inf" { return "-Infinity" }
+    if value == 0.0 { return "0" }
+    return s
+}
+
+ascii(s: string) -> bool {
+    n = string.length(s)
+    i = 0
+    while i < n {
+        if string.char_at_n(s, n, i) > 127 { return false }
+        i = i + 1
+    }
+    return true
+}
+
+whitespace(c: int) -> bool { return c == 32 || (c >= 9 && c <= 13) }
+
+trim_side(s: string, leading: bool, trailing: bool, chars: string, spaces: bool) -> string {
+    n = string.length(s)
+    first = 0
+    last = n
+    while leading && first < last {
+        c = string.char_at_n(s, n, first)
+        one = string.substring_n(s, n, first, first + 1)
+        if spaces {
+            if !whitespace(c) { break }
+        } else if string.contains(chars, one) == 0 { break }
+        first = first + 1
+    }
+    while trailing && last > first {
+        c = string.char_at_n(s, n, last - 1)
+        one = string.substring_n(s, n, last - 1, last)
+        if spaces {
+            if !whitespace(c) { break }
+        } else if string.contains(chars, one) == 0 { break }
+        last = last - 1
+    }
+    return string.substring_n(s, n, first, last)
+}
+
+words(s: string) -> ptr {
+    result = list.list_new()
+    n = string.length(s)
+    i = 0
+    while i < n {
+        while i < n && whitespace(string.char_at_n(s, n, i)) { i = i + 1 }
+        start = i
+        while i < n && !whitespace(string.char_at_n(s, n, i)) { i = i + 1 }
+        if i > start {
+            item = string.substring_n(s, n, start, i)
+            list.list_add_string_owned(result, item)
+        }
+    }
+    return result
+}
+
+word_at(items: ptr, i: int) -> string {
+    return string.copy(list.list_get_raw(items, i))
+}
+
+// JavaScript substring clamps and swaps endpoints, including negative lengths.
+slice(s: string, first: int, last: int) -> string {
+    n = string.length(s)
+    a = first
+    b = last
+    if a < 0 { a = 0 }
+    if b < 0 { b = 0 }
+    if a > n { a = n }
+    if b > n { b = n }
+    if b < a { swap = a; a = b; b = swap }
+    return string.substring_n(s, n, a, b)
+}
+
+padding(pad: string, size: int) -> string {
+    n = string.length(pad)
+    if n == 0 || size <= 0 { return "" }
+    b = strbuilder.new(size)
+    i = 0
+    while i < size {
+        take = n
+        if take > size - i { take = size - i }
+        strbuilder.append(b, string.substring_n(pad, n, 0, take))
+        i = i + take
+    }
+    return strbuilder.finish(b)
+}
+
+text_call(name: string, args: ptr) -> (string, string) {
+    a = defaulted(args, 0, "")
+    b = arg(args, 1, "")
+    c = arg(args, 2, "")
+    d = arg(args, 3, "")
+    n = string.length(a)
+    if name == "LENGTH" {
+        // A valid UTF-8 scalar contributes 1 or 2 JavaScript UTF-16 units.
+        units = 0
+        i = 0
+        while i < n {
+            code = string.char_at_n(a, n, i)
+            if code < 128 || code >= 192 { units = units + 1 }
+            if code >= 240 { units = units + 1 }
+            i = i + 1
+        }
+        return string.from_int(units), ""
+    }
+    if !ascii(a) || !ascii(b) || !ascii(c) || !ascii(d) {
+        return "", string.concat(name, ": Unicode text semantics are not implemented yet")
+    }
+    if name == "UPPER" { return string.to_upper(a), "" }
+    if name == "LOWER" { return string.to_lower(a), "" }
+    if name == "TRIM" || name == "TRIM_START" || name == "TRIM_END" {
+        return trim_side(a, name != "TRIM_END", name != "TRIM_START", "", true), ""
+    }
+    if name == "STRIP" {
+        option = string.to_upper(arg(args, 1, "BOTH"))
+        chars = arg(args, 2, " ")
+        leading = option != "T" && option != "TRAILING"
+        trailing = option != "L" && option != "LEADING"
+        return trim_side(a, leading, trailing, chars, false), ""
+    }
+    if name == "SUBSTR" || name == "SUBSTRING" {
+        start = integer(b, 0)
+        if name == "SUBSTR" {
+            if start == 0 { start = 1 }
+            start = start - 1
+            if start < 0 { start = 0 }
+        }
+        end = n
+        if map.map_has(args, "2") != 0 { end = start + integer(c, 0) }
+        return slice(a, start, end), ""
+    }
+    if name == "POS" || name == "INDEX" || name == "INDEXOF" {
+        // INDEX's positional converter selects its array-style defaults
+        // for an empty needle; retain that observable RexxJS behavior.
+        if name == "INDEX" { b = defaulted(args, 1, "1") }
+        start = integer(c, 0)
+        if name != "INDEXOF" {
+            if start == 0 { start = 1 }
+            start = start - 1
+        }
+        if start < 0 { start = 0 }
+        if start > n { start = n }
+        pos = string.index_of_from(a, b, start)
+        if b == "" { pos = start }
+        if name != "INDEXOF" { pos = pos + 1 }
+        return string.from_int(pos), ""
+    }
+    if name == "INCLUDES" || name == "STARTS_WITH" || name == "ENDS_WITH" || name == "ABBREV" {
+        ok = false
+        if name == "INCLUDES" { ok = string.contains(a, b) != 0 }
+        if name == "STARTS_WITH" { ok = string.starts_with(a, b) != 0 }
+        if name == "ENDS_WITH" { ok = string.ends_with(a, b) != 0 }
+        if name == "ABBREV" {
+            minimum = integer(c, 1)
+            if minimum == 0 { minimum = 1 }
+            ok = string.length(b) >= minimum && string.starts_with(string.to_upper(a), string.to_upper(b)) != 0
+            if ok { return "1", "" }
+            return "0", ""
+        }
+        if ok { return "true", "" }
+        return "false", ""
+    }
+    if name == "REVERSE" {
+        out = strbuilder.new(n)
+        i = n
+        while i > 0 { i = i - 1; strbuilder.append_byte(out, string.char_at_n(a, n, i)) }
+        return strbuilder.finish(out), ""
+    }
+    if name == "REPEAT" || name == "COPIES" {
+        count = integer(b, 0)
+        if count <= 0 || n == 0 { return "", "" }
+        if count > 1048576 / n { return "", "result exceeds the current 1 MiB builtin limit" }
+        return padding(a, count * n), ""
+    }
+    if name == "PAD_START" || name == "PAD_END" || name == "LEFT" || name == "RIGHT" || name == "CENTER" {
+        if name == "LEFT" || name == "RIGHT" { b = defaulted(args, 1, "1") }
+        size = integer(b, 0)
+        if size > 1048576 { return "", "result exceeds the current 1 MiB builtin limit" }
+        if size < 0 { size = 0 }
+        if name == "PAD_START" || name == "PAD_END" {
+            if size <= n { return a, "" }
+        } else if size <= n {
+            if name == "RIGHT" { return slice(a, n - size, n), "" }
+            return slice(a, 0, size), ""
+        }
+        pad = arg(args, 2, " ")
+        if name == "LEFT" || name == "RIGHT" { pad = defaulted(args, 2, " ") }
+        need = size - n
+        if name == "CENTER" {
+            return string.concat(string.concat(padding(pad, need / 2), a), padding(pad, need - need / 2)), ""
+        }
+        fill = padding(pad, need)
+        if name == "LEFT" || name == "PAD_END" { return string.concat(a, fill), "" }
+        return string.concat(fill, a), ""
+    }
+    if name == "TRANSLATE" {
+        if b == "" && c == "" { return string.to_upper(a), "" }
+        input = c
+        if input == "" { input = "abcdefghijklmnopqrstuvwxyz" }
+        out = strbuilder.new(n)
+        i = 0
+        while i < n {
+            one = string.substring_n(a, n, i, i + 1)
+            pos = string.index_of(input, one)
+            if pos >= 0 && pos < string.length(b) { strbuilder.append(out, string.substring(b, pos, pos + 1)) }
+            else { strbuilder.append(out, one) }
+            i = i + 1
+        }
+        return strbuilder.finish(out), ""
+    }
+    if name == "VERIFY" {
+        start = integer(arg(args, 3, "1"), 1)
+        if start < 1 { start = 1 }
+        option = string.to_upper(c)
+        matching = option == "M" || option == "MATCH"
+        i = start - 1
+        while i < n {
+            one = string.substring_n(a, n, i, i + 1)
+            found = string.contains(b, one) != 0
+            if found == matching { return string.from_int(i + 1), "" }
+            i = i + 1
+        }
+        return "0", ""
+    }
+    if name == "SLUG" {
+        lower = string.to_lower(a)
+        out = strbuilder.new(n)
+        dash = false
+        i = 0
+        while i < n {
+            ch = string.char_at_n(lower, n, i)
+            if (ch >= 97 && ch <= 122) || (ch >= 48 && ch <= 57) {
+                if dash && strbuilder.length(out) > 0 { strbuilder.append_byte(out, 45) }
+                dash = false
+                strbuilder.append_byte(out, ch)
+            } else if ch == 45 || ch == 95 || whitespace(ch) { dash = true }
+            i = i + 1
+        }
+        return strbuilder.finish(out), ""
+    }
+    items = words(a)
+    defer list.list_free(items)
+    count = list.list_size(items)
+    if name == "WORDS" { return string.from_int(count), "" }
+    if name == "WORD" {
+        index = integer(b, 1)
+        if index < 1 || index > count { return "", "" }
+        return word_at(items, index - 1), ""
+    }
+    if name == "WORDPOS" {
+        phrase = words(b)
+        defer list.list_free(phrase)
+        size = list.list_size(phrase)
+        if size == 0 { return "0", "" }
+        i = integer(arg(args, 2, "1"), 1) - 1
+        if i < 0 { i = 0 }
+        while i <= count - size {
+            match_all = true
+            j = 0
+            while j < size {
+                if word_at(items, i + j) != word_at(phrase, j) { match_all = false; break }
+                j = j + 1
+            }
+            if match_all { return string.from_int(i + 1), "" }
+            i = i + 1
+        }
+        return "0", ""
+    }
+    first = integer(b, 1)
+    take = integer(arg(args, 2, string.from_int(count)), 0)
+    if take < 0 { take = 0 }
+    if name == "DELWORD" && (first < 1 || first > count) { return string.trim(a), "" }
+    if name == "SUBWORD" && (first < 1 || first > count) { return "", "" }
+    sep = " "
+    if name == "SPACE" {
+        spaces = integer(arg(args, 1, "1"), 1)
+        if spaces < 0 { spaces = 0 }
+        pad = arg(args, 2, " ")
+        if string.length(pad) > 0 && spaces > 1048576 / string.length(pad) { return "", "padding limit exceeded" }
+        sep = padding(pad, spaces * string.length(pad))
+    }
+    out = strbuilder.new(n)
+    i = 0
+    kept = 0
+    while i < count {
+        selected = i >= first - 1 && i - (first - 1) < take
+        keep = name == "SPACE" || (name == "SUBWORD" && selected) || (name == "DELWORD" && !selected)
+        if keep {
+            if kept > 0 { strbuilder.append(out, sep) }
+            strbuilder.append(out, word_at(items, i))
+            kept = kept + 1
+        }
+        i = i + 1
+    }
+    return strbuilder.finish(out), ""
+}
+
+math_call(name: string, args: ptr) -> (string, string) {
+    a = arg(args, 0, "")
+    b = arg(args, 1, "")
+    if string.starts_with(name, "MATH_") != 0 {
+        a = defaulted(args, 0, "0")
+        if name == "MATH_LOG" { a = defaulted(args, 0, "1") }
+        if name == "MATH_POWER" { b = defaulted(args, 1, "1") }
+        if name == "MATH_PERCENTAGE" { b = defaulted(args, 1, "100") }
+        if name == "MATH_LOG" { b = defaulted(args, 1, formatted(math.e())) }
+        if name == "MATH_GCD" || name == "MATH_LCM" || name == "MATH_CLAMP" { b = defaulted(args, 1, "0") }
+    }
+    x, valid_x = number_prefix(a)
+    y, valid_y = number_prefix(b)
+    count = integer(arg(args, -1, "0"), 0)
+    if name == "ABS" || name == "MATH_ABS" {
+        if !valid_x && name == "MATH_ABS" { return "", string.concat(string.concat("Cannot calculate absolute value of '", a), "' - not a number") }
+        return formatted(math.abs_float(x)), ""
+    }
+    if name == "MAX" || name == "MIN" || name == "MATH_MAX" || name == "MATH_MIN" || name == "MATH_SUM" || name == "MATH_ADD" || name == "MATH_MULTIPLY" || name == "MATH_AVERAGE" {
+        total = 0.0
+        if name == "MATH_MULTIPLY" { total = 1.0 }
+        found = 0
+        i = 0
+        while i < count {
+            value, ok = number_prefix(arg(args, i, ""))
+            if ok {
+                if name == "MATH_MULTIPLY" { total = total * value }
+                else if name == "MAX" || name == "MATH_MAX" {
+                    if found == 0 || value > total { total = value }
+                } else if name == "MIN" || name == "MATH_MIN" {
+                    if found == 0 || value < total { total = value }
+                } else { total = total + value }
+                found = found + 1
+            }
+            i = i + 1
+        }
+        if name == "MATH_AVERAGE" && found > 0 { total = total / found }
+        return formatted(total), ""
+    }
+    if name == "MATH_SQRT" {
+        if !valid_x { return "", string.concat(string.concat("Cannot calculate square root of '", a), "' - not a number") }
+        if x < 0.0 { return "", string.concat("Cannot calculate square root of negative number: ", formatted(x)) }
+        return formatted(math.sqrt(x)), ""
+    }
+    if !valid_x { return "NaN", "" }
+    if name == "MATH_CEIL" { return formatted(math.ceil(x)), "" }
+    if name == "MATH_FLOOR" || name == "INT" { return formatted(math.floor(x)), "" }
+    if name == "MATH_ROUND" {
+        precision = integer(b, 0)
+        scale = math.pow(10.0, precision)
+        return formatted(math.floor(x * scale + 0.5) / scale), ""
+    }
+    if name == "MATH_POWER" {
+        if !valid_y { return "NaN", "" }
+        return formatted(math.pow(x, y)), ""
+    }
+    if name == "MATH_LOG" {
+        base = math.e()
+        if map.map_has(args, "1") != 0 {
+            if !valid_y { return "NaN", "" }
+            base = y
+        }
+        if x <= 0.0 || base < 0.0 { return "NaN", "" }
+        return formatted(math.log(x) / math.log(base)), ""
+    }
+    if name == "MATH_SIN" || name == "MATH_COS" || name == "MATH_TAN" {
+        if string.to_lower(b) == "degrees" { x = x * math.pi() / 180.0 }
+        if name == "MATH_SIN" { return formatted(math.sin(x)), "" }
+        if name == "MATH_COS" { return formatted(math.cos(x)), "" }
+        return formatted(math.tan(x)), ""
+    }
+    if name == "MATH_CLAMP" {
+        z, valid_z = number_prefix(defaulted(args, 2, "100"))
+        if !valid_y || !valid_z { return "NaN", "" }
+        return formatted(math.min_float(math.max_float(x, y), z)), ""
+    }
+    if name == "MATH_PERCENTAGE" {
+        if !valid_y { return "NaN", "" }
+        if y == 0.0 { return "0", "" }
+        return formatted(x / y * 100.0), ""
+    }
+    if name == "MATH_FACTORIAL" {
+        if x < 0.0 { return "NaN", "" }
+        limit = math.floor(x)
+        if limit > 170.0 { limit = 170.0 }
+        result = 1.0
+        i = 2
+        while i <= limit { result = result * i; i = i + 1 }
+        return formatted(result), ""
+    }
+    if name == "MATH_GCD" || name == "MATH_LCM" {
+        if !valid_y { return "", "GCD/LCM require two numeric arguments" }
+        x = math.abs_float(math.floor(x))
+        y = math.abs_float(math.floor(y))
+        product = x * y
+        while y != 0.0 {
+            remainder = x - math.floor(x / y) * y
+            x = y
+            y = remainder
+        }
+        if name == "MATH_LCM" {
+            if x == 0.0 { return "0", "" }
+            x = product / x
+        }
+        return formatted(x), ""
+    }
+    if name == "MATH_DISTANCE_2D" || name == "MATH_ANGLE_2D" {
+        x2, ok_x2 = number_prefix(arg(args, 2, ""))
+        y2, ok_y2 = number_prefix(arg(args, 3, ""))
+        if !valid_y || !ok_x2 || !ok_y2 { return "NaN", "" }
+        dx = x2 - x
+        dy = y2 - y
+        if name == "MATH_DISTANCE_2D" { return formatted(math.sqrt(dx * dx + dy * dy)), "" }
+        angle = math.atan2(dy, dx)
+        if string.to_lower(arg(args, 4, "radians")) == "degrees" { angle = angle * 180.0 / math.pi() }
+        return formatted(angle), ""
+    }
+    return "", "unimplemented math function"
+}
+
+invoke(name: string, args: ptr) -> (string, string) {
+    key = string.concat(string.concat(" ", name), " ")
+    if string.contains(TEXT_FUNCTIONS, key) != 0 { return text_call(name, args) }
+    if string.contains(MATH_FUNCTIONS, key) != 0 { return math_call(name, args) }
+    return "", string.concat("unknown or unavailable function: ", name)
+}
+
+// Named arguments follow each implementation's order. Synonyms from
+// RexxJS's converters are accepted; unknown names are diagnosed by the parser.
+parameter_index(name: string, key: string) -> int {
+    if key == "string" || key == "str" || key == "text" || key == "num" || key == "value" || key == "number" { return 0 }
+    if key == "base" {
+        if name == "MATH_LOG" { return 1 }
+        return 0
+    }
+    if key == "x1" || key == "a" { return 0 }
+    if key == "y1" || key == "b" { return 1 }
+    if key == "x2" { return 2 }
+    if key == "y2" { return 3 }
+    if key == "exponent" || key == "precision" || key == "total" || key == "min" { return 1 }
+    if key == "max" { return 2 }
+    if key == "unit" {
+        if name == "MATH_ANGLE_2D" { return 4 }
+        return 1
+    }
+    if key == "start" || key == "position" || key == "fromIndex" {
+        if name == "POS" || name == "INDEX" || name == "INDEXOF" || name == "WORDPOS" { return 2 }
+        if name == "VERIFY" { return 3 }
+        return 1
+    }
+    if key == "length" || key == "len" {
+        if name == "SUBSTR" || name == "SUBSTRING" || name == "SUBWORD" || name == "DELWORD" { return 2 }
+        if name == "ABBREV" { return 2 }
+        return 1
+    }
+    if key == "needle" || key == "search" || key == "searchString" || key == "substring" || key == "reference" || key == "abbrev" || key == "phrase" || key == "word" || key == "n" || key == "count" || key == "targetLength" { return 1 }
+    if key == "option" {
+        if name == "VERIFY" { return 2 }
+        return 1
+    }
+    if key == "pad" || key == "padString" || key == "character" || key == "inputTable" { return 2 }
+    if key == "outputTable" { return 1 }
+    return -1
+}

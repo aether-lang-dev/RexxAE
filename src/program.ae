@@ -1,0 +1,660 @@
+// Parse once into immutable expression trees and a flat control-flow program.
+// Instructions are context-owned serialized JSON; no recursive runtime stack
+// has to survive a host event or a cooperative yield.
+import std.string
+import std.json
+import std.map
+import src.state
+import src.lex
+import src.values
+import src.builtins
+
+exports(compile)
+
+node(ctx: ptr, op: string) -> ptr {
+    result = json.obj()
+    json.set(result, "op", json.str(op))
+    id = state.integer(ctx, "node_count")
+    state.number(ctx, "node_count", id + 1)
+    json.set(result, "id", json.from_int(id))
+    return result
+}
+literal(ctx: ptr, value: ptr) -> ptr {
+    result = node(ctx, "literal")
+    json.set(result, "value", value)
+    return result
+}
+named(ctx: ptr) -> bool {
+    if state.integer(ctx, "kind") != 1 { return false }
+    source = state.read(ctx, "source")
+    n = string.length(source)
+    i = state.integer(ctx, "pos")
+    while i < n && (string.char_at_n(source, n, i) == 32 || string.char_at_n(source, n, i) == 9) { i = i + 1 }
+    return string.char_at_n(source, n, i) == 61 && string.char_at_n(source, n, i + 1) != 61
+}
+following(ctx: ptr) -> string {
+    source = state.read(ctx, "source")
+    tail = string.substring(source, state.integer(ctx, "pos"), string.length(source))
+    look = lex.new(tail)
+    result = string.to_upper(state.read(look, "token"))
+    // A lexer is a map containing strings only.
+    free_lexer(look)
+    return result
+}
+
+// Kept as a helper so imported map teardown has one clear ownership site.
+free_lexer(ctx: ptr) {
+    map.map_free(ctx)
+}
+
+precedence(ctx: ptr) -> int {
+    op = string.to_upper(state.read(ctx, "token"))
+    if state.integer(ctx, "kind") == 1 {
+        if op == "AND" || op == "OR" { return 1 }
+        return 0
+    }
+    if state.integer(ctx, "kind") != 3 { return 0 }
+    if op == "&" || op == "|" || op == "&&" { return 1 }
+    if op == "=" || op == "==" || op == "!=" || op == "<>" || op == "\\=" || op == "\\==" || op == "<" || op == ">" || op == "<=" || op == ">=" { return 2 }
+    if op == "||" { return 3 }
+    if op == "+" || op == "-" { return 4 }
+    if op == "*" || op == "/" || op == "%" { return 5 }
+    if op == "**" { return 6 }
+    return 0
+}
+stopped(ctx: ptr, stops: string) -> bool {
+    if state.integer(ctx, "kind") == 1 {
+        key = string.concat(string.concat(" ", string.to_upper(state.read(ctx, "token"))), " ")
+        if string.contains(stops, key) != 0 { return true }
+    }
+    return string.contains(stops, "$NAMED") != 0 && named(ctx)
+}
+
+call_node(ctx: ptr, name: string, parens: bool, depth: int) -> ptr {
+    result = node(ctx, "call")
+    json.set(result, "name", json.str(string.to_upper(name)))
+    args = json.arr()
+    if parens { lex.next(ctx) }
+    mode = 0
+    while state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && !lex.symbol(ctx, ")") && state.read(ctx, "error") == "" {
+        item = json.obj()
+        if named(ctx) {
+            if mode == 1 { state.fail(ctx, "mixed positional and named arguments are not implemented") }
+            mode = 2
+            json.set(item, "name", json.str(state.read(ctx, "token")))
+            lex.next(ctx)
+            lex.next(ctx)
+        } else {
+            if mode == 2 { state.fail(ctx, "expected named argument") }
+            mode = 1
+        }
+        child = expression(ctx, 1, depth + 1, " $NAMED ELSE ")
+        json.set(item, "value", child)
+        json.push(args, item)
+        if lex.symbol(ctx, ",") {
+            lex.next(ctx)
+            if lex.symbol(ctx, ")") || state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4 { state.fail(ctx, "expected argument after comma") }
+        } else if !parens && named(ctx) { continue }
+        else { break }
+    }
+    if parens {
+        if !lex.symbol(ctx, ")") { state.fail(ctx, "expected closing parenthesis in function call") }
+        else { lex.next(ctx) }
+    }
+    json.set(result, "args", args)
+    return result
+}
+
+expression(ctx: ptr, minimum: int, depth: int, stops: string) -> ptr {
+    if depth > 64 { state.fail(ctx, "expression nesting limit exceeded"); return literal(ctx, values.string_value("")) }
+    kind = state.integer(ctx, "kind")
+    token = state.read(ctx, "token")
+    left = null
+    if kind == 2 {
+        if state.integer(ctx, "quote") == 34 && (string.contains(token, "{") != 0 || string.contains(token, "\\") != 0) { state.fail(ctx, "double-quoted interpolation and escapes are not implemented") }
+        left = literal(ctx, values.string_value(token))
+        lex.next(ctx)
+    } else if kind == 1 && string.to_upper(token) != "NOT" {
+        lex.next(ctx)
+        if lex.symbol(ctx, "(") { left = call_node(ctx, token, true, depth) }
+        else if named(ctx) && string.string_try_double(token) == 0 && (builtins.known(string.to_upper(token)) || string.contains(stops, "$NAMED") == 0) { left = call_node(ctx, token, false, depth) }
+        else if builtins.known(string.to_upper(token)) && state.integer(ctx, "blank") != 0 && !stopped(ctx, stops) && (state.integer(ctx, "kind") == 1 || state.integer(ctx, "kind") == 2) {
+            left = node(ctx, "call")
+            json.set(left, "name", json.str(string.to_upper(token)))
+            json.set(left, "bare", json.str(token))
+            args = json.arr()
+            item = json.obj()
+            json.set(item, "value", expression(ctx, 1, depth + 1, stops))
+            json.push(args, item)
+            json.set(left, "args", args)
+        }
+        else if token == "true" || token == "false" { left = literal(ctx, values.boolean(token == "true")) }
+        else if string.string_try_double(token) != 0 { left = literal(ctx, values.numeric(values.number_text(string.string_get_double(token)))) }
+        else {
+            left = node(ctx, "var")
+            json.set(left, "name", json.str(token))
+        }
+    } else if lex.symbol(ctx, "(") {
+        lex.next(ctx)
+        left = expression(ctx, 1, depth + 1, "")
+        if !lex.symbol(ctx, ")") { state.fail(ctx, "expected closing parenthesis") }
+        else { lex.next(ctx) }
+    } else if lex.symbol(ctx, "[") || lex.symbol(ctx, "{") {
+        object = lex.symbol(ctx, "{")
+        close = "]"
+        op = "array"
+        if object { close = "}"; op = "object" }
+        left = node(ctx, op)
+        items = json.arr()
+        lex.next(ctx)
+        while !lex.symbol(ctx, close) && state.read(ctx, "error") == "" {
+            item = json.obj()
+            if object {
+                if state.integer(ctx, "kind") != 1 && state.integer(ctx, "kind") != 2 { state.fail(ctx, "expected object key") }
+                json.set(item, "name", json.str(state.read(ctx, "token")))
+                lex.next(ctx)
+                if !lex.symbol(ctx, ":") { state.fail(ctx, "expected colon after object key") }
+                else { lex.next(ctx) }
+            }
+            json.set(item, "value", expression(ctx, 1, depth + 1, ""))
+            json.push(items, item)
+            if lex.symbol(ctx, ",") { lex.next(ctx) }
+            else { break }
+        }
+        if !lex.symbol(ctx, close) { state.fail(ctx, "expected closing collection delimiter") }
+        else { lex.next(ctx) }
+        json.set(left, "items", items)
+    } else if lex.symbol(ctx, "+") || lex.symbol(ctx, "-") || lex.symbol(ctx, "\\") || lex.keyword(ctx, "NOT") {
+        left = node(ctx, "unary")
+        json.set(left, "operator", json.str(string.to_upper(token)))
+        lex.next(ctx)
+        json.set(left, "right", expression(ctx, 7, depth + 1, stops))
+    } else {
+        state.fail(ctx, "expected expression")
+        left = literal(ctx, values.string_value(""))
+    }
+    while state.read(ctx, "error") == "" && !stopped(ctx, stops) {
+        op = string.to_upper(state.read(ctx, "token"))
+        p = precedence(ctx)
+        implicit = false
+        if string.contains(stops, "$CALLATOM") != 0 && state.integer(ctx, "blank") != 0 { break }
+        if p == 0 && (state.integer(ctx, "kind") == 1 || state.integer(ctx, "kind") == 2) {
+            p = 3
+            op = "||"
+            if state.integer(ctx, "blank") != 0 { op = "blank" }
+            implicit = true
+        }
+        if p == 0 || p < minimum { break }
+        if !implicit { lex.next(ctx) }
+        next_min = p + 1
+        if op == "**" { next_min = p }
+        right = expression(ctx, next_min, depth + 1, stops)
+        combined = node(ctx, "binary")
+        json.set(combined, "operator", json.str(op))
+        json.set(combined, "left", left)
+        json.set(combined, "right", right)
+        left = combined
+    }
+    return left
+}
+
+instruction(ctx: ptr, op: string) -> ptr {
+    result = json.obj()
+    json.set(result, "op", json.str(op))
+    json.set(result, "line", json.from_int(state.integer(ctx, "statement_line")))
+    return result
+}
+// Consumes the instruction tree; patch reloads a fresh owned tree.
+emit(ctx: ptr, value: ptr) -> int {
+    index = state.integer(ctx, "program_size")
+    key = string.concat("p:", string.from_int(index))
+    state.save(ctx, key, value)
+    json.json_free(value)
+    state.number(ctx, "program_size", index + 1)
+    return index
+}
+patch(ctx: ptr, index: int, field: string, target: int) {
+    key = string.concat("p:", string.from_int(index))
+    value = state.load(ctx, key)
+    json.set(value, field, json.from_int(target))
+    state.save(ctx, key, value)
+    json.json_free(value)
+}
+clauses(ctx: ptr) { while state.integer(ctx, "kind") == 4 { lex.next(ctx) } }
+
+block(ctx: ptr, depth: int, loop: int) {
+    clauses(ctx)
+    while state.integer(ctx, "kind") != 0 && !lex.keyword(ctx, "END") && state.read(ctx, "error") == "" {
+        statement(ctx, depth + 1, loop)
+        clauses(ctx)
+    }
+    if !lex.keyword(ctx, "END") { state.fail(ctx, "expected END") }
+    else { lex.next(ctx) }
+}
+
+do_statement(ctx: ptr, depth: int, outer_loop: int) {
+    header_line = state.integer(ctx, "statement_line")
+    lex.next(ctx)
+    if state.integer(ctx, "kind") == 4 {
+        block(ctx, depth, outer_loop)
+        return
+    }
+    header = instruction(ctx, "loop")
+    mode = "repeat"
+    if lex.keyword(ctx, "FOREVER") { mode = "forever"; lex.next(ctx) }
+    else if lex.keyword(ctx, "WHILE") || lex.keyword(ctx, "UNTIL") {
+        mode = string.to_lower(state.read(ctx, "token"))
+        lex.next(ctx)
+        json.set(header, "condition", expression(ctx, 1, 0, ""))
+    } else if state.integer(ctx, "kind") == 1 && (following(ctx) == "=" || following(ctx) == "OVER") {
+        name = state.read(ctx, "token")
+        if string.contains(name, ".") != 0 { state.fail(ctx, "compound DO counters are not implemented") }
+        json.set(header, "name", json.str(name))
+        lex.next(ctx)
+        if lex.keyword(ctx, "OVER") {
+            mode = "over"
+            lex.next(ctx)
+            items = expression(ctx, 1, 0, "")
+            if state.text(items, "op") == "var" {
+                name = state.text(items, "name")
+                if string.ends_with(name, ".") != 0 { json.set(items, "name", json.str(string.substring(name, 0, string.length(name) - 1))) }
+            }
+            json.set(header, "items", items)
+        } else {
+            mode = "range"
+            lex.next(ctx)
+            json.set(header, "first", expression(ctx, 1, 0, " TO "))
+            if !lex.keyword(ctx, "TO") { state.fail(ctx, "expected TO in DO range") }
+            else { lex.next(ctx) }
+            json.set(header, "last", expression(ctx, 1, 0, " BY "))
+            if lex.keyword(ctx, "BY") { lex.next(ctx); json.set(header, "step", expression(ctx, 1, 0, "")) }
+        }
+    } else { json.set(header, "count", expression(ctx, 1, 0, "")) }
+    json.set(header, "mode", json.str(mode))
+    start = emit(ctx, header)
+    if state.integer(ctx, "kind") != 4 { state.fail(ctx, "DO header requires a clause boundary") }
+    block(ctx, depth, start)
+    end = instruction(ctx, "next")
+    json.set(end, "line", json.from_int(header_line))
+    json.set(end, "head", json.from_int(start))
+    emit(ctx, end)
+    patch(ctx, start, "end", state.integer(ctx, "program_size"))
+}
+
+// CALL uses commas when present; otherwise blanks separate arguments unless
+// a standalone operator makes the complete tail one expression (RexxJS).
+call_statement(ctx: ptr, assigned: bool) -> ptr {
+    lex.next(ctx)
+    result = node(ctx, "call")
+    json.set(result, "statement_call", json.from_int(1))
+    if assigned { json.set(result, "assigned_call", json.from_int(1)) }
+    if lex.symbol(ctx, "(") {
+        lex.next(ctx)
+        if state.integer(ctx, "kind") != 1 { state.fail(ctx, "CALL requires a variable name") }
+        json.set(result, "dynamic", json.str(state.read(ctx, "token")))
+        lex.next(ctx)
+        if !lex.symbol(ctx, ")") { state.fail(ctx, "expected closing parenthesis in CALL target") }
+        else { lex.next(ctx) }
+    } else {
+        if state.integer(ctx, "kind") != 1 && state.integer(ctx, "kind") != 2 { state.fail(ctx, "CALL requires a routine name") }
+        json.set(result, "name", json.str(string.to_upper(state.read(ctx, "token"))))
+        lex.next(ctx)
+    }
+    source = state.read(ctx, "source")
+    tail = string.substring(source, state.integer(ctx, "token_start"), string.length(source))
+    look = lex.new(tail)
+    commas = false
+    operator = false
+    nesting = 0
+    while state.integer(look, "kind") != 0 && state.integer(look, "kind") != 4 && !lex.keyword(look, "ELSE") {
+        if lex.symbol(look, "(") { nesting = nesting + 1 }
+        if lex.symbol(look, ")") { nesting = nesting - 1 }
+        if nesting == 0 && lex.symbol(look, ",") { commas = true }
+        end = state.integer(look, "pos")
+        after = string.char_at(tail, end)
+        if nesting == 0 && precedence(look) > 0 && state.integer(look, "blank") != 0 && (after == 32 || after == 9) { operator = true }
+        lex.next(look)
+    }
+    map.map_free(look)
+    if assigned && (commas || operator) { state.fail(ctx, "assigned CALL currently requires simple blank-separated arguments") }
+    args = json.arr()
+    while state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && !lex.keyword(ctx, "ELSE") && state.read(ctx, "error") == "" {
+        item = json.obj()
+        stops = " ELSE "
+        if !commas && !operator { stops = " ELSE $CALLATOM " }
+        json.set(item, "value", expression(ctx, 1, 0, stops))
+        json.push(args, item)
+        if commas {
+            if !lex.symbol(ctx, ",") { break }
+            lex.next(ctx)
+            // RexxJS drops empty comma-separated positions.
+            while lex.symbol(ctx, ",") { lex.next(ctx) }
+        } else if operator { break }
+    }
+    json.set(result, "args", args)
+    return result
+}
+
+argument_statement(ctx: ptr) {
+    lex.next(ctx)
+    inst = instruction(ctx, "arg")
+    names = json.arr()
+    while state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && !lex.keyword(ctx, "ELSE") && state.read(ctx, "error") == "" {
+        if state.integer(ctx, "kind") != 1 { state.fail(ctx, "ARG currently requires simple variable names"); break }
+        name = state.read(ctx, "token")
+        if string.contains(name, ".") != 0 { state.fail(ctx, "compound ARG targets are not implemented") }
+        json.push(names, json.str(name))
+        lex.next(ctx)
+        if lex.symbol(ctx, ",") { lex.next(ctx) }
+    }
+    json.set(inst, "names", names)
+    emit(ctx, inst)
+}
+
+template_name(name: string) -> bool {
+    n = string.length(name)
+    c = string.char_at_n(name, n, 0)
+    if !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95) { return false }
+    i = 1
+    while i < n {
+        c = string.char_at_n(name, n, i)
+        if !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95) { return false }
+        i = i + 1
+    }
+    return true
+}
+
+parse_template(ctx: ptr, delimiters: bool) -> ptr {
+    tokens = json.arr()
+    while state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && !lex.keyword(ctx, "ELSE") && state.read(ctx, "error") == "" {
+        token = json.obj()
+        text = state.read(ctx, "token")
+        if state.integer(ctx, "kind") == 2 && delimiters { json.set(token, "delimiter", json.from_int(1)) }
+        else if state.integer(ctx, "kind") != 1 || (!template_name(text) && text != ".") { state.fail(ctx, "PARSE template requires simple names, '.', or quoted delimiters; positions are not implemented") }
+        json.set(token, "text", json.str(text))
+        json.push(tokens, token)
+        if json.json_array_size(tokens) > 256 { state.fail(ctx, "PARSE template field limit exceeded") }
+        lex.next(ctx)
+    }
+    if json.json_array_size(tokens) == 0 { state.fail(ctx, "PARSE requires a template") }
+    return tokens
+}
+
+parse_statement(ctx: ptr) {
+    lex.next(ctx)
+    if lex.keyword(ctx, "ARG") { argument_statement(ctx); return }
+    mode = string.to_upper(state.read(ctx, "token"))
+    if mode != "VAR" && mode != "VALUE" { state.fail(ctx, "PARSE requires VAR, VALUE or ARG"); return }
+    lex.next(ctx)
+    inst = instruction(ctx, "parse")
+    if mode == "VAR" {
+        if state.integer(ctx, "kind") != 1 || !template_name(state.read(ctx, "token")) { state.fail(ctx, "PARSE VAR requires a simple source variable") }
+        json.set(inst, "mode", json.str("var"))
+        json.set(inst, "name", json.str(state.read(ctx, "token")))
+        lex.next(ctx)
+        if lex.keyword(ctx, "WITH") { lex.next(ctx) }
+        json.set(inst, "template", parse_template(ctx, true))
+    } else {
+        source = state.read(ctx, "source")
+        tail = string.substring(source, state.integer(ctx, "token_start"), string.length(source))
+        look = lex.new(tail)
+        with = false
+        while state.integer(look, "kind") != 0 && state.integer(look, "kind") != 4 && !lex.keyword(look, "ELSE") {
+            if lex.keyword(look, "WITH") { with = true; break }
+            lex.next(look)
+        }
+        map.map_free(look)
+        if with {
+            json.set(inst, "mode", json.str("expression"))
+            json.set(inst, "value", expression(ctx, 1, 0, " WITH "))
+            if !lex.keyword(ctx, "WITH") { state.fail(ctx, "expected WITH after PARSE VALUE input") }
+            else { lex.next(ctx) }
+            json.set(inst, "template", parse_template(ctx, true))
+        } else {
+            // Preserve the reference's unevaluated input, including quotes,
+            // in its simple no-WITH form. Rich input needs explicit WITH.
+            if state.integer(ctx, "kind") != 1 && state.integer(ctx, "kind") != 2 { state.fail(ctx, "PARSE VALUE expression requires WITH") }
+            raw = string.substring(source, state.integer(ctx, "token_start"), state.integer(ctx, "pos"))
+            json.set(inst, "mode", json.str("legacy"))
+            json.set(inst, "name", json.str(raw))
+            lex.next(ctx)
+            json.set(inst, "template", parse_template(ctx, false))
+        }
+    }
+    emit(ctx, inst)
+}
+
+// SELECT needs only branches and jumps: no selection state survives a yield.
+// Inline OTHERWISE clauses are collected in source order, even if they precede
+// a WHEN. They run only after every WHEN has failed, as in RexxJS.
+select_statement(ctx: ptr, depth: int, loop: int) {
+    header_line = state.integer(ctx, "statement_line")
+    exits = json.arr()
+    defer json.json_free(exits)
+    defaults = json.arr()
+    defer json.json_free(defaults)
+    lex.next(ctx)
+    if state.integer(ctx, "kind") != 4 { state.fail(ctx, "SELECT requires a clause boundary"); return }
+    clauses(ctx)
+    while state.integer(ctx, "kind") != 0 && !lex.keyword(ctx, "END") && state.read(ctx, "error") == "" {
+        state.number(ctx, "statement_line", state.integer(ctx, "token_line"))
+        if lex.keyword(ctx, "WHEN") {
+            lex.next(ctx)
+            condition = expression(ctx, 1, 0, " THEN ")
+            branch = instruction(ctx, "branch")
+            json.set(branch, "condition", condition)
+            branch_pc = emit(ctx, branch)
+            if !lex.keyword(ctx, "THEN") { state.fail(ctx, "expected THEN in WHEN clause"); return }
+            lex.next(ctx)
+            multiline = state.integer(ctx, "kind") == 4
+            if lex.keyword(ctx, "DO") {
+                // The reference consumes bare THEN DO as a branch marker,
+                // not a nested DO block with a second closing END.
+                lex.next(ctx)
+                if state.integer(ctx, "kind") != 4 { state.fail(ctx, "WHEN THEN DO must end the clause"); return }
+                multiline = true
+            }
+            if multiline {
+                clauses(ctx)
+                while state.integer(ctx, "kind") != 0 && !lex.keyword(ctx, "WHEN") && !lex.keyword(ctx, "OTHERWISE") && !lex.keyword(ctx, "END") && state.read(ctx, "error") == "" {
+                    statement(ctx, depth + 1, loop)
+                    clauses(ctx)
+                }
+            } else {
+                statement(ctx, depth + 1, loop)
+                clauses(ctx)
+            }
+            json.push(exits, json.from_int(emit(ctx, instruction(ctx, "jump"))))
+            patch(ctx, branch_pc, "target", state.integer(ctx, "program_size"))
+        } else if lex.keyword(ctx, "OTHERWISE") {
+            skip = emit(ctx, instruction(ctx, "jump"))
+            entry = json.obj()
+            json.set(entry, "start", json.from_int(state.integer(ctx, "program_size")))
+            lex.next(ctx)
+            if state.integer(ctx, "kind") == 4 {
+                clauses(ctx)
+                while state.integer(ctx, "kind") != 0 && !lex.keyword(ctx, "END") && state.read(ctx, "error") == "" {
+                    statement(ctx, depth + 1, loop)
+                    clauses(ctx)
+                }
+            } else {
+                statement(ctx, depth + 1, loop)
+                clauses(ctx)
+            }
+            json.set(entry, "tail", json.from_int(emit(ctx, instruction(ctx, "jump"))))
+            json.push(defaults, entry)
+            patch(ctx, skip, "target", state.integer(ctx, "program_size"))
+        } else { state.fail(ctx, "expected WHEN, OTHERWISE or END in SELECT") }
+    }
+    if state.read(ctx, "error") != "" { return }
+    if !lex.keyword(ctx, "END") {
+        state.number(ctx, "token_line", header_line)
+        state.fail(ctx, "expected END for SELECT")
+        return
+    }
+    lex.next(ctx)
+    fallback = emit(ctx, instruction(ctx, "jump"))
+    end = state.integer(ctx, "program_size")
+    target = end
+    if json.json_array_size(defaults) > 0 { target = state.index(json.json_array_get_raw(defaults, 0), "start") }
+    patch(ctx, fallback, "target", target)
+    i = 0
+    while i < json.json_array_size(defaults) {
+        entry = json.json_array_get_raw(defaults, i)
+        target = end
+        if i + 1 < json.json_array_size(defaults) { target = state.index(json.json_array_get_raw(defaults, i + 1), "start") }
+        patch(ctx, state.index(entry, "tail"), "target", target)
+        i = i + 1
+    }
+    i = 0
+    while i < json.json_array_size(exits) {
+        patch(ctx, json.json_get_int(json.json_array_get_raw(exits, i)), "target", end)
+        i = i + 1
+    }
+}
+
+statement(ctx: ptr, depth: int, loop: int) {
+    if depth > 64 { state.fail(ctx, "statement nesting limit exceeded"); return }
+    state.number(ctx, "statement_line", state.integer(ctx, "token_line"))
+    token = state.read(ctx, "token")
+    word = string.to_upper(token)
+    if lex.keyword(ctx, "PROCEDURE") {
+        entry = state.read(ctx, "open_routine")
+        key = string.concat("proc:", entry)
+        if depth != 0 || entry == "" || state.integer(ctx, "program_size") != state.integer(ctx, "open_routine") || state.read(ctx, key) != "" {
+            state.fail(ctx, "Unexpected PROCEDURE: expected the first instruction of a CALL routine")
+            return
+        }
+        lex.next(ctx)
+        exposed = json.arr()
+        defer json.json_free(exposed)
+        if lex.keyword(ctx, "EXPOSE") {
+            lex.next(ctx)
+            while state.integer(ctx, "kind") == 1 && state.read(ctx, "error") == "" {
+                name = state.read(ctx, "token")
+                json.push(exposed, json.str(name))
+                if json.json_array_size(exposed) > 256 { state.fail(ctx, "EXPOSE name limit exceeded") }
+                lex.next(ctx)
+            }
+            if json.json_array_size(exposed) == 0 { state.fail(ctx, "EXPOSE requires variable names") }
+        }
+        if state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 { state.fail(ctx, "PROCEDURE requires a clause boundary") }
+        state.save(ctx, key, exposed)
+        return
+    }
+    if lex.keyword(ctx, "SELECT") { select_statement(ctx, depth, loop); return }
+    if lex.keyword(ctx, "WHEN") || lex.keyword(ctx, "OTHERWISE") { state.fail(ctx, "selection clause requires an enclosing SELECT"); return }
+    if lex.keyword(ctx, "CALL") {
+        inst = instruction(ctx, "call")
+        json.set(inst, "value", call_statement(ctx, false))
+        emit(ctx, inst)
+    } else if lex.keyword(ctx, "ARG") { argument_statement(ctx) }
+    else if lex.keyword(ctx, "PARSE") { parse_statement(ctx) } else if lex.keyword(ctx, "RETURN") {
+        inst = instruction(ctx, "return")
+        lex.next(ctx)
+        if state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4 || lex.keyword(ctx, "ELSE") { json.set(inst, "value", literal(ctx, values.string_value(""))) }
+        else { json.set(inst, "value", expression(ctx, 1, 0, " ELSE ")) }
+        emit(ctx, inst)
+    } else if lex.keyword(ctx, "IF") {
+        lex.next(ctx)
+        condition = expression(ctx, 1, 0, " THEN ")
+        branch = instruction(ctx, "branch")
+        json.set(branch, "condition", condition)
+        branch_pc = emit(ctx, branch)
+        clauses(ctx)
+        if !lex.keyword(ctx, "THEN") { state.fail(ctx, "expected THEN"); return }
+        lex.next(ctx)
+        clauses(ctx)
+        statement(ctx, depth + 1, loop)
+        clauses(ctx)
+        if lex.keyword(ctx, "ELSE") {
+            jump = emit(ctx, instruction(ctx, "jump"))
+            patch(ctx, branch_pc, "target", state.integer(ctx, "program_size"))
+            lex.next(ctx)
+            clauses(ctx)
+            statement(ctx, depth + 1, loop)
+            patch(ctx, jump, "target", state.integer(ctx, "program_size"))
+        } else { patch(ctx, branch_pc, "target", state.integer(ctx, "program_size")) }
+        return
+    }
+    else if lex.keyword(ctx, "DO") { do_statement(ctx, depth, loop); return }
+    else if lex.keyword(ctx, "LEAVE") || lex.keyword(ctx, "ITERATE") {
+        if loop < 0 { state.fail(ctx, "loop control requires an enclosing DO loop") }
+        emit(ctx, instruction(ctx, string.to_lower(word)))
+        lex.next(ctx)
+    } else if state.integer(ctx, "kind") == 2 || lex.keyword(ctx, "SAY") || lex.keyword(ctx, "EXIT") {
+        op = "command"
+        if state.integer(ctx, "kind") == 1 && (word == "SAY" || word == "EXIT") { op = string.to_lower(word); lex.next(ctx) }
+        inst = instruction(ctx, op)
+        if op == "exit" && (state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4) { json.set(inst, "value", literal(ctx, values.numeric("0"))) }
+        else {
+            if op == "say" && (state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4) { state.fail(ctx, "bare SAY is not implemented; use SAY ''") }
+            json.set(inst, "value", expression(ctx, 1, 0, " ELSE "))
+        }
+        emit(ctx, inst)
+    } else if lex.keyword(ctx, "ADDRESS") {
+        lex.next(ctx)
+        if state.integer(ctx, "kind") != 1 { state.fail(ctx, "expected ADDRESS environment name") }
+        inst = instruction(ctx, "address")
+        json.set(inst, "name", json.str(string.to_lower(state.read(ctx, "token"))))
+        emit(ctx, inst)
+        lex.next(ctx)
+        if state.integer(ctx, "kind") == 2 { statement(ctx, depth + 1, loop) }
+    } else {
+        if lex.keyword(ctx, "LET") { lex.next(ctx); token = state.read(ctx, "token") }
+        if state.integer(ctx, "kind") == 1 && following(ctx) == "=" {
+            inst = instruction(ctx, "assign")
+            json.set(inst, "name", json.str(token))
+            lex.next(ctx)
+            lex.next(ctx)
+            if lex.keyword(ctx, "CALL") {
+                wrapper = node(ctx, "call_result")
+                json.set(wrapper, "value", call_statement(ctx, true))
+                json.set(inst, "value", wrapper)
+            } else { json.set(inst, "value", expression(ctx, 1, 0, " ELSE ")) }
+            emit(ctx, inst)
+        } else if state.integer(ctx, "kind") == 1 && following(ctx) == "(" {
+            inst = instruction(ctx, "call")
+            json.set(inst, "value", expression(ctx, 1, 0, " ELSE "))
+            emit(ctx, inst)
+        } else { state.fail(ctx, "unsupported statement (expected assignment)") }
+    }
+    if state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && !lex.keyword(ctx, "ELSE") { state.fail(ctx, "unexpected token or unsupported syntax") }
+}
+
+finish_routine(ctx: ptr) {
+    if state.read(ctx, "open_routine") == "" { return }
+    label = state.integer(ctx, "open_routine") - 1
+    patch(ctx, label, "target", state.integer(ctx, "program_size"))
+    state.write(ctx, "open_routine", "")
+}
+
+compile(ctx: ptr) {
+    clauses(ctx)
+    while state.integer(ctx, "kind") != 0 && state.read(ctx, "error") == "" {
+        if state.integer(ctx, "kind") == 1 && following(ctx) == ":" {
+            if state.read(ctx, "open_routine") != "" {
+                emit(ctx, instruction(ctx, "implicit_return"))
+                finish_routine(ctx)
+            }
+            state.number(ctx, "statement_line", state.integer(ctx, "token_line"))
+            name = string.to_upper(state.read(ctx, "token"))
+            label = emit(ctx, instruction(ctx, "label"))
+            state.number(ctx, string.concat("r:", name), label + 1)
+            state.number(ctx, "open_routine", label + 1)
+            lex.next(ctx)
+            lex.next(ctx)
+            if lex.keyword(ctx, "PROCEDURE") { statement(ctx, 0, -1) }
+            else if state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 { state.fail(ctx, "label must occupy its own clause") }
+        } else {
+            returning = lex.keyword(ctx, "RETURN")
+            statement(ctx, 0, -1)
+            if returning { finish_routine(ctx) }
+        }
+        clauses(ctx)
+    }
+    if state.read(ctx, "open_routine") != "" {
+        emit(ctx, instruction(ctx, "implicit_return"))
+        finish_routine(ctx)
+    }
+}

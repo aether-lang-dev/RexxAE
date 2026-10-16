@@ -1,0 +1,83 @@
+// Only v: entries belong to script generations. Host registrations, programs,
+// permissions and execution metadata always stay in the owning context.
+import std.string
+import std.map
+import std.json
+import src.state
+
+exports(enter, leave)
+
+snapshot(ctx: ptr) -> ptr {
+    result = json.obj()
+    keys = map.map_keys_raw(ctx)
+    defer map.map_keys_free(keys)
+    i = 0
+    while i < map.map_keys_size_raw(keys) {
+        key = map.map_keys_get_raw(keys, i)
+        if string.starts_with(key, "v:") != 0 {
+            json.set(result, key, json.str(state.read(ctx, key)))
+        }
+        i = i + 1
+    }
+    return result
+}
+clear(ctx: ptr) {
+    // Own the names before removing entries: map key snapshots borrow names.
+    saved = snapshot(ctx)
+    defer json.json_free(saved)
+    i = 0
+    while i < json.json_object_size_raw(saved) {
+        map.map_remove(ctx, json.json_object_key_at(saved, i))
+        i = i + 1
+    }
+}
+restore(ctx: ptr, saved: ptr) {
+    i = 0
+    while i < json.json_object_size_raw(saved) {
+        key = json.json_object_key_at(saved, i)
+        state.write(ctx, key, state.text(saved, key))
+        i = i + 1
+    }
+}
+enter(ctx: ptr, exposed: ptr) -> ptr {
+    generation = json.obj()
+    saved = snapshot(ctx)
+    json.set(generation, "argv", json.str(state.read(ctx, "argv")))
+    shared = json.arr()
+    clear(ctx)
+    i = 0
+    while i < json.json_object_size_raw(saved) {
+        key = json.json_object_key_at(saved, i)
+        if string.starts_with(key, "v:RUNTIME.") != 0 { state.write(ctx, key, state.text(saved, key)) }
+        i = i + 1
+    }
+    i = 0
+    while i < json.json_array_size(exposed) {
+        name = string.copy(json.json_get_string_raw(json.json_array_get_raw(exposed, i)))
+        if string.ends_with(name, ".") != 0 { name = string.substring(name, 0, string.length(name) - 1) }
+        key = string.concat("v:", name)
+        json.push(shared, json.str(key))
+        encoded = state.text(saved, key)
+        if encoded != "" { state.write(ctx, key, encoded) }
+        i = i + 1
+    }
+    json.set(generation, "variables", saved)
+    json.set(generation, "shared", shared)
+    return generation
+}
+leave(ctx: ptr, generation: ptr) {
+    current = snapshot(ctx)
+    defer json.json_free(current)
+    clear(ctx)
+    restore(ctx, state.field(generation, "variables"))
+    shared = state.field(generation, "shared")
+    i = 0
+    while i < json.json_array_size(shared) {
+        key = string.copy(json.json_get_string_raw(json.json_array_get_raw(shared, i)))
+        encoded = state.text(current, key)
+        if encoded == "" { map.map_remove(ctx, key) }
+        else { state.write(ctx, key, encoded) }
+        i = i + 1
+    }
+    state.write(ctx, "argv", state.text(generation, "argv"))
+}

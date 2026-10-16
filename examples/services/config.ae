@@ -1,0 +1,26 @@
+// One injected effect, following sae/services/files: validate, then enforce
+// a service-specific fence even when the container trusts this function.
+import std.file
+import std.sandbox
+import std.map
+import std.string
+
+exports(read)
+
+@no_net
+@no_os
+read(key: string) -> string {
+    if key != "public" { return "DENIED" }
+    result = map.map_new()
+    defer map.map_free(result)
+    map.map_put_string_owned(result, "text", "DENIED")
+    grants = sandbox.new("configuration service") {
+        grant_fs_read("tests/fixtures/public.txt")
+    }
+    defer sandbox.free(grants)
+    sandbox.enforce(grants) callback {
+        content, err = file.read("tests/fixtures/public.txt")
+        if err == "" { map.map_put_string_owned(result, "text", content) }
+    }
+    return string.copy(map.map_get_raw(result, "text"))
+}

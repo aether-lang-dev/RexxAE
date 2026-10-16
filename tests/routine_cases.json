@@ -1,0 +1,336 @@
+[
+  [
+    "basic",
+    "CALL add 0, 2\nSAY RESULT\nEXIT\nadd:\nARG a,b\nRETURN a + b",
+    [
+      "2"
+    ]
+  ],
+  [
+    "spaces",
+    "CALL pair 1 2\nEXIT\npair:\nPARSE ARG a b\nSAY a b\nRETURN",
+    [
+      "1 2"
+    ]
+  ],
+  [
+    "operator",
+    "LET n = 4\nCALL down n - 1\nSAY RESULT\nEXIT\ndown:\nARG n\nRETURN n",
+    [
+      "3"
+    ]
+  ],
+  [
+    "negative",
+    "CALL pair 1 -5\nEXIT\npair:\nARG a b\nSAY a b\nRETURN",
+    [
+      "1 -5"
+    ]
+  ],
+  [
+    "shared",
+    "LET n = 1\nCALL change\nSAY n\nEXIT\nchange:\nn = 7\nRETURN",
+    [
+      "7"
+    ]
+  ],
+  [
+    "nested",
+    "CALL outer 'one'\nSAY RESULT\nLET n = ARG(1)\nSAY n\nEXIT\nouter:\nCALL inner 'two'\nRETURN ARG(1)\ninner:\nRETURN ARG(1)",
+    [
+      "two",
+      "two"
+    ]
+  ],
+  [
+    "recursion",
+    "CALL down 3\nSAY RESULT\nEXIT\ndown:\nARG n\nIF n = 0 THEN RETURN 'done'\nSAY n\nCALL down n - 1\nRETURN 'done'",
+    [
+      "3",
+      "2",
+      "1",
+      "done"
+    ]
+  ],
+  [
+    "loop_return",
+    "LET i = 'old'\nDO i = 1 TO 2\nCALL work i\nSAY i RESULT\nEND\nSAY i\nEXIT\nwork:\nDO i = 8 TO 9\nRETURN i\nEND",
+    [
+      "1 8",
+      "2 8",
+      "old"
+    ]
+  ],
+  [
+    "implicit",
+    "CALL first\nSAY RESULT\nCALL empty\nSAY RESULT\nEXIT\nfirst:\nRETURN 'before'\nempty:",
+    [
+      "before",
+      "before"
+    ]
+  ],
+  [
+    "empty",
+    "CALL empty\nSAY TYPEOF(RESULT)\nEXIT\nempty:",
+    [
+      "object"
+    ]
+  ],
+  [
+    "label_skip",
+    "CALL foo\nSAY RESULT\nSAY 'tail'\nfoo:\nSAY 'routine'\nRETURN 'yes'\nSAY 'after'",
+    [
+      "routine",
+      "yes",
+      "tail",
+      "after"
+    ]
+  ],
+  [
+    "main_return",
+    "SAY 'before'\nRETURN 7\nSAY 'bad'",
+    [
+      "before"
+    ]
+  ],
+  [
+    "dynamic",
+    "LET target = 'routine'\nCALL (target) 5\nSAY RESULT\nEXIT\nroutine:\nARG x\nRETURN x",
+    [
+      "5"
+    ]
+  ],
+  [
+    "builtin",
+    "CALL UPPER 'hello'\nSAY RESULT",
+    [
+      "HELLO"
+    ]
+  ],
+  [
+    "arg_count",
+    "CALL routine 0, '', 'third'\nEXIT\nroutine:\nLET count = ARG()\nLET zero = ARG(1)\nLET exists = ARG(2, 'E')\nLET omitted = ARG(2, 'O')\nLET absent = ARG(4, 'O')\nSAY count zero exists omitted absent\nRETURN",
+    [
+      "3 0 1 1 0"
+    ]
+  ],
+  [
+    "arg_missing",
+    "CALL routine 1\nEXIT\nroutine:\nARG a,b\nSAY a\nSAY b\nLET missing = ARG(2)\nSAY missing\nRETURN",
+    [
+      "1",
+      "",
+      ""
+    ]
+  ],
+  [
+    "typed_return",
+    "CALL routine\nSAY JSON_STRINGIFY(RESULT)\nEXIT\nroutine:\nLET o = JSON_PARSE('{\"a\":[1,true,null]}')\nRETURN o",
+    [
+      "{\"a\":[1,true,null]}"
+    ]
+  ],
+  [
+    "assigned_call",
+    "LET x = CALL routine 2\nSAY JSON_STRINGIFY(x)\nEXIT\nroutine:\nARG n\nRETURN n + 3",
+    [
+      "{\"terminated\":false,\"returnValue\":5}"
+    ]
+  ],
+  [
+    "early_return",
+    "CALL routine\nSAY RESULT\nEXIT\nroutine:\nDO 2\nIF 1 THEN RETURN 9\nEND\nRETURN 8",
+    [
+      "9"
+    ]
+  ],
+  [
+    "last_label_wins",
+    "CALL routine\nSAY RESULT\nEXIT\nroutine:\nRETURN 1\nroutine:\nRETURN 2",
+    [
+      "2"
+    ]
+  ],
+  [
+    "adjacent_labels",
+    "CALL first\nSAY TYPEOF(RESULT)\nCALL second\nSAY RESULT\nEXIT\nfirst:\nsecond:\nRETURN 2",
+    [
+      "object",
+      "2"
+    ]
+  ],
+  [
+    "arg_text_prefix",
+    "CALL work 7\nEXIT\nwork:\nLET a = ARG('1e2')\nLET b = ARG('1.9')\nSAY a b\nRETURN",
+    [
+      "7 7"
+    ]
+  ],
+  [
+    "arg_fractional_numeric",
+    "CALL work 7\nEXIT\nwork:\nLET a = ARG(1.9)\nSAY a\nRETURN",
+    [
+      ""
+    ]
+  ],
+  [
+    "arg_large_missing",
+    "CALL work 7\nEXIT\nwork:\nLET a = ARG(1000, 'E')\nLET b = ARG(1000, 'O')\nSAY a b\nRETURN",
+    [
+      "0 0"
+    ]
+  ],
+  [
+    "dynamic_builtin",
+    "LET target = 'upper'\nCALL (target) 'hello'\nSAY RESULT",
+    [
+      "HELLO"
+    ]
+  ],
+  [
+    "routine_shadows_builtin",
+    "CALL UPPER 'hello'\nSAY RESULT\nEXIT\nUPPER:\nRETURN 'routine'",
+    [
+      "routine"
+    ]
+  ],
+  [
+    "main_arg_defaults",
+    "ARG a,b\nLET count = ARG()\nSAY count\nSAY a\nSAY b",
+    [
+      "0",
+      "",
+      ""
+    ]
+  ],
+  [
+    "compact_expression",
+    "LET n = 4\nCALL work n-1\nSAY RESULT\nEXIT\nwork:\nARG a\nRETURN a",
+    [
+      "3"
+    ]
+  ],
+  [
+    "procedure_stem_expose",
+    "LET stem.1 = 'one'\nCALL work\nSAY stem.1 stem.2\nEXIT\nwork: PROCEDURE EXPOSE stem.\nLET stem.1 = 'changed'\nLET stem.2 = 'two'\nRETURN",
+    [
+      "changed two"
+    ]
+  ],
+  [
+    "procedure_hidden_stem",
+    "LET stem.1 = 'outer'\nCALL work\nSAY stem.1\nEXIT\nwork: PROCEDURE\nSAY stem.1\nLET stem.1 = 'inner'\nRETURN",
+    [
+      "STEM.1",
+      "outer"
+    ]
+  ],
+  [
+    "procedure_missing_expose",
+    "CALL work\nSAY created\nEXIT\nwork: PROCEDURE EXPOSE created\ncreated = 7\nRETURN",
+    [
+      "7"
+    ]
+  ],
+  [
+    "procedure_nested_generations",
+    "LET x = 'root'\nCALL outer\nSAY x RESULT\nEXIT\nouter: PROCEDURE EXPOSE x\nx = 'outer'\nCALL inner\nSAY x RESULT\nRETURN x\ninner: PROCEDURE\nSAY x\nx = 'inner'\nRETURN x",
+    [
+      "X",
+      "outer inner",
+      "outer outer"
+    ]
+  ],
+  [
+    "procedure_plain_inner",
+    "LET x = 'root'\nCALL outer\nSAY x RESULT\nEXIT\nouter: PROCEDURE\nx = 'local'\nCALL inner\nRETURN x\ninner:\nx = 'shared'\nRETURN",
+    [
+      "root shared"
+    ]
+  ],
+  [
+    "procedure_argv_restore",
+    "CALL outer 'caller'\nEXIT\nouter:\nCALL inner 'callee'\nSAY ARG(1) RESULT\nRETURN\ninner: PROCEDURE\nSAY ARG(1)\nRETURN 'ok'",
+    [
+      "callee",
+      "caller ok"
+    ]
+  ],
+  [
+    "procedure_loop_restore",
+    "LET i = 'root'\nDO i = 1 TO 2\nCALL work i\nSAY i RESULT\nEND\nSAY i\nEXIT\nwork: PROCEDURE\nARG n\nDO i = 1 TO 2\nEND\nRETURN n + i",
+    [
+      "1 4",
+      "2 5",
+      "root"
+    ]
+  ],
+  [
+    "procedure_next_line",
+    "LET x = 1\nCALL work\nSAY x RESULT\nEXIT\nwork:\nPROCEDURE EXPOSE x\nx = 2\nRETURN 3",
+    [
+      "2 3"
+    ]
+  ],
+  [
+    "range_wrong_direction",
+    "DO i = 1 TO 3 BY -1\nSAY 'bad'\nEND\nSAY i",
+    [
+      "1"
+    ]
+  ],
+  [
+    "range_leave",
+    "DO i = 1 TO 3\nLEAVE\nEND\nSAY i",
+    [
+      "1"
+    ]
+  ],
+  [
+    "over_object_order",
+    "LET items = {\"b\":\"bee\",\"10\":\"ten\",\"2\":\"two\",\"01\":\"one\",\"0\":\"zero\",\"a\":\"aye\"}\nDO v OVER items\nSAY v\nEND",
+    [
+      "zero",
+      "two",
+      "ten",
+      "bee",
+      "one",
+      "aye"
+    ]
+  ],
+  [
+    "over_empty_array",
+    "DO v OVER []\nSAY 'bad'\nEND\nSAY 'done'",
+    [
+      "done"
+    ]
+  ],
+  [
+    "bare_builtin_shadow",
+    "LET UPPER = 'variable'\nLET s = 'hello'\nLET x = UPPER s\nSAY x",
+    [
+      "variable hello"
+    ]
+  ],
+  [
+    "derived_once",
+    "LET i = 'j'\nLET j = 2\nLET stem.i = 'value'\nSAY stem.i stem.2",
+    [
+      "value STEM.2"
+    ]
+  ],
+  [
+    "derived_dotted_tail",
+    "LET i = 'child.name'\nLET stem.i = 'value'\nSAY stem.child.name",
+    [
+      "value"
+    ]
+  ],
+  [
+    "abuttal_parenthesized",
+    "LET s = 'world'\nLET greeting = 'hello ' || s\nSAY (greeting)'!'",
+    [
+      "hello world!"
+    ]
+  ]
+]

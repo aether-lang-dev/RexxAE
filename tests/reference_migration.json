@@ -1,0 +1,178 @@
+[
+  {
+    "name": "unset_symbol",
+    "source": "SAY foo",
+    "latest_output": [
+      "FOO"
+    ]
+  },
+  {
+    "name": "unset_compound",
+    "source": "LET i = 2\nSAY list.i",
+    "latest_output": [
+      "LIST.2"
+    ]
+  },
+  {
+    "name": "substituted_tail",
+    "source": "LET i = 2\nLET list.i = 'x'\nSAY list.2 list.i",
+    "latest_output": [
+      "x x"
+    ]
+  },
+  {
+    "name": "substituted_property_collision",
+    "source": "LET key = 'x'\nLET data.x = 7\nLET data.key = 8\nSAY data.key data.x",
+    "latest_output": [
+      "8 8"
+    ]
+  },
+  {
+    "name": "multiple_tail_parts",
+    "source": "LET i = 2\nLET j = 3\nLET list.i.j = 'x'\nSAY list.2.3",
+    "latest_output": [
+      "x"
+    ]
+  },
+  {
+    "name": "procedure_generation",
+    "source": "LET x = 'outer'\nCALL work\nSAY x RESULT\nEXIT\nwork: PROCEDURE\nSAY x\nLET x = 'inner'\nRETURN x",
+    "latest_output": [
+      "X",
+      "outer inner"
+    ]
+  },
+  {
+    "name": "procedure_expose",
+    "source": "LET total = 10\nCALL add 5\nSAY total\nEXIT\nadd: PROCEDURE EXPOSE total\nARG amount\ntotal = total + amount\nRETURN",
+    "latest_output": [
+      "15"
+    ]
+  },
+  {
+    "name": "procedure_recursion",
+    "source": "CALL fact 5\nSAY RESULT\nEXIT\nfact: PROCEDURE\nARG n\nIF n <= 1 THEN RETURN 1\nCALL fact n - 1\nRETURN n * RESULT",
+    "latest_output": [
+      "120"
+    ]
+  },
+  {
+    "name": "builtin_call_expression",
+    "source": "LET n = 4\nCALL ABS n - 7\nSAY RESULT",
+    "latest_output": [
+      "3"
+    ]
+  },
+  {
+    "name": "builtin_call_zero",
+    "source": "LET n = 0\nCALL ABS n\nSAY RESULT",
+    "latest_output": [
+      "0"
+    ]
+  },
+  {
+    "name": "blank_concatenation",
+    "source": "LET v = 'a'\nv = v 'b'\nSAY v",
+    "latest_output": [
+      "a b"
+    ]
+  },
+  {
+    "name": "abuttal",
+    "source": "LET v = 'a'\nv = v'b'\nSAY v",
+    "latest_output": [
+      "ab"
+    ]
+  },
+  {
+    "name": "blank_in_call",
+    "source": "LET a = 'x'\nLET n = LENGTH(a 'yz')\nSAY n",
+    "latest_output": [
+      "4"
+    ]
+  },
+  {
+    "name": "abuttal_in_call",
+    "source": "LET a = 'x'\nLET n = LENGTH(a'yz')\nSAY n",
+    "latest_output": [
+      "3"
+    ]
+  },
+  {
+    "name": "unparenthesized_builtin",
+    "source": "LET s = 'hello'\nLET x = UPPER s\nSAY x",
+    "latest_output": [
+      "HELLO"
+    ]
+  },
+  {
+    "name": "range_termination",
+    "source": "DO i = 1 TO 2\nEND\nSAY i",
+    "latest_output": [
+      "3"
+    ]
+  },
+  {
+    "name": "descending_termination",
+    "source": "DO i = 3 TO 1\nEND\nSAY i",
+    "latest_output": [
+      "0"
+    ]
+  },
+  {
+    "name": "existing_loop_variable",
+    "source": "LET i = 99\nDO i = 1 TO 2\nEND\nSAY i",
+    "latest_output": [
+      "99"
+    ]
+  },
+  {
+    "name": "over_stem",
+    "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem\nSAY v\nEND",
+    "latest_output": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "name": "over_stem_period",
+    "source": "LET stem.1 = 'a'\nLET stem.2 = 'b'\nDO v OVER stem.\nSAY v\nEND",
+    "latest_output": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "name": "next_line_instruction",
+    "source": "IF 1 = 1 THEN\nSAY 'yes'\nELSE\nSAY 'no'",
+    "latest_output": [
+      "yes"
+    ]
+  },
+  {
+    "name": "next_line_then",
+    "source": "IF 1 = 1\nTHEN SAY 'yes'\nELSE SAY 'no'",
+    "latest_output": [
+      "yes"
+    ]
+  },
+  {
+    "name": "command_concatenation",
+    "source": "LET n = 3\nADDRESS APP\n'SET n=' || n",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "app",
+        "SET n=3"
+      ]
+    ]
+  },
+  {
+    "name": "logical_condition",
+    "source": "IF 1 = 1 | 0 = 1 THEN SAY 'or'\nIF 1 = 1 & 0 = 1 THEN SAY 'bad'\nELSE SAY 'and'",
+    "latest_output": [
+      "or",
+      "and"
+    ]
+  }
+]

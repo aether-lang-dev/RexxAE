@@ -1,0 +1,158 @@
+// Shared golden programs and frame lifetime/protocol cases.
+import std.spec
+import std.file
+import std.json
+import std.string
+import src.engine
+
+output(source: string, expected: ptr) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = 3
+    steps = 0
+    index = 0
+    while status > 0 && steps < 10000 {
+        status = engine.rexxae_step(ctx, 1)
+        if status == 1 {
+            if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
+            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            index = index + 1
+        }
+        if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
+        steps = steps + 1
+    }
+    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    spec.assert_eq(status, 0, "completed within budgeted steps")
+    spec.assert_eq(index, json.json_array_size(expected), "output count")
+}
+
+main() {
+    fw = spec.init()
+    contents, read_err = file.read("tests/select_cases.json")
+    if read_err != "" { println(read_err); return 1 }
+    rows, parse_err = json.parse(contents)
+    if parse_err != "" { println(parse_err); return 1 }
+    defer json.json_free(rows)
+    spec.describe(fw, "RexxJS SELECT fixtures") {
+        i = 0
+        while i < json.json_array_size(rows) {
+            row = json.json_array_get_raw(rows, i)
+            name = json.json_get_string_raw(json.json_array_get_raw(row, 0))
+            source = string.copy(json.json_get_string_raw(json.json_array_get_raw(row, 1)))
+            expected = json.json_array_get_raw(row, 2)
+            spec.it(name) callback { output(source, expected) }
+            i = i + 1
+        }
+    }
+    spec.describe(fw, "SELECT suspension and diagnostics") {
+        spec.it("evaluates host conditions once and skips later effects") callback {
+            ctx = engine.rexxae_create("SELECT\nWHEN TESTHOST(1) < TESTHOST(2) THEN CALL TESTHOST 3\nWHEN TESTHOST(4) THEN SAY 'bad'\nOTHERWISE CALL TESTHOST 5\nEND\nSAY RESULT")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 1, 1), 0, "register")
+            status = 3
+            steps = 0
+            calls = 0
+            output_count = 0
+            while status > 0 && steps < 100 {
+                status = engine.rexxae_step(ctx, 1)
+                if status == 4 {
+                    calls = calls + 1
+                    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[${calls}]", "exact dispatch order")
+                    spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "pending request repeats")
+                    result = string.from_int(calls + 1)
+                    if calls == 3 { result = "{\"ok\":true}" }
+                    spec.assert_eq(engine.rexxae_reply_value(ctx, result, ""), 0, "typed reply")
+                }
+                if status == 1 {
+                    spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "[object Object]", "branch result")
+                    output_count = output_count + 1
+                }
+                steps = steps + 1
+            }
+            spec.assert_eq(status, 0, "completed")
+            spec.assert_eq(calls, 3, "no repeated or skipped-branch effects")
+            spec.assert_eq(output_count, 1, "one output")
+        }
+        spec.it("keeps the WHEN line during invalid replies and host errors") callback {
+            ctx = engine.rexxae_create("SELECT\nWHEN TESTHOST() THEN SAY 'bad'\nEND")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "condition pending")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "invalid", ""), -1, "invalid reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "condition still pending")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "condition refused"), 0, "error reply")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_eq(engine.rexxae_line(ctx), 2, "WHEN source line")
+        }
+        spec.it("reports a runtime error in an OTHERWISE body") callback {
+            ctx = engine.rexxae_create("SELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE\nLET n = 1 / 0\nEND")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "runtime error")
+            spec.assert_eq(engine.rexxae_line(ctx), 4, "body line")
+        }
+        spec.it("rejects malformed selections before any host dispatch") callback {
+            cases = json.arr()
+            json.push(cases, json.str("SELECT\nWHEN 1 SAY 'bad'\nEND"))
+            json.push(cases, json.str("SELECT\nWHEN THEN SAY 'bad'\nEND"))
+            json.push(cases, json.str("SELECT\nWHEN 1 THEN SAY 'bad'"))
+            json.push(cases, json.str("SELECT\nSAY 'bad'\nEND"))
+            json.push(cases, json.str("WHEN 1 THEN SAY 'bad'"))
+            json.push(cases, json.str("OTHERWISE SAY 'bad'"))
+            json.push(cases, json.str("SELECT value\nEND"))
+            json.push(cases, json.str("SELECT\nWHEN 1 THEN DO extra\nEND"))
+            defer json.json_free(cases)
+            i = 0
+            while i < json.json_array_size(cases) {
+                invalid = string.copy(json.json_get_string_raw(json.json_array_get_raw(cases, i)))
+                ctx = engine.rexxae_create("CALL TESTHOST\n${invalid}")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "parse precedes effect")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error remains terminal")
+                engine.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+        spec.it("attributes a missing closing END to the SELECT header") callback {
+            ctx = engine.rexxae_create("\nSELECT\nWHEN 1 THEN SAY 'bad'\n")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "missing END")
+            spec.assert_eq(engine.rexxae_line(ctx), 2, "SELECT header")
+            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "expected END for SELECT", "diagnostic")
+        }
+        spec.it("budgets a loop containing selections and unwinds on EXIT") callback {
+            ctx = engine.rexxae_create("LET i = 'old'\nDO i = 1 TO 100\nSELECT\nWHEN i = 5 THEN EXIT 9\nOTHERWISE LET n = i\nEND\nEND")
+            defer engine.rexxae_destroy(ctx)
+            status = 3
+            steps = 0
+            while status == 3 && steps < 100 {
+                status = engine.rexxae_step(ctx, 1)
+                steps = steps + 1
+            }
+            spec.assert_eq(status, 0, "completed")
+            spec.assert_eq(engine.rexxae_exit_code(ctx), 9, "EXIT propagated")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"old\"", "loop restored")
+        }
+        spec.it("tears down nested selections suspended in a routine") callback {
+            i = 0
+            while i < 30 {
+                ctx = engine.rexxae_create("CALL work\nEXIT\nwork:\nSELECT\nWHEN 1 THEN\nSELECT\nWHEN TESTHOST() THEN SAY 'ready'\nEND\nOTHERWISE RETURN 0\nEND\nRETURN 1")
+                spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "nested condition")
+                engine.rexxae_destroy(ctx)
+                i = i + 1
+            }
+        }
+        spec.it("bounds selection nesting during parsing") callback {
+            source = "SAY 'before'\n"
+            i = 0
+            while i < 70 { source = "${source}SELECT\nWHEN 1 THEN\n"; i = i + 1 }
+            source = "${source}SAY 'deep'\n"
+            i = 0
+            while i < 70 { source = "${source}END\n"; i = i + 1 }
+            ctx = engine.rexxae_create(source)
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "depth guarded before output")
+            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "statement nesting limit exceeded", "depth diagnostic")
+        }
+    }
+    return spec.run_summary(fw)
+}

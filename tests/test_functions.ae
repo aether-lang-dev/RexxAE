@@ -1,0 +1,107 @@
+import std.spec
+import std.string
+import src.engine
+
+check_expr(expression: string, expected: string) {
+    source = "LET ANSWER = ${expression}\nSAY ANSWER"
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = engine.rexxae_step(ctx, 100)
+    if status == -1 {
+        detail = string.copy(engine.rexxae_error(ctx))
+        spec.fail("${expression}: ${detail}")
+        return
+    }
+    spec.assert_eq(status, 1, "function result produces SAY")
+    actual = string.copy(engine.rexxae_text(ctx))
+    spec.assert_str_eq(actual, expected, expression)
+    spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "program completed")
+}
+
+check_error(source: string, fragment: string) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error status")
+    detail = string.copy(engine.rexxae_error(ctx))
+    spec.assert_contains(detail, fragment, "specific error")
+    spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error is terminal")
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "native scalar functions through the Rexx parser") {
+        spec.it("nests function calls and arithmetic") callback {
+            check_expr("UPPER(SUBSTR('abcdef', 2, 3)) || LOWER('Z')", "BCDz")
+            check_expr("ABS(-3) + MAX(4, 5 * 2)", "13")
+        }
+        spec.it("accepts positional and named calls") callback {
+            check_expr("UPPER string='hello'", "HELLO")
+            check_expr("SUBSTR string='abcdef' start=2 length=3", "bcd")
+            check_expr("MATH_POWER base=2 exponent=5", "32")
+        }
+        spec.it("preserves quoted delimiters and operators") callback {
+            check_expr("REVERSE('),(')", "(,)")
+            check_expr("'a' '+' 'b'", "a + b")
+            check_expr("LENGTH('||')", "2")
+        }
+        spec.it("measures JS UTF-16 units rather than UTF-8 bytes") callback {
+            check_expr("LENGTH('café')", "4")
+            check_expr("LENGTH('😀')", "2")
+            check_expr("LENGTH('é')", "2")
+        }
+        spec.it("uses distinct substring bases and swaps negative spans") callback {
+            check_expr("SUBSTR('abcdef', 2, 3)", "bcd")
+            check_expr("SUBSTRING('abcdef', 2, 3)", "cde")
+            check_expr("SUBSTR('abcd', 3, -1)", "b")
+            check_expr("SUBSTRING('abcd', 3, -1)", "c")
+        }
+        spec.it("uses data-first searches and documented index bases") callback {
+            check_expr("POS('banana', 'na', 4)", "5")
+            check_expr("INDEXOF('banana', 'na', 4)", "4")
+            check_expr("POS('abc', '', 100)", "4")
+            check_expr("POS('abc', 'missing')", "0")
+        }
+        spec.it("pads with repeating patterns and clips them") callback {
+            check_expr("LEFT('ab', 5, 'xy')", "abxyx")
+            check_expr("RIGHT('ab', 5, 'xy')", "xyxab")
+            check_expr("CENTER('ab', 7, 'xy')", "xyabxyx")
+            check_expr("PAD_START('abc', 5, '')", "abc")
+        }
+        spec.it("normalizes words and searches whole phrases") callback {
+            check_expr("SPACE('  a   b  ', 2, '.')", "a..b")
+            check_expr("WORDPOS('a b a b c', 'a b', 2)", "3")
+            check_expr("DELWORD('a b c d', 2, 2)", "a d")
+            check_expr("SUBWORD('a b c d', 2, 2)", "b c")
+        }
+        spec.it("retains RexxJS floor and round behavior for negatives") callback {
+            check_expr("INT(-1.1)", "-2")
+            check_expr("MATH_ROUND(-1.5)", "-1")
+            check_expr("MATH_ROUND(12.345, 2)", "12.35")
+        }
+        spec.it("uses parseFloat prefixes and ignores invalid reduction inputs") callback {
+            check_expr("ABS('-12.5px')", "12.5")
+            check_expr("MATH_SUM(2, 'bad', 3)", "5")
+            check_expr("MAX('bad', -4, -2)", "-2")
+            check_expr("MATH_MULTIPLY()", "1")
+        }
+        spec.it("implements bounded deterministic maths") callback {
+            check_expr("MATH_GCD(-12, 18)", "6")
+            check_expr("MATH_LCM(12, 18)", "36")
+            check_expr("MATH_DISTANCE_2D(0, 0, 3, 4)", "5")
+            check_expr("MATH_FACTORIAL(5)", "120")
+        }
+        spec.it("reports unsupported functions and malformed argument lists") callback {
+            check_error("SAY MISSING(1)", "unavailable function")
+            check_error("SAY UPPER('a',)", "argument after comma")
+            check_error("SAY UPPER('a'", "closing parenthesis")
+            check_error("SAY UPPER unknown='a'", "unknown named argument")
+            check_error("SAY UPPER string='a' str='b'", "duplicate argument")
+        }
+        spec.it("diagnoses domains, unported Unicode and output limits") callback {
+            check_error("SAY MATH_SQRT(-1)", "negative number")
+            check_error("SAY UPPER('é')", "Unicode")
+            check_error("SAY REPEAT('xx', 1000000)", "limit")
+        }
+    }
+    return spec.run_summary(fw)
+}

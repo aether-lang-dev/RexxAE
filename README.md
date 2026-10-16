@@ -1,0 +1,207 @@
+# RexxAE
+
+An embeddable Rexx engine written in Aether, consumable as a **C library and
+an Aether binary library**. RexxJS is the dialect reference; spreadsheet and
+sae supply integration examples. The default library has no fs/net/os/extern
+capability grants. Applications supply effects through explicit host requests;
+there is no JavaScript runtime dependency.
+
+This is a working implementation slice, not a complete port. It has typed
+values, 71 builtins with limited profiles, registered application functions, labeled routines with CALL/RETURN,
+comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
+
+Current target checkouts are RexxJS `e3bd4e9` and spreadsheet `5bc0e29`
+(vendoring `60d6ab0`). The migrated engine passes **507 strict differential
+programs** against standalone RexxJS, including 24 update probes.
+PROCEDURE/EXPOSE, substituted compound tails, uppercase unset symbols,
+abuttal, object OVER and updated loop completion are implemented. See
+[the reference report](docs/reference-update.md) for limits and vendor differences.
+
+## Build and test
+
+Requires Aether, a C compiler and make. Tests require Python 3; differential
+tests and inventory generation also need Node.js and a RexxJS checkout.
+No npm install is required.
+
+```sh
+make                            # self-contained library and C counter host
+make aether-lib                 # shared-runtime variant for Aether consumers
+make test                       # std.spec, binary linkage, ctypes, host harness
+make parity REXXJS=../RexxJS     # strict comparison with the selected checkout
+make reference-audit             # characterize standalone and vendored targets
+make binary-test                # both Aether binary-library variants
+make containment                # runtime escape probes and compiler guards
+make memcheck                   # requires Valgrind
+make inventory check-inventory  # function/dependency analysis
+```
+
+Use the development compiler with `AE=/home/paul/scm/aether/build/ae`.
+Use `make -B` when switching compilers to rebuild libraries and consumers
+together. Make keeps its Aether cache under `build/cache`.
+
+This migration is tested on Linux with installed Aether 0.802.0. The previous
+slice also passed development Aether 0.815.0; current dev-tree validation is
+blocked by compiler/stdlib annotation errors. Installed 0.802 also has a
+repeat trusted-service refusal; see [Aether issues](docs/aether-issues.md).
+The Makefile has a macOS library/rpath branch; macOS and Windows remain
+untested. Static/object packaging is a follow-up.
+
+## Embed through the C interface
+
+Include [rexxae.h](include/rexxae.h) and link `librexxae`.
+[examples/counter.c](examples/counter.c) demonstrates ADDRESS commands.
+[examples/host.py](examples/host.py) is a Python/ctypes host harness running
+[host.rexx](examples/host.rexx):
+
+```sh
+python3 examples/host.py build/librexxae.so
+```
+
+It registers three functions, passes arrays/objects, accepts typed replies,
+executes nested CALL/RETURN and SELECT/DO and asserts the resulting host-call sequence. It does not
+replicate a spreadsheet.
+
+Create a context, register function names and arities, optionally seed typed
+variables, then call `aether_rexxae_step(ctx, instruction_budget)`:
+
+| Status | Host action |
+|---|---|
+| `REXXAE_SAY` | Read text, display/capture it, then step again. |
+| `REXXAE_COMMAND` | Read address/text; reply with RC, RESULT and ERRORTEXT. |
+| `REXXAE_FUNCTION` | Read function name/JSON arguments; reply with JSON or an error. |
+| `REXXAE_RUNNABLE` | The instruction budget was used; schedule another step. |
+| `REXXAE_DONE` | Read the exit code, then destroy the context. |
+| `REXXAE_ERROR` | Read the error and source line, then destroy the context. |
+
+Use `aether_rexxae_register_function`, `aether_rexxae_function`,
+`aether_rexxae_arguments_json` and `aether_rexxae_reply_value` for application
+functions. Names are case-insensitive; implemented builtins cannot be replaced.
+Host functions currently take positional arguments.
+
+Typed arguments/replies use JSON numbers, strings, booleans, null, arrays and
+objects. Variable getters/setters use the same representation. Convenience
+argument getters expose JSON type codes and Rexx display text. JSON excludes
+nonfinite numbers: those remain internal numeric values and cannot be
+exported as typed host arguments.
+
+Pending events repeat until answered. Expression results are memoized until
+an instruction completes, so resumption does not repeat an earlier host
+effect. Malformed JSON replies leave the call pending for correction; an
+accepted application error terminates the script. Registry/variable mutation
+is rejected while a request is pending.
+
+Inputs are copied. Getter payloads are borrowed; copy them before retaining
+across another context call. A context belongs to one host thread; concurrent
+use is not established. Destruction releases pending expressions and loop
+state. This ABI is experimental.
+
+## Link from Aether
+
+An Aether application imports the compiled library through its catalog:
+
+```aether
+import std.string
+import rexxae
+
+main() {
+    ctx = rexxae.rexxae_create("LET n = 6 * 7\nSAY n")
+    defer rexxae.rexxae_destroy(ctx)
+    status = rexxae.rexxae_step(ctx, 100)
+    if status == 1 {
+        println(string.copy(rexxae.rexxae_text(ctx)))
+    }
+}
+```
+
+After `make aether-lib`, compile with:
+
+```sh
+ae build consumer.ae --lib /path/to/RexxAE/build/aether -o consumer
+```
+
+`build/aether/librexxae.so` uses `--shared-runtime`, allowing an Aether host
+and its libraries to share one runtime. The self-contained `build/librexxae.so`
+can also be imported; it is the default C/ctypes artifact. Both use the same
+engine and API. Aether's importer supplies native link/rpath wiring.
+
+[test_binary_import.ae](tests/test_binary_import.ae) tests both variants using
+`import rexxae`, with no engine source import. Source-import std.spec tests
+are a separate layer.
+
+## Coverage and limits
+
+Supported now:
+
+- Assignments, arithmetic, signs, parentheses and concatenation.
+- Script-derived compound tails, nested property assignment, uppercase unset
+  symbols, zero-based array reads and literal host property access.
+- PARSE VAR word/literal-delimiter templates and explicit PARSE VALUE
+  expressions WITH templates, including suspended host input.
+- Typed numbers, strings, booleans, arrays, objects and JSON/host nulls.
+- 60 scalar functions plus JSON_PARSE, JSON_STRINGIFY, JSON_GET, JSON_KEYS,
+  ARRAY_GET, ARRAY_LENGTH, ARRAY_PUSH, JOIN, TYPEOF, lazy IF and ARG.
+- Positional/nested calls and recognized named scalar arguments.
+- Labeled routines with optional PROCEDURE/EXPOSE, CALL (including dynamic targets), RETURN,
+  RESULT, ARG() and simple ARG/PARSE ARG argument binding. Routine calls
+  preserve pending expressions across host requests and cooperative yields.
+- Comparisons, IF/THEN/ELSE, conditional DO blocks, and SELECT/WHEN/OTHERWISE
+  with nested branches and first-match execution.
+- DO ranges/BY, repeat, WHILE, UNTIL, FOREVER and array/object OVER;
+  innermost LEAVE/ITERATE, with existing loop variables restored as in RexxJS.
+- SAY, ADDRESS/quoted commands, integer EXIT, clause separators, comments,
+  CRLF and doubled quotes. Keywords/functions ignore case; variables retain it.
+
+Still needed: positional PARSE templates, classic stem defaults, interpolation,
+double-quoted escapes, INTERPRET, language error handlers, modules and many
+remaining functions. Missing symbols return their derived uppercase names;
+ARRAY_GET/JSON_GET missing properties still error rather than returning JS
+undefined. Nested writes through arrays are diagnosed as unsupported. JSON_GET supports direct object keys, not full paths.
+Named typed/host arguments are incomplete. Text functions remain ASCII-only
+except UTF-16-aware LENGTH; numeric coercion/formatting has tested profiles,
+not full JS equivalence.
+
+Bare `null` resolves to the unset symbol `NULL`; typed null comes
+from JSON_PARSE or a host. Seven compatibility differences are pinned in
+[known_differences.json](tests/known_differences.json), not counted as parity.
+For shared syntax, assign composite values to variables before function
+calls and use double-quoted JSON object keys. Copy RESULT into another variable before
+RETURN; the reference parses RETURN RESULT as a function call. Assign compound
+function arithmetic before WHEN for shared condition syntax. See
+[routines.md](docs/routines.md) for CALL forms, PROCEDURE scopes and
+argument-list behavior. [select.md](docs/select.md) explains SELECT forms,
+including the reference's THEN DO marker and closing END behavior.
+[parse-and-compounds.md](docs/parse-and-compounds.md) records PARSE input
+quirks, explicit WITH behavior and owned values versus reference aliases.
+
+The complete program parses before execution, so syntax errors precede host
+dispatch. Runtime failures do not roll back earlier application effects.
+Budgets count instructions, including control flow, not elapsed time or
+memory; initial parsing is not budgeted.
+
+Containment is an explicit host/guest service boundary. Engine entry points
+are @pure, its reviewed imports contain no fs/net/os module, and no Rexx
+syntax reaches native symbols. Hosts mount selected functions, validate typed
+arguments and veto unmounted ADDRESS environments. The Aether host example
+combines seal except, sandbox.enforce, trusted service injection and a
+service-specific file grant. Its escape probes run against both compiled
+library variants. See [containment.md](docs/containment.md), including the
+observed std.file library-gate gap and the distinction between this boundary
+and OS containment of a memory-safety failure.
+
+## Verification and references
+
+`make test` runs 379 native std.spec cases (including both binary variants),
+ctypes protocol checks, the C example and Python host harness. `make parity`
+compares 507 programs, including host-call arguments/results, with RexxJS
+`e3bd4e9`. All pass. Seven documented compatibility differences remain
+separately asserted, and are not counted as parity. The same 125
+function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
+the C example and all eleven native spec executables. Eleven compiler
+rejection probes and the pinned guest/import surfaces protect the containment
+contract.
+
+See [design.md](docs/design.md), [compatibility-baseline.md](docs/compatibility-baseline.md),
+[function-policy.md](docs/function-policy.md) and the generated
+[function inventory](docs/function-inventory.md). The inventory covers 386
+core functions, 119 converter helpers and 42 optional manifests.
+[AGENTS.md](AGENTS.md) records contributor and testing rules.

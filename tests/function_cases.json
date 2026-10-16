@@ -1,0 +1,627 @@
+[
+  [
+    "upper",
+    "UPPER('hello')",
+    "HELLO"
+  ],
+  [
+    "lower",
+    "LOWER('HELLO')",
+    "hello"
+  ],
+  [
+    "length",
+    "LENGTH('hello')",
+    "5"
+  ],
+  [
+    "length_utf16",
+    "LENGTH('\ud83d\ude00\u00e9')",
+    "3"
+  ],
+  [
+    "length_combining",
+    "LENGTH('e\u0301')",
+    "2"
+  ],
+  [
+    "substr",
+    "SUBSTR('abcdef', 2, 3)",
+    "bcd"
+  ],
+  [
+    "substr_rest",
+    "SUBSTR('abcdef', 4)",
+    "def"
+  ],
+  [
+    "substr_negative_length",
+    "SUBSTR('abcd', 3, -1)",
+    "b"
+  ],
+  [
+    "substr_zero",
+    "SUBSTR('abc', 0, 2)",
+    "ab"
+  ],
+  [
+    "substring",
+    "SUBSTRING('abcdef', 2, 3)",
+    "cde"
+  ],
+  [
+    "substring_negative_length",
+    "SUBSTRING('abcd', 3, -1)",
+    "c"
+  ],
+  [
+    "pos",
+    "POS('banana', 'na')",
+    "3"
+  ],
+  [
+    "pos_offset",
+    "POS('banana', 'na', 4)",
+    "5"
+  ],
+  [
+    "pos_missing",
+    "POS('banana', 'z')",
+    "0"
+  ],
+  [
+    "pos_empty",
+    "POS('abc', '', 100)",
+    "4"
+  ],
+  [
+    "index",
+    "INDEX('banana', 'na')",
+    "3"
+  ],
+  [
+    "indexof",
+    "INDEXOF('banana', 'na', 4)",
+    "4"
+  ],
+  [
+    "indexof_missing",
+    "INDEXOF('abc', 'z')",
+    "-1"
+  ],
+  [
+    "includes",
+    "INCLUDES('banana', 'na')",
+    "true"
+  ],
+  [
+    "includes_false",
+    "INCLUDES('banana', 'z')",
+    "false"
+  ],
+  [
+    "starts_with",
+    "STARTS_WITH('banana', 'ban')",
+    "true"
+  ],
+  [
+    "ends_with",
+    "ENDS_WITH('banana', 'ana')",
+    "true"
+  ],
+  [
+    "abbrev",
+    "ABBREV('COMMAND', 'com', 3)",
+    "1"
+  ],
+  [
+    "abbrev_short",
+    "ABBREV('COMMAND', 'co', 3)",
+    "0"
+  ],
+  [
+    "trim",
+    "TRIM('  abc  ')",
+    "abc"
+  ],
+  [
+    "trim_start",
+    "TRIM_START('  abc  ')",
+    "abc  "
+  ],
+  [
+    "trim_end",
+    "TRIM_END('  abc  ')",
+    "  abc"
+  ],
+  [
+    "strip",
+    "STRIP('xxabxx', 'B', 'x')",
+    "ab"
+  ],
+  [
+    "strip_leading",
+    "STRIP('xxabxx', 'L', 'x')",
+    "abxx"
+  ],
+  [
+    "strip_trailing",
+    "STRIP('xyabxy', 'T', 'xy')",
+    "xyab"
+  ],
+  [
+    "reverse",
+    "REVERSE('abc')",
+    "cba"
+  ],
+  [
+    "reverse_delimiters",
+    "REVERSE('),(')",
+    "(,)"
+  ],
+  [
+    "space",
+    "SPACE(' a   b  ', 2, '.')",
+    "a..b"
+  ],
+  [
+    "space_zero",
+    "SPACE(' a b ', 0)",
+    "ab"
+  ],
+  [
+    "space_empty",
+    "SPACE('   ')",
+    ""
+  ],
+  [
+    "word",
+    "WORD('  a b c ', 2)",
+    "b"
+  ],
+  [
+    "word_missing",
+    "WORD('a b', 8)",
+    ""
+  ],
+  [
+    "words",
+    "WORDS(' a   b  c ')",
+    "3"
+  ],
+  [
+    "words_empty",
+    "WORDS(' ')",
+    "0"
+  ],
+  [
+    "wordpos",
+    "WORDPOS('a b a b c', 'a b', 2)",
+    "3"
+  ],
+  [
+    "wordpos_not_substring",
+    "WORDPOS('alphabet soup', 'alpha')",
+    "0"
+  ],
+  [
+    "delword",
+    "DELWORD('a b c d', 2, 2)",
+    "a d"
+  ],
+  [
+    "delword_rest",
+    "DELWORD('a b c d', 2)",
+    "a"
+  ],
+  [
+    "delword_outside",
+    "DELWORD(' a   b ', 8)",
+    "a   b"
+  ],
+  [
+    "subword",
+    "SUBWORD('a b c d', 2, 2)",
+    "b c"
+  ],
+  [
+    "subword_rest",
+    "SUBWORD('a b c d', 2)",
+    "b c d"
+  ],
+  [
+    "repeat",
+    "REPEAT('ab', 3)",
+    "ababab"
+  ],
+  [
+    "repeat_negative",
+    "REPEAT('ab', -1)",
+    ""
+  ],
+  [
+    "copies",
+    "COPIES('x', 3)",
+    "xxx"
+  ],
+  [
+    "pad_start",
+    "PAD_START('ab', 5, 'xy')",
+    "xyxab"
+  ],
+  [
+    "pad_end",
+    "PAD_END('ab', 5, 'xy')",
+    "abxyx"
+  ],
+  [
+    "pad_empty",
+    "PAD_START('ab', 5, '')",
+    "ab"
+  ],
+  [
+    "left",
+    "LEFT('abc', 2)",
+    "ab"
+  ],
+  [
+    "left_pad",
+    "LEFT('ab', 5, 'xy')",
+    "abxyx"
+  ],
+  [
+    "right",
+    "RIGHT('abc', 2)",
+    "bc"
+  ],
+  [
+    "right_pad",
+    "RIGHT('ab', 5, 'xy')",
+    "xyxab"
+  ],
+  [
+    "center",
+    "CENTER('ab', 7, 'xy')",
+    "xyabxyx"
+  ],
+  [
+    "translate",
+    "TRANSLATE('abc', 'XYZ', 'abc')",
+    "XYZ"
+  ],
+  [
+    "translate_default",
+    "TRANSLATE('abc')",
+    "ABC"
+  ],
+  [
+    "translate_short_table",
+    "TRANSLATE('abc', 'X', 'abc')",
+    "Xbc"
+  ],
+  [
+    "verify",
+    "VERIFY('123x', '0123456789')",
+    "4"
+  ],
+  [
+    "verify_match",
+    "VERIFY('ab3', '0123456789', 'M')",
+    "3"
+  ],
+  [
+    "slug",
+    "SLUG(' Hello, BIG_world! ')",
+    "hello-big-world"
+  ],
+  [
+    "abs",
+    "ABS(-5)",
+    "5"
+  ],
+  [
+    "abs_prefix",
+    "ABS('-12.5px')",
+    "12.5"
+  ],
+  [
+    "abs_invalid",
+    "ABS('bad')",
+    "0"
+  ],
+  [
+    "abs_empty",
+    "ABS()",
+    "0"
+  ],
+  [
+    "math_abs",
+    "MATH_ABS(-5)",
+    "5"
+  ],
+  [
+    "max",
+    "MAX(-5, 8, 3)",
+    "8"
+  ],
+  [
+    "max_invalid",
+    "MAX('bad', -4, -2)",
+    "-2"
+  ],
+  [
+    "max_empty",
+    "MAX()",
+    "0"
+  ],
+  [
+    "min",
+    "MIN(-5, 8, 3)",
+    "-5"
+  ],
+  [
+    "math_max",
+    "MATH_MAX(1, 3, 2)",
+    "3"
+  ],
+  [
+    "math_min",
+    "MATH_MIN(1, 3, 2)",
+    "1"
+  ],
+  [
+    "ceil",
+    "MATH_CEIL(-1.2)",
+    "-1"
+  ],
+  [
+    "floor",
+    "MATH_FLOOR(-1.2)",
+    "-2"
+  ],
+  [
+    "int",
+    "INT(-1.2)",
+    "-2"
+  ],
+  [
+    "round_negative_tie",
+    "MATH_ROUND(-1.5)",
+    "-1"
+  ],
+  [
+    "round_precision",
+    "MATH_ROUND(12.345, 2)",
+    "12.35"
+  ],
+  [
+    "round_negative_precision",
+    "MATH_ROUND(125, -1)",
+    "130"
+  ],
+  [
+    "sum",
+    "MATH_SUM(2, 'bad', 3)",
+    "5"
+  ],
+  [
+    "add",
+    "MATH_ADD(2, 3)",
+    "5"
+  ],
+  [
+    "multiply",
+    "MATH_MULTIPLY(2, 'bad', 3)",
+    "6"
+  ],
+  [
+    "multiply_empty",
+    "MATH_MULTIPLY()",
+    "1"
+  ],
+  [
+    "average",
+    "MATH_AVERAGE(2, 'bad', 4)",
+    "3"
+  ],
+  [
+    "power",
+    "MATH_POWER(2, 5)",
+    "32"
+  ],
+  [
+    "sqrt",
+    "MATH_SQRT(81)",
+    "9"
+  ],
+  [
+    "log",
+    "MATH_LOG(8, 2)",
+    "3"
+  ],
+  [
+    "log_domain",
+    "MATH_LOG(-1)",
+    "NaN"
+  ],
+  [
+    "sin",
+    "MATH_SIN(90, 'degrees')",
+    "1"
+  ],
+  [
+    "cos",
+    "MATH_COS(0)",
+    "1"
+  ],
+  [
+    "tan",
+    "MATH_TAN(0)",
+    "0"
+  ],
+  [
+    "clamp",
+    "MATH_CLAMP(12, 0, 10)",
+    "10"
+  ],
+  [
+    "percentage",
+    "MATH_PERCENTAGE(25, 100)",
+    "25"
+  ],
+  [
+    "percentage_zero",
+    "MATH_PERCENTAGE(25, 0)",
+    "25"
+  ],
+  [
+    "factorial",
+    "MATH_FACTORIAL(5)",
+    "120"
+  ],
+  [
+    "factorial_negative",
+    "MATH_FACTORIAL(-1)",
+    "NaN"
+  ],
+  [
+    "gcd",
+    "MATH_GCD(-12, 18)",
+    "6"
+  ],
+  [
+    "lcm",
+    "MATH_LCM(12, 18)",
+    "36"
+  ],
+  [
+    "lcm_zero",
+    "MATH_LCM(0, 0)",
+    "0"
+  ],
+  [
+    "distance",
+    "MATH_DISTANCE_2D(0, 0, 3, 4)",
+    "5"
+  ],
+  [
+    "angle",
+    "MATH_ANGLE_2D(0, 0, 0, 1, 'degrees')",
+    "90"
+  ],
+  [
+    "nested",
+    "UPPER(SUBSTR('abcdef', 2, 3)) || LOWER('Z')",
+    "BCDz"
+  ],
+  [
+    "nested_math",
+    "ABS(-3) + MAX(4, 5 * 2)",
+    "13"
+  ],
+  [
+    "named_string",
+    "UPPER string='hello'",
+    "HELLO"
+  ],
+  [
+    "named_substr",
+    "SUBSTR string='abcdef' start=2 length=3",
+    "bcd"
+  ],
+  [
+    "named_math",
+    "MATH_POWER base=2 exponent=5",
+    "32"
+  ],
+  [
+    "percentage_quoted_zero",
+    "MATH_PERCENTAGE(25, '0')",
+    "0"
+  ],
+  [
+    "power_zero_converter",
+    "MATH_POWER(2, 0)",
+    "2"
+  ],
+  [
+    "power_quoted_zero",
+    "MATH_POWER(2, '0')",
+    "1"
+  ],
+  [
+    "upper_zero",
+    "UPPER(0)",
+    ""
+  ],
+  [
+    "upper_quoted_zero",
+    "UPPER('0')",
+    "0"
+  ],
+  [
+    "length_zero",
+    "LENGTH(0)",
+    "0"
+  ],
+  [
+    "json_parse_number",
+    "JSON_PARSE('42')",
+    "42"
+  ],
+  [
+    "json_stringify_array",
+    "JSON_STRINGIFY(JSON_PARSE('[1,true,\"x\"]'))",
+    "[1,true,\"x\"]"
+  ],
+  [
+    "array_get",
+    "ARRAY_GET(JSON_PARSE('[10,20]'), 2)",
+    "20"
+  ],
+  [
+    "array_length",
+    "ARRAY_LENGTH(JSON_PARSE('[1,true]'))",
+    "2"
+  ],
+  [
+    "array_push_converter",
+    "ARRAY_PUSH(JSON_PARSE('[1]'), 2)",
+    "1,1,2"
+  ],
+  [
+    "join",
+    "JOIN(JSON_PARSE('[1,2]'), '-')",
+    "1-2"
+  ],
+  [
+    "json_get",
+    "JSON_GET(JSON_PARSE('{\"a\":1}'), 'a')",
+    "1"
+  ],
+  [
+    "json_keys",
+    "JSON_KEYS(JSON_PARSE('{\"a\":1,\"b\":2}'))",
+    "a,b"
+  ],
+  [
+    "typeof_boolean",
+    "TYPEOF(JSON_PARSE('true'))",
+    "boolean"
+  ],
+  [
+    "lazy_if",
+    "IF(1,3,4)",
+    "3"
+  ],
+  [
+    "json_stringify_null_converter",
+    "JSON_STRINGIFY(JSON_PARSE('null'))",
+    "{}"
+  ],
+  [
+    "arg_empty",
+    "ARG()",
+    "0"
+  ]
+]

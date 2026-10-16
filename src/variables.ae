@@ -1,0 +1,137 @@
+// Rebuild owned containers rather than growing parsed interior JSON values.
+import std.string
+import std.json
+import src.state
+import src.values
+
+exports(get, put, derived, unset)
+
+symbol_part(name: string) -> bool {
+    n = string.length(name)
+    c = string.char_at_n(name, n, 0)
+    if !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95) { return false }
+    i = 1
+    while i < n {
+        c = string.char_at_n(name, n, i)
+        if !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95) { return false }
+        i = i + 1
+    }
+    return true
+}
+
+// Script symbols substitute each tail once. The host get/put API below is
+// literal, so host property access never depends on script variable names.
+derived(ctx: ptr, name: string) -> string {
+    if state.read(ctx, string.concat("v:", name)) != "" { return name }
+    dot = string.index_of(name, ".")
+    if dot < 0 { return name }
+    root = string.substring(name, 0, dot)
+    if !symbol_part(root) { return name }
+    result = root
+    start = dot + 1
+    n = string.length(name)
+    while start <= n {
+        end = string.index_of_from(name, ".", start)
+        if end < 0 { end = n }
+        part = string.substring(name, start, end)
+        if symbol_part(part) {
+            value = state.load(ctx, string.concat("v:", part))
+            if value != null { part = values.text(value); json.json_free(value) }
+        }
+        result = string.concat(string.concat(result, "."), part)
+        if end == n { break }
+        start = end + 1
+    }
+    return result
+}
+unset(ctx: ptr, name: string) -> string {
+    // Only symbol spellings are uppercased, not arbitrary text.
+    dot = string.index_of(name, ".")
+    root = name
+    if dot >= 0 { root = string.substring(name, 0, dot) }
+    if !symbol_part(root) { return name }
+    i = 0
+    n = string.length(name)
+    while i < n {
+        c = string.char_at_n(name, n, i)
+        if !((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95 || c == 46) { return name }
+        i = i + 1
+    }
+    return string.to_upper(derived(ctx, name))
+}
+
+get(ctx: ptr, name: string) -> ptr {
+    exact = state.load(ctx, string.concat("v:", name))
+    if exact != null { return exact }
+    dot = string.index_of(name, ".")
+    if dot < 0 { return state.load(ctx, string.concat("v:", name)) }
+    root_name = string.substring(name, 0, dot)
+    root = state.load(ctx, string.concat("v:", root_name))
+    defer json.json_free(root)
+    current = root
+    start = dot + 1
+    n = string.length(name)
+    depth = 0
+    while current != null && depth <= 64 {
+        end = string.index_of_from(name, ".", start)
+        if end < 0 { end = n }
+        key = string.substring(name, start, end)
+        k = values.kind(current)
+        if k == 5 { current = json.json_object_get_raw(values.data(current), key) }
+        else if k == 4 {
+            if key == "length" {
+                if end != n { return null }
+                return values.numeric(string.from_int(json.json_array_size(values.data(current))))
+            }
+            if string.string_try_int(key) == 0 { return null }
+            index = string.string_get_int(key)
+            if index < 0 || string.from_int(index) != key { return null }
+            current = json.json_array_get_raw(values.data(current), index)
+        } else { return null }
+        if current == null { return null }
+        if end == n { return values.clone(current) }
+        start = end + 1
+        depth = depth + 1
+    }
+    return null
+}
+
+replace(existing: ptr, path: string, value: ptr, depth: int) -> ptr {
+    if depth > 64 || (depth > 0 && values.kind(existing) == 4) { return null }
+    dot = string.index_of(path, ".")
+    key = path
+    if dot >= 0 { key = string.substring(path, 0, dot) }
+    old = null
+    if values.kind(existing) == 5 { old = json.json_object_get_raw(values.data(existing), key) }
+    child = null
+    if dot < 0 { child = values.clone(value) }
+    else { child = replace(old, string.substring(path, dot + 1, string.length(path)), value, depth + 1) }
+    if child == null { return null }
+    fields = json.obj()
+    replaced = false
+    i = 0
+    if values.kind(existing) == 5 {
+        while i < json.json_object_size_raw(values.data(existing)) {
+            field = json.json_object_key_at(values.data(existing), i)
+            if field == key { json.set(fields, field, child); replaced = true }
+            else { json.set(fields, field, values.clone(json.json_object_value_at(values.data(existing), i))) }
+            i = i + 1
+        }
+    }
+    if !replaced { json.set(fields, key, child) }
+    return values.wrap(5, fields)
+}
+
+put(ctx: ptr, name: string, value: ptr) -> bool {
+    dot = string.index_of(name, ".")
+    if dot < 0 { state.save(ctx, string.concat("v:", name), value); return true }
+    root_name = string.substring(name, 0, dot)
+    key = string.concat("v:", root_name)
+    old = state.load(ctx, key)
+    result = replace(old, string.substring(name, dot + 1, string.length(name)), value, 0)
+    json.json_free(old)
+    if result == null { return false }
+    state.save(ctx, key, result)
+    json.json_free(result)
+    return true
+}

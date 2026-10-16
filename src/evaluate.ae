@@ -1,0 +1,406 @@
+// Expression evaluator. Owned results are memoized per instruction, including
+// host replies. Resuming a suspended expression never repeats a host effect.
+import std.string
+import std.map
+import std.json
+import std.math
+import src.state
+import src.values
+import src.variables
+import src.builtins
+
+exports(run, known, cache_result)
+
+const VALUE_FUNCTIONS = " JSON_PARSE JSON_STRINGIFY ARRAY_GET ARRAY_LENGTH ARRAY_PUSH JOIN JSON_GET JSON_KEYS TYPEOF IF ARG "
+
+known(name: string) -> bool {
+    key = string.concat(string.concat(" ", name), " ")
+    return builtins.known(name) || string.contains(VALUE_FUNCTIONS, key) != 0
+}
+cache_result(ctx: ptr, key: string, value: ptr) {
+    cache = map.map_get_raw(ctx, "cache")
+    state.save(cache, key, value)
+}
+argument(args: ptr, i: int) -> ptr { return json.json_array_get_raw(args, i) }
+
+typed_call(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    a = argument(args, 0)
+    if name == "ARG" {
+        argv = state.load(ctx, "argv")
+        defer json.json_free(argv)
+        if count == 0 { return values.numeric(string.from_int(json.json_array_size(argv))) }
+        index_text = string.trim(values.text(a))
+        if values.kind(a) != 2 {
+            // RexxJS uses parseInt for text, but leaves numeric indices alone.
+            end = 0
+            n = string.length(index_text)
+            if string.char_at_n(index_text, n, 0) == 43 || string.char_at_n(index_text, n, 0) == 45 { end = 1 }
+            start = end
+            while end < n && string.char_at_n(index_text, n, end) >= 48 && string.char_at_n(index_text, n, end) <= 57 { end = end + 1 }
+            if end == start { state.fail(ctx, "ARG requires a positive integer index"); return null }
+            index_text = string.substring_n(index_text, n, 0, end)
+        }
+        index_number, valid_index = builtins.number_prefix(index_text)
+        if !valid_index || index_number < 1.0 { state.fail(ctx, "ARG requires a positive integer index"); return null }
+        index = 256
+        if index_number <= 256.0 && index_number == math.floor(index_number) { index = string.string_get_int(values.number_text(index_number)) - 1 }
+        exists = index < json.json_array_size(argv)
+        if count > 1 {
+            option = string.to_upper(string.trim(values.text(argument(args, 1))))
+            flag = false
+            if option == "E" { flag = exists }
+            else if option == "O" { flag = exists && values.kind(argument(argv, index)) == 3 && values.text(argument(argv, index)) == "" }
+            else { state.fail(ctx, "ARG option must be E or O"); return null }
+            if flag { return values.numeric("1") }
+            return values.numeric("0")
+        }
+        if !exists { return values.string_value("") }
+        return values.clone(argument(argv, index))
+    }
+    if name == "TYPEOF" {
+        if count == 0 { return values.string_value("undefined") }
+        type_name = values.type_name(a)
+        if type_name == "array" || type_name == "null" { type_name = "object" }
+        return values.string_value(type_name)
+    }
+    if count == 0 { state.fail(ctx, "function requires parameters"); return null }
+    if name == "JSON_PARSE" {
+        raw = json.json_parse_raw(values.text(a))
+        if raw == null { state.fail(ctx, "invalid JSON input"); return null }
+        result = values.from_json(raw, 0)
+        json.json_free(raw)
+        if result == null { state.fail(ctx, "JSON value nesting limit exceeded") }
+        return result
+    }
+    if name == "JSON_STRINGIFY" {
+        // RexxJS's argument converter uses `object || {}`. Keep null/false/
+        // numeric zero/empty text distinct while preserving that default.
+        k = values.kind(a)
+        if k == 0 || (k == 1 && values.text(a) == "false") || (k == 2 && values.text(a) == "0") || (k == 3 && values.text(a) == "") { return values.string_value("{}") }
+        raw = values.to_json(a, 0)
+        if raw == null { state.fail(ctx, "value cannot be represented as JSON"); return null }
+        encoded, err = json.stringify(raw)
+        json.json_free(raw)
+        if err != "" { state.fail(ctx, err); return null }
+        return values.string_value(encoded)
+    }
+    if name == "JSON_KEYS" {
+        if values.kind(a) != 5 { state.fail(ctx, "JSON_KEYS requires an object"); return null }
+        result = json.arr()
+        i = 0
+        while i < json.json_object_size_raw(values.data(a)) {
+            json.push(result, values.string_value(json.json_object_key_at(values.data(a), i)))
+            i = i + 1
+        }
+        return values.wrap(4, result)
+    }
+    if name == "ARRAY_LENGTH" {
+        if values.kind(a) == 4 { return values.numeric(string.from_int(json.json_array_size(values.data(a)))) }
+        if values.kind(a) == 5 { return values.numeric(string.from_int(json.json_object_size_raw(values.data(a)))) }
+        state.fail(ctx, "ARRAY_LENGTH currently requires a typed array or object")
+        return null
+    }
+    if name == "ARRAY_GET" || name == "JSON_GET" {
+        if count < 2 { state.fail(ctx, "function requires a key"); return null }
+        key = values.text(argument(args, 1))
+        child = null
+        if values.kind(a) == 4 && name == "ARRAY_GET" {
+            if string.string_try_int(key) == 0 { state.fail(ctx, "array index must be an integer"); return null }
+            index = string.string_get_int(key)
+            if index > 0 { index = index - 1 }
+            if index >= 0 && index < json.json_array_size(values.data(a)) { child = json.json_array_get_raw(values.data(a), index) }
+        } else if values.kind(a) == 5 { child = json.json_object_get_raw(values.data(a), key) }
+        if child == null { state.fail(ctx, "missing key or unsupported container access"); return null }
+        return values.clone(child)
+    }
+    if name == "ARRAY_PUSH" {
+        if values.kind(a) != 4 { state.fail(ctx, "ARRAY_PUSH requires an array"); return null }
+        // Build an independently owned container before wrapping it. Older
+        // Aether runtimes cannot safely grow a parsed interior container.
+        result = json.arr()
+        i = 0
+        while i < json.json_array_size(values.data(a)) {
+            json.push(result, values.clone(json.json_array_get_raw(values.data(a), i)))
+            i = i + 1
+        }
+        // The reference positional converter includes its first argument
+        // again in the items list. Preserve it; this is not an in-place push.
+        i = 0
+        while i < count { json.push(result, values.clone(argument(args, i))); i = i + 1 }
+        return values.wrap(4, result)
+    }
+    if name == "JOIN" {
+        if values.kind(a) != 4 { state.fail(ctx, "JOIN requires an array"); return null }
+        sep = ""
+        if count > 1 { sep = values.text(argument(args, 1)) }
+        joined = ""
+        i = 0
+        while i < json.json_array_size(values.data(a)) {
+            if i > 0 { joined = string.concat(joined, sep) }
+            child = json.json_array_get_raw(values.data(a), i)
+            if values.kind(child) != 0 { joined = string.concat(joined, values.text(child)) }
+            i = i + 1
+        }
+        return values.string_value(joined)
+    }
+    state.fail(ctx, "unimplemented typed function")
+    return null
+}
+
+scalar_call(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if name == "LENGTH" && count > 0 {
+        first = argument(args, 0)
+        if values.kind(first) == 4 { return values.numeric(string.from_int(json.json_array_size(values.data(first)))) }
+        if values.kind(first) == 5 { return values.numeric(string.from_int(json.json_object_size_raw(values.data(first)))) }
+    }
+    flat = args
+    if (name == "MAX" || name == "MIN") && count == 1 && values.kind(argument(args, 0)) == 4 { flat = values.data(argument(args, 0)); count = json.json_array_size(flat) }
+    legacy = map.map_new()
+    defer map.map_free(legacy)
+    i = 0
+    while i < count {
+        item = argument(flat, i)
+        key = string.from_int(i)
+        state.write(legacy, key, values.text(item))
+        type_key = string.concat("t:", key)
+        state.write(legacy, type_key, values.type_name(item))
+        i = i + 1
+    }
+    state.number(legacy, "-1", count)
+    result, err = builtins.invoke(name, legacy)
+    if err != "" { state.fail(ctx, err); return null }
+    type_name = builtins.result_type(name)
+    if type_name == "number" { return values.numeric(result) }
+    if type_name == "boolean" { return values.boolean(result == "true") }
+    return values.string_value(result)
+}
+
+call(ctx: ptr, expr: ptr, depth: int) -> ptr {
+    name = state.text(expr, "name")
+    dynamic = state.text(expr, "dynamic")
+    if dynamic != "" {
+        target = variables.get(ctx, variables.derived(ctx, dynamic))
+        if target == null { state.fail(ctx, "CALL target variable is not defined"); return null }
+        name = string.to_upper(values.text(target))
+        json.json_free(target)
+    }
+    bare = state.text(expr, "bare")
+    if bare != "" {
+        shadow = state.load(ctx, string.concat("v:", bare))
+        if shadow != null {
+            defer json.json_free(shadow)
+            tail = run(ctx, state.field(argument(state.field(expr, "args"), 0), "value"), depth + 1)
+            if tail == null { return null }
+            defer json.json_free(tail)
+            return values.string_value(string.concat(string.concat(values.text(shadow), " "), values.text(tail)))
+        }
+    }
+    routine = 0
+    if state.index(expr, "statement_call") != 0 { routine = state.integer(ctx, string.concat("r:", name)) }
+    nodes = state.field(expr, "args")
+    count = json.json_array_size(nodes)
+    if count > 256 { state.fail(ctx, "function argument limit exceeded"); return null }
+    // IF must not evaluate or dispatch the branch it does not select.
+    if name == "IF" && routine == 0 {
+        if count != 3 { state.fail(ctx, "IF requires three positional arguments"); return null }
+        condition = run(ctx, state.field(argument(nodes, 0), "value"), depth + 1)
+        if condition == null { return null }
+        index = 2
+        if values.truth(condition) { index = 1 }
+        json.json_free(condition)
+        return run(ctx, state.field(argument(nodes, index), "value"), depth + 1)
+    }
+    host = state.load(ctx, string.concat("h:", name))
+    defer json.json_free(host)
+    if routine == 0 && known(name) && state.index(expr, "assigned_call") != 0 { state.fail(ctx, "assigned CALL to a builtin is unsupported; use a function expression"); return null }
+    if routine == 0 && !known(name) && host == null { state.fail(ctx, string.concat("unknown or unavailable function: ", name)); return null }
+    args = json.arr()
+    defer json.json_free(args)
+    // Resolve argument names into positions, preserving holes for defaults.
+    positions = map.map_new()
+    defer map.map_free(positions)
+    size = count
+    i = 0
+    while i < count {
+        item = argument(nodes, i)
+        arg_name = state.text(item, "name")
+        index = i
+        if arg_name != "" {
+            if host != null || routine != 0 { state.fail(ctx, "host functions and routines currently require positional arguments"); return null }
+            index = builtins.parameter_index(name, arg_name)
+            if index < 0 { state.fail(ctx, "unknown named argument"); return null }
+        }
+        key = string.from_int(index)
+        if map.map_has(positions, key) != 0 { state.fail(ctx, "duplicate argument"); return null }
+        child = run(ctx, state.field(item, "value"), depth + 1)
+        if child == null { return null }
+        state.save(positions, key, child)
+        json.json_free(child)
+        if index >= size { size = index + 1 }
+        i = i + 1
+    }
+    i = 0
+    while i < size {
+        child = state.load(positions, string.from_int(i))
+        if child == null { child = values.string_value("") }
+        json.push(args, child)
+        i = i + 1
+    }
+    if routine != 0 {
+        state.save(ctx, "routine_args", args)
+        state.number(ctx, "routine_target", routine)
+        state.write(ctx, "routine_node", string.from_int(state.index(expr, "id")))
+        state.number(ctx, "status", 5)
+        return null
+    }
+    if known(name) {
+        if builtins.known(name) { return scalar_call(ctx, name, args) }
+        return typed_call(ctx, name, args)
+    }
+    if count < state.index(host, "min") || count > state.index(host, "max") { state.fail(ctx, "host function argument count mismatch"); return null }
+    raw = json.arr()
+    i = 0
+    while i < count {
+        child = values.to_json(argument(args, i), 0)
+        if child == null { json.json_free(raw); state.fail(ctx, "host arguments must be finite JSON values"); return null }
+        json.push(raw, child)
+        i = i + 1
+    }
+    state.save(ctx, "arguments", raw)
+    json.json_free(raw)
+    state.write(ctx, "function", name)
+    state.write(ctx, "pending_node", string.from_int(state.index(expr, "id")))
+    state.number(ctx, "status", 4)
+    return null
+}
+
+binary(ctx: ptr, expr: ptr, depth: int) -> ptr {
+    left = run(ctx, state.field(expr, "left"), depth + 1)
+    if left == null { return null }
+    defer json.json_free(left)
+    op = state.text(expr, "operator")
+    if (op == "AND" || op == "&") && !values.truth(left) { return values.numeric("0") }
+    if (op == "OR" || op == "|") && values.truth(left) { return values.numeric("1") }
+    right = run(ctx, state.field(expr, "right"), depth + 1)
+    if right == null { return null }
+    defer json.json_free(right)
+    a = values.text(left)
+    b = values.text(right)
+    if op == "blank" { return values.string_value(string.concat(string.concat(a, " "), b)) }
+    if op == "||" { return values.string_value(string.concat(a, b)) }
+    if op == "AND" || op == "OR" || op == "&" || op == "|" || op == "&&" {
+        ok = values.truth(left) && values.truth(right)
+        if op == "OR" || op == "|" { ok = values.truth(left) || values.truth(right) }
+        if op == "&&" { ok = values.truth(left) != values.truth(right) }
+        if ok { return values.numeric("1") }
+        return values.numeric("0")
+    }
+    if op == "=" || op == "==" || op == "!=" || op == "<>" || op == "\\=" || op == "\\==" || op == "<" || op == ">" || op == "<=" || op == ">=" {
+        cmp = string.compare(a, b)
+        x, valid_x = builtins.number_prefix(a)
+        y, valid_y = builtins.number_prefix(b)
+        if valid_x && valid_y && op != "==" && op != "\\==" {
+            cmp = 0
+            if x < y { cmp = -1 }
+            if x > y { cmp = 1 }
+        }
+        if op != "==" && op != "\\==" {
+            if values.kind(left) == 0 { cmp = -1; if values.kind(right) == 0 { cmp = 0 } }
+            else if values.kind(right) == 0 { cmp = 1 }
+        }
+        ok = false
+        if op == "=" || op == "==" { ok = cmp == 0 }
+        if op == "!=" || op == "<>" || op == "\\=" || op == "\\==" { ok = cmp != 0 }
+        if op == "<" { ok = cmp < 0 }
+        if op == ">" { ok = cmp > 0 }
+        if op == "<=" { ok = cmp <= 0 }
+        if op == ">=" { ok = cmp >= 0 }
+        if ok { return values.numeric("1") }
+        return values.numeric("0")
+    }
+    if string.string_try_double(a) == 0 || string.string_try_double(b) == 0 || values.kind(left) == 1 || values.kind(right) == 1 || values.kind(left) == 0 || values.kind(right) == 0 { state.fail(ctx, "arithmetic requires numbers"); return null }
+    x = string.string_get_double(a)
+    y = string.string_get_double(b)
+    result = 0.0
+    if op == "+" { result = x + y }
+    if op == "-" { result = x - y }
+    if op == "*" { result = x * y }
+    if op == "/" || op == "%" {
+        if y == 0.0 { state.fail(ctx, "division by zero"); return null }
+        result = x / y
+        if op == "%" {
+            quotient = math.floor(result)
+            if result < 0.0 { quotient = math.ceil(result) }
+            result = x - quotient * y
+        }
+    }
+    if op == "**" { result = math.pow(x, y) }
+    return values.numeric(values.number_text(result))
+}
+
+run_uncached(ctx: ptr, expr: ptr, depth: int) -> ptr {
+    op = state.text(expr, "op")
+    if op == "literal" { return values.clone(state.field(expr, "value")) }
+    if op == "var" {
+        name = state.text(expr, "name")
+        result = variables.get(ctx, variables.derived(ctx, name))
+        if result == null { return values.string_value(variables.unset(ctx, name)) }
+        return result
+    }
+    if op == "call_result" {
+        value = run(ctx, state.field(expr, "value"), depth + 1)
+        if value == null { return null }
+        fields = json.obj()
+        json.set(fields, "terminated", values.boolean(false))
+        json.set(fields, "returnValue", value)
+        return values.wrap(5, fields)
+    }
+    if op == "call" { return call(ctx, expr, depth) }
+    if op == "binary" { return binary(ctx, expr, depth) }
+    if op == "unary" {
+        value = run(ctx, state.field(expr, "right"), depth + 1)
+        if value == null { return null }
+        defer json.json_free(value)
+        operator = state.text(expr, "operator")
+        if operator == "NOT" || operator == "\\" {
+            if values.truth(value) { return values.numeric("0") }
+            return values.numeric("1")
+        }
+        text = values.text(value)
+        if string.string_try_double(text) == 0 { state.fail(ctx, "unary operator requires a number"); return null }
+        number = string.string_get_double(text)
+        if operator == "-" { number = -number }
+        return values.numeric(values.number_text(number))
+    }
+    if op == "array" || op == "object" {
+        result = json.arr()
+        if op == "object" { json.json_free(result); result = json.obj() }
+        items = state.field(expr, "items")
+        i = 0
+        while i < json.json_array_size(items) {
+            item = argument(items, i)
+            child = run(ctx, state.field(item, "value"), depth + 1)
+            if child == null { json.json_free(result); return null }
+            if op == "object" { json.set(result, state.text(item, "name"), child) }
+            else { json.push(result, child) }
+            i = i + 1
+        }
+        k = 4
+        if op == "object" { k = 5 }
+        return values.wrap(k, result)
+    }
+    state.fail(ctx, "unknown expression")
+    return null
+}
+run(ctx: ptr, expr: ptr, depth: int) -> ptr {
+    if depth > 128 { state.fail(ctx, "expression nesting limit exceeded"); return null }
+    key = string.from_int(state.index(expr, "id"))
+    cache = map.map_get_raw(ctx, "cache")
+    cached = state.load(cache, key)
+    if cached != null { return cached }
+    result = run_uncached(ctx, expr, depth)
+    if result != null { cache_result(ctx, key, result) }
+    return result
+}

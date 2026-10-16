@@ -1,0 +1,225 @@
+// Shared golden programs and frame lifetime/protocol cases.
+import std.spec
+import std.file
+import std.json
+import std.string
+import std.strbuilder
+import src.engine
+
+output(source: string, expected: ptr) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = 3
+    steps = 0
+    index = 0
+    while status > 0 && steps < 10000 {
+        status = engine.rexxae_step(ctx, 1)
+        if status == 1 {
+            if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
+            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            index = index + 1
+        }
+        if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
+        steps = steps + 1
+    }
+    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    spec.assert_eq(status, 0, "completed within budgeted steps")
+    spec.assert_eq(index, json.json_array_size(expected), "output count")
+}
+
+migration_output(source: string, expected: ptr, commands: ptr) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = 3
+    steps = 0
+    index = 0
+    command_index = 0
+    while status > 0 && steps < 10000 {
+        status = engine.rexxae_step(ctx, 1)
+        if status == 1 {
+            if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
+            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            index = index + 1
+        }
+        if status == 2 {
+            if commands == null || command_index >= json.json_array_size(commands) { spec.fail("unexpected ADDRESS") }
+            else {
+                wanted = json.json_array_get_raw(commands, command_index)
+                spec.assert_str_eq(string.copy(engine.rexxae_address(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 0))), "environment")
+                spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 1))), "command")
+            }
+            command_index = command_index + 1
+            spec.assert_eq(engine.rexxae_reply(ctx, 0, "host-result", ""), 0, "reply")
+        }
+        if status == 4 { spec.fail("unexpected host function"); break }
+        steps = steps + 1
+    }
+    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    spec.assert_eq(status, 0, "completion")
+    spec.assert_eq(index, json.json_array_size(expected), "output count")
+    count = 0
+    if commands != null { count = json.json_array_size(commands) }
+    spec.assert_eq(command_index, count, "command count")
+}
+
+main() {
+    fw = spec.init()
+    contents, read_err = file.read("tests/routine_cases.json")
+    if read_err != "" { println(read_err); return 1 }
+    rows, parse_err = json.parse(contents)
+    if parse_err != "" { println(parse_err); return 1 }
+    defer json.json_free(rows)
+    spec.describe(fw, "RexxJS routine fixtures") {
+        i = 0
+        while i < json.json_array_size(rows) {
+            row = json.json_array_get_raw(rows, i)
+            name = json.json_get_string_raw(json.json_array_get_raw(row, 0))
+            source = string.copy(json.json_get_string_raw(json.json_array_get_raw(row, 1)))
+            expected = json.json_array_get_raw(row, 2)
+            spec.it(name) callback { output(source, expected) }
+            i = i + 1
+        }
+    }
+    migration_text, migration_err = file.read("tests/reference_migration.json")
+    if migration_err != "" { println(migration_err); return 1 }
+    migration, migration_parse_err = json.parse(migration_text)
+    if migration_parse_err != "" { println(migration_parse_err); return 1 }
+    defer json.json_free(migration)
+    spec.describe(fw, "updated RexxJS dialect") {
+        i = 0
+        while i < json.json_array_size(migration) {
+            row = json.json_array_get_raw(migration, i)
+            name = json.json_get_string_raw(json.json_object_get_raw(row, "name"))
+            source = string.copy(json.json_get_string_raw(json.json_object_get_raw(row, "source")))
+            expected = json.json_object_get_raw(row, "latest_output")
+            commands = json.json_object_get_raw(row, "latest_commands")
+            spec.it(name) callback { migration_output(source, expected, commands) }
+            i = i + 1
+        }
+    }
+    spec.describe(fw, "resumable routine frames") {
+        spec.it("does not repeat host effects while entering a routine") callback {
+            ctx = engine.rexxae_create("CALL outer TESTHOST(1), TESTHOST(2)\nSAY RESULT\nEXIT\nouter:\nARG a,b\nCALL inner a + b\nLET answer = RESULT\nRETURN answer\ninner:\nARG n\nCALL TESTHOST n\nLET answer = RESULT\nRETURN answer")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 1, 1), 0, "register")
+            status = 3
+            count = 0
+            steps = 0
+            while status > 0 && steps < 100 {
+                status = engine.rexxae_step(ctx, 1)
+                if status == 4 {
+                    count = count + 1
+                    wanted = "[1]"
+                    if count == 2 { wanted = "[2]" }
+                    if count == 3 { wanted = "[5]" }
+                    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), wanted, "argument once")
+                    spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "pending is stable")
+                    result = "2"
+                    if count == 2 { result = "3" }
+                    if count == 3 { result = "10" }
+                    spec.assert_eq(engine.rexxae_reply_value(ctx, result, ""), 0, "reply")
+                }
+                if status == 1 { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "10", "return") }
+                steps = steps + 1
+            }
+            spec.assert_eq(status, 0, "done")
+            spec.assert_eq(count, 3, "exact dispatch count")
+        }
+        spec.it("reports an error inside a nested routine at its source line") callback {
+            ctx = engine.rexxae_create("CALL outer\nEXIT\nouter:\nCALL inner\nRETURN\ninner:\nLET n = 1 / 0\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error")
+            spec.assert_eq(engine.rexxae_line(ctx), 7, "routine source location")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+        }
+        spec.it("unwinds loop variables on a nested host error") callback {
+            ctx = engine.rexxae_create("LET i = 'original'\nCALL outer\nEXIT\nouter:\nDO i = 1 TO 3\nCALL inner\nEND\nRETURN\ninner:\nCALL TESTHOST\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "request")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "host refused"), 0, "failure")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_eq(engine.rexxae_line(ctx), 10, "call line")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"original\"", "loop restored")
+        }
+        spec.it("restores procedure generations and caller loops on a host error") callback {
+            ctx = engine.rexxae_create("LET i = 'root'\nLET x = 'outer'\nDO i = 1 TO 2\nCALL work\nEND\nEXIT\nwork: PROCEDURE EXPOSE x\nx = 'changed'\nDO i = 1 TO 3\nCALL inner\nEND\nRETURN\ninner: PROCEDURE\nDO i = 1 TO 2\nCALL TESTHOST\nEND\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "nested request")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "refused"), 0, "veto")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"root\"", "caller loop restored after generation")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "x")), "\"changed\"", "exposed change propagated on error")
+        }
+        spec.it("restores procedure variables on arithmetic error and EXIT") callback {
+            bad = engine.rexxae_create("LET x = 'root'\nCALL work\nEXIT\nwork: PROCEDURE\nx = 'local'\nRETURN 1 / 0")
+            defer engine.rexxae_destroy(bad)
+            spec.assert_eq(engine.rexxae_step(bad, 100), -1, "arithmetic error")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(bad, "x")), "\"root\"", "restored")
+            done = engine.rexxae_create("LET x = 'root'\nCALL work\nSAY 'bad'\nwork: PROCEDURE\nx = 'local'\nEXIT 7")
+            defer engine.rexxae_destroy(done)
+            spec.assert_eq(engine.rexxae_step(done, 100), 0, "EXIT")
+            spec.assert_eq(engine.rexxae_exit_code(done), 7, "code")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(done, "x")), "\"root\"", "restored on EXIT")
+        }
+        spec.it("restores generations at the recursive call limit") callback {
+            ctx = engine.rexxae_create("LET x = 'root'\nCALL again\nEXIT\nagain: PROCEDURE\nx = 'local'\nCALL again\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 1000), -1, "depth guard")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "x")), "\"root\"", "root generation restored")
+        }
+        spec.it("rejects duplicate and unlabelled PROCEDURE declarations") callback {
+            duplicate = engine.rexxae_create("CALL work\nEXIT\nwork: PROCEDURE\nPROCEDURE\nRETURN")
+            defer engine.rexxae_destroy(duplicate)
+            spec.assert_eq(engine.rexxae_step(duplicate, 100), -1, "duplicate")
+            root = engine.rexxae_create("PROCEDURE EXPOSE x")
+            defer engine.rexxae_destroy(root)
+            spec.assert_eq(engine.rexxae_step(root, 100), -1, "outside routine")
+            empty = engine.rexxae_create("CALL work\nEXIT\nwork: PROCEDURE EXPOSE\nRETURN")
+            defer engine.rexxae_destroy(empty)
+            spec.assert_eq(engine.rexxae_step(empty, 100), -1, "empty EXPOSE")
+        }
+        spec.it("limits recursion without consuming the native stack") callback {
+            ctx = engine.rexxae_create("CALL again\nEXIT\nagain:\nCALL again\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 1000), -1, "depth limit")
+            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "routine call depth limit exceeded", "diagnostic")
+            spec.assert_eq(engine.rexxae_line(ctx), 4, "recursive call line")
+        }
+        spec.it("rejects unavailable dynamic targets without dispatching effects") callback {
+            ctx = engine.rexxae_create("CALL (missing)")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "missing target variable")
+            other = engine.rexxae_create("CALL absent")
+            defer engine.rexxae_destroy(other)
+            spec.assert_eq(engine.rexxae_step(other, 100), -1, "unknown routine")
+        }
+        spec.it("rejects misplaced PROCEDURE before any host request") callback {
+            ctx = engine.rexxae_create("CALL TESTHOST\nEXIT\nwork:\nDO\nPROCEDURE EXPOSE x\nEND\nRETURN")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "full parse")
+            spec.assert_eq(engine.rexxae_line(ctx), 5, "scope line")
+        }
+        spec.it("destroys pending and budget-suspended nested calls") callback {
+            i = 0
+            while i < 30 {
+                ctx = engine.rexxae_create("CALL outer [1,true]\nEXIT\nouter: PROCEDURE\nARG input\nCALL inner input\nRETURN\ninner: PROCEDURE\nARG input\nCALL TESTHOST input\nRETURN")
+                spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 1, 1), 0, "register")
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "pending")
+                engine.rexxae_destroy(ctx)
+                other = engine.rexxae_create("CALL again\nEXIT\nagain:\nCALL again\nRETURN")
+                spec.assert_eq(engine.rexxae_step(other, 5), 3, "budget suspended")
+                engine.rexxae_destroy(other)
+                i = i + 1
+            }
+        }
+        spec.it("EXIT inside a routine terminates the whole script") callback {
+            ctx = engine.rexxae_create("CALL outer\nSAY 'bad'\nouter:\nCALL inner\nRETURN\ninner:\nEXIT 9")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "exited")
+            spec.assert_eq(engine.rexxae_exit_code(ctx), 9, "exit status")
+        }
+    }
+    return spec.run_summary(fw)
+}

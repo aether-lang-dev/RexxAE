@@ -1,0 +1,204 @@
+[
+  [
+    "first_match",
+    "SELECT\nWHEN 1 THEN SAY 'first'\nWHEN 1 THEN SAY 'bad'\nOTHERWISE SAY 'bad'\nEND\nSAY 'after'",
+    [
+      "first",
+      "after"
+    ]
+  ],
+  [
+    "later_match",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nWHEN 2 > 1 THEN SAY 'second'\nOTHERWISE SAY 'bad'\nEND",
+    [
+      "second"
+    ]
+  ],
+  [
+    "otherwise",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE SAY 'fallback'\nEND",
+    [
+      "fallback"
+    ]
+  ],
+  [
+    "no_match",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nEND\nSAY 'after'",
+    [
+      "after"
+    ]
+  ],
+  [
+    "empty_select",
+    "SELECT\nEND\nSAY 'after'",
+    [
+      "after"
+    ]
+  ],
+  [
+    "only_otherwise",
+    "SELECT\nOTHERWISE SAY 'fallback'\nEND",
+    [
+      "fallback"
+    ]
+  ],
+  [
+    "empty_matching_branch",
+    "SELECT\nWHEN 1 THEN\nWHEN 1 THEN SAY 'bad'\nOTHERWISE SAY 'bad'\nEND\nSAY 'after'",
+    [
+      "after"
+    ]
+  ],
+  [
+    "multiline_when",
+    "SELECT\nWHEN 1 THEN\nSAY 'one'\nSAY 'two'\nWHEN 1 THEN SAY 'bad'\nEND",
+    [
+      "one",
+      "two"
+    ]
+  ],
+  [
+    "multiline_otherwise",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE\nSAY 'one'\nSAY 'two'\nEND",
+    [
+      "one",
+      "two"
+    ]
+  ],
+  [
+    "then_do_marker",
+    "SELECT\nWHEN 1 THEN DO\nSAY 'one'\nSAY 'two'\nOTHERWISE SAY 'bad'\nEND",
+    [
+      "one",
+      "two"
+    ]
+  ],
+  [
+    "nested_select",
+    "SELECT\nWHEN 1 THEN\nSELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE SAY 'inner'\nEND\nSAY 'outer'\nOTHERWISE SAY 'bad'\nEND",
+    [
+      "inner",
+      "outer"
+    ]
+  ],
+  [
+    "nested_default",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE\nSELECT\nWHEN 1 THEN SAY 'inner'\nEND\nSAY 'outer'\nEND",
+    [
+      "inner",
+      "outer"
+    ]
+  ],
+  [
+    "loop_in_branch",
+    "SELECT\nWHEN 1 THEN\nDO i = 1 TO 2\nSAY i\nEND\nSAY 'after loop'\nEND",
+    [
+      "1",
+      "2",
+      "after loop"
+    ]
+  ],
+  [
+    "selection_in_loop",
+    "DO i = 1 TO 3\nSELECT\nWHEN i = 1 THEN SAY 'one'\nWHEN i = 2 THEN SAY 'two'\nOTHERWISE SAY 'three'\nEND\nEND",
+    [
+      "one",
+      "two",
+      "three"
+    ]
+  ],
+  [
+    "leave_iterate",
+    "DO i = 1 TO 5\nSELECT\nWHEN i = 2 THEN ITERATE\nWHEN i = 4 THEN LEAVE\nOTHERWISE SAY i\nEND\nSAY 'tail'\nEND\nSAY 'done'",
+    [
+      "1",
+      "tail",
+      "3",
+      "tail",
+      "done"
+    ]
+  ],
+  [
+    "default_leave",
+    "DO i = 1 TO 2\nSELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE LEAVE\nEND\nSAY 'bad'\nEND\nSAY 'done'",
+    [
+      "done"
+    ]
+  ],
+  [
+    "return_when",
+    "CALL work\nSAY RESULT\nEXIT\nwork:\nSELECT\nWHEN 1 THEN RETURN 7\nOTHERWISE RETURN 8\nEND\nRETURN 9",
+    [
+      "7"
+    ]
+  ],
+  [
+    "return_default",
+    "CALL work\nSAY RESULT\nEXIT\nwork:\nSELECT\nWHEN 0 THEN RETURN 7\nOTHERWISE RETURN 8\nEND\nRETURN 9",
+    [
+      "8"
+    ]
+  ],
+  [
+    "if_inside_select",
+    "SELECT\nWHEN 1 THEN IF 1 THEN SAY 'yes'\nOTHERWISE SAY 'bad'\nEND",
+    [
+      "yes"
+    ]
+  ],
+  [
+    "select_inside_if",
+    "IF 1 THEN DO\nSELECT\nWHEN 1 THEN SAY 'yes'\nEND\nEND\nELSE SAY 'bad'",
+    [
+      "yes"
+    ]
+  ],
+  [
+    "case_and_clauses",
+    "select; when 0 then say 'bad'; when 1 then say 'yes'; otherwise say 'bad'; end",
+    [
+      "yes"
+    ]
+  ],
+  [
+    "inline_otherwise_before_when",
+    "SELECT\nOTHERWISE SAY 'bad'\nWHEN 1 THEN SAY 'match'\nEND",
+    [
+      "match"
+    ]
+  ],
+  [
+    "repeated_otherwise",
+    "SELECT\nOTHERWISE SAY 'first'\nWHEN 0 THEN SAY 'bad'\nOTHERWISE SAY 'second'\nEND",
+    [
+      "first",
+      "second"
+    ]
+  ],
+  [
+    "empty_otherwise",
+    "SELECT\nWHEN 0 THEN SAY 'bad'\nOTHERWISE\nEND\nSAY 'after'",
+    [
+      "after"
+    ]
+  ],
+  [
+    "main_return",
+    "SELECT\nWHEN 1 THEN RETURN 7\nEND\nSAY 'bad'",
+    []
+  ],
+  [
+    "typed_truth",
+    "LET a = JSON_PARSE('null')\nLET b = []\nLET c = [1]\nSELECT\nWHEN a THEN SAY 'bad'\nWHEN b THEN SAY 'bad'\nWHEN c THEN SAY 'array'\nOTHERWISE SAY 'bad'\nEND",
+    [
+      "array"
+    ]
+  ],
+  [
+    "precomputed_function_expression",
+    "LET sum = ABS(2) + ABS(3)\nSELECT\nWHEN sum > 4 THEN SAY 'match'\nOTHERWISE SAY 'fallback'\nEND",
+    [
+      "match"
+    ]
+  ]
+]

@@ -19,7 +19,7 @@ abuttal, object OVER and updated loop completion are implemented. See
 
 ## Build and test
 
-Requires Aether, a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.823.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -35,14 +35,18 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Use the development compiler with `AE=/home/paul/scm/aether/build/ae`.
-Use `make -B` when switching compilers to rebuild libraries and consumers
-together. Make keeps its Aether cache under `build/cache`.
+Use `AE=/home/paul/.aether/bin/ae` to select the installed 0.823.0 compiler.
+Check `ae --version` before testing; the development-tree executable may be
+older than the installed release. Use `make -B` when switching compilers to
+rebuild libraries and consumers together. Make keeps its Aether cache under
+`build/cache`.
 
-This migration is tested on Linux with installed Aether 0.802.0. The previous
-slice also passed development Aether 0.815.0; current dev-tree validation is
-blocked by compiler/stdlib annotation errors. Installed 0.802 also has a
-repeat trusted-service refusal; see [Aether issues](docs/aether-issues.md).
+Linux validation targets installed Aether 0.823.0: 382 native specs, 507 RexxJS
+comparisons, both binary-library variants, containment probes and Valgrind.
+The previous compiler/stdlib annotation blocker is resolved. The repeated
+trusted-service lifetime reproducer now passes, with three automated regression
+specs protecting repeated calls and enclosing restrictions. See
+[Aether findings](docs/aether-issues.md).
 The Makefile has a macOS library/rpath branch; macOS and Windows remain
 untested. Static/object packaging is a follow-up.
 
@@ -190,13 +194,13 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-`make test` runs 379 native std.spec cases (including both binary variants),
+`make test` runs 382 native std.spec cases (including both binary variants),
 ctypes protocol checks, the C example and Python host harness. `make parity`
 compares 507 programs, including host-call arguments/results, with RexxJS
 `e3bd4e9`. All pass. Seven documented compatibility differences remain
 separately asserted, and are not counted as parity. The same 125
 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
-the C example and all eleven native spec executables. Eleven compiler
+the C example and all twelve native spec executables. Eleven compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract.
 

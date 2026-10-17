@@ -1,3 +1,4 @@
+# Validated target: Aether 0.823.0 (check the selected executable version).
 AE ?= ae
 CC ?= cc
 REXXJS ?= ../RexxJS
@@ -42,6 +43,8 @@ build/test_select: tests/select_cases.json
 
 build/test_parse: tests/parse_cases.json
 
+build/test_trusted_service: examples/services/config.ae
+
 build/aether:
 	mkdir -p $@
 
@@ -62,9 +65,10 @@ build/test_containment: tests/test_containment.ae examples/services/config.ae $(
 build/test_containment_shared: tests/test_containment.ae examples/services/config.ae build/aether/librexxae.$(LIBEXT)
 	$(AE) build $< --lib $(abspath build/aether) -o $@
 
-containment: build/test_containment build/test_containment_shared
+containment: build/test_containment build/test_containment_shared build/test_trusted_service
 	./build/test_containment
 	./build/test_containment_shared
+	./build/test_trusted_service
 	python3 tools/check_containment.py --ae $(AE)
 
 spec: build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
@@ -96,7 +100,7 @@ inventory:
 check-inventory:
 	node tools/inventory.cjs $(REXXJS) --check
 
-memcheck: all spec build/test_containment build/test_containment_shared
+memcheck: all spec build/test_containment build/test_containment_shared build/test_trusted_service
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/counter
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_functions
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_execution
@@ -109,6 +113,7 @@ memcheck: all spec build/test_containment build/test_containment_shared
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_binary_shared
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_containment
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_containment_shared
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_trusted_service
 
 clean:
 	rm -rf build

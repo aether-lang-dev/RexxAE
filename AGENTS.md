@@ -15,7 +15,8 @@ language and builtins in `.ae` files.
   examples. The host owns effects and transport.
 - `/home/paul/scm/aether/` contains the compiler, `std/` and `contrib/`.
   Prefer these facilities to new C code or an npm dependency. The dev-tree
-  `build/ae` may be newer than the installed `ae`.
+  `build/ae` may differ from the installed `ae`; check the executable version.
+  The current target is installed Aether **0.823.0**.
 - Keep reference checkouts unchanged unless the user asks otherwise.
 - Preserve RexxJS compatibility where tested. Record unsupported features,
   semantic restrictions and proposed omissions explicitly. npm dependence
@@ -45,8 +46,9 @@ Retain the other complementary layers:
   both native and reference results. Do not count these cases as parity.
 
 Run the relevant specs while developing and `make test parity` before
-finishing a change. Use `make test parity AE=/home/paul/scm/aether/build/ae`
-to verify against the development compiler. Do not hide failing fixtures,
+finishing a change. Use `make -B test parity memcheck AE=/home/paul/.aether/bin/ae`
+to rebuild and verify against installed 0.823.0. The development-tree executable
+may be older; verify its version before selecting it. Do not hide failing fixtures,
 silently skip available tests, or describe untested functionality as parity.
 Do not run builds and tests against a compiler being rebuilt concurrently.
 
@@ -88,7 +90,8 @@ builtin surface are deliberately pinned by `tools/check_containment.py` and
 Do not rely on --emit=lib alone: the inspected compilers permit std.file
 without an fs grant, while @pure rejects calls into it, including transitively.
 
-Run `make containment` for both actual binary-library variants and compiler
+Run `make containment` for the trusted-service lifetime regressions, both
+actual binary-library variants and compiler
 rejection probes. Guest services must be absent unless mounted, validate
 argument types/resources, and fail closed. ADDRESS is a request, never an
 implicit shell. Aether service adapters should retain a service-specific

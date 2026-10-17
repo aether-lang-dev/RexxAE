@@ -1,0 +1,55 @@
+// Aether 0.823 regression: repeated trusted calls must preserve the enclosing
+// sandbox and keep its authority snapshot alive. No RexxAE engine is involved.
+import std.spec
+import std.sandbox
+import std.file
+import std.audit
+import examples.services.config
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "trusted service authority lifetime") {
+        spec.it("reads repeatedly inside one long-lived enforcement frame") callback {
+            worker = sandbox.new("deny all") {}
+            defer sandbox.free(worker)
+            sandbox.enforce(worker, config) callback {
+                i = 0
+                while i < 3 {
+                    spec.assert_str_eq(config.read("public"), "public configuration\n", "repeat trusted read")
+                    i = i + 1
+                }
+            }
+        }
+        spec.it("restores deny-all authority after success and early refusal") callback {
+            worker = sandbox.new("deny all") {}
+            defer sandbox.free(worker)
+            sandbox.enforce(worker, config) callback {
+                audit.clear()
+                spec.assert_str_eq(config.read("public"), "public configuration\n", "trusted success")
+                spec.assert_str_eq(config.read("../private.txt"), "DENIED", "service validation")
+                _text, err = file.read("tests/fixtures/private.txt")
+                spec.assert_true(err != "", "untrusted read still denied")
+                spec.assert_true(audit.denied_count() >= 1, "sandbox veto recorded")
+                spec.assert_str_eq(config.read("public"), "public configuration\n", "trusted call after veto")
+            }
+        }
+        spec.it("cannot widen an enclosing sandbox through nested trust") callback {
+            outer = sandbox.new("outer deny all") {}
+            inner = sandbox.new("inner deny all") {}
+            defer sandbox.free(outer)
+            defer sandbox.free(inner)
+            sandbox.enforce(outer) callback {
+                sandbox.enforce(inner, config) callback {
+                    audit.clear()
+                    i = 0
+                    while i < 3 {
+                        spec.assert_str_eq(config.read("public"), "DENIED", "outer veto persists")
+                        i = i + 1
+                    }
+                    spec.assert_true(audit.denied_count() >= 3, "each refusal audited")
+                }
+            }
+        }
+    }
+    return spec.run_summary(fw)
+}

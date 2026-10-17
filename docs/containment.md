@@ -54,13 +54,12 @@ before entering the trusted enforce callback; trusted names may only be called
 inside that callback, not passed around as values.
 
 Each step/event runs in a fresh sealed deny-all enforcement frame, with the
-same host-owned grants and service routing. This is necessary on Aether 0.802:
-repeating a trusted call site inside one long-lived enforce callback consumes
-a captured authority snapshot and causes invalid reads. Reentering the frame
-per event passes repeated mounted-service calls and subsequent untrusted vetoes
-under Valgrind. The service still has its own fence, and an enclosing sandbox
-still narrows all frames. See [aether-issues.md](aether-issues.md) and the isolated
-reproducer; this is a host adapter workaround, not a guest capability.
+same host-owned grants and service routing. This originally avoided a trusted
+snapshot lifetime defect reproduced on 0.802 and 0.819. The original standalone
+long-lived-frame reproducer passes on the current target, installed 0.823.0.
+The per-event host structure remains valid; independent tests deliberately use
+one long-lived frame so it cannot mask a recurrence. See
+[aether-issues.md](aether-issues.md) for current and historical evidence.
 
 The test gate deliberately also mounts broad **probe-only** wrappers for file,
 environment, process and socket access. Those wrappers are not trusted and
@@ -80,6 +79,11 @@ Nineteen std.spec cases per artifact cover:
 - PROCEDURE/EXPOSE spoofing, mounted service resumes and restored scope isolation.
 - Nested grants, frozen-grant mutation and attempted widening through trust.
 - Context registry isolation, inaccessible host lexical state and bounded loops.
+
+Three additional std.spec cases in `tests/test_trusted_service.ae` run without
+the engine. They assert repeated reads in one frame, restoration after success
+and early refusal, and repeated vetoes by an enclosing sandbox. They run in
+`make containment` and under Valgrind in `make memcheck`.
 
 The socket positive control asserts an **allowed Aether audit decision** for
 one endpoint and a denial for another port. This execution environment refuses

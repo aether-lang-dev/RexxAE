@@ -66,10 +66,11 @@ Script-derived compound names and literal host JSON property access are separate
 contracts. A script variable sharing a property name cannot change a host API
 path. Copied object values still differ from RexxJS's general alias semantics.
 
-Aether 0.802 requires a fresh enforcement frame per guest event for safe repeated
-trusted-service dispatch. The dev-tree compiler is currently mismatched with
-its stdlib; details and a standalone reproducer are in
-[aether-issues.md](aether-issues.md).
+Installed Aether 0.823.0 is now the target. Its standalone trusted-service
+lifetime reproducer passes under Valgrind; three std.spec regressions cover
+repeated reads, restoration after refusal and enclosing sandbox vetoes. The
+earlier compiler/stdlib annotation blocker is also resolved. Details and
+historical failures are in [aether-issues.md](aether-issues.md).
 
 ## What the updated spreadsheet actually needs
 

@@ -31,8 +31,8 @@ exercise(source: string, expected_status: int, expected_requests: int, minimum_d
     }
     worker = sandbox.new("RexxAE deny-all") {}
     defer sandbox.free(worker)
-    // A fresh enforcement frame per event avoids Aether 0.802's consumed
-    // trusted-authority snapshot when a trusted call site repeats in a loop.
+    // Keep one sealed enforcement frame per event. The independent trusted
+    // service regression also checks long-lived frames on target Aether 0.823.
     audit.clear()
     status = 3
     requests = 0
@@ -53,7 +53,8 @@ exercise(source: string, expected_status: int, expected_requests: int, minimum_d
     spec.assert_str_eq(output, expected_output, "only authorized output")
 }
 
-contained_event(ctx: ptr, worker: sandbox.Grants) -> ptr {
+// The callback captures this opaque context. The caller owns it until return.
+contained_event(ctx: @keep ptr, worker: sandbox.Grants) -> ptr {
     event = map.map_new()
     map.map_put_string_owned(event, "requests", "0")
     map.map_put_string_owned(event, "output", "")

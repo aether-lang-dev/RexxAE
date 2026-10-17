@@ -151,10 +151,10 @@ a versioned compatibility policy instead of silently changing the port.
 
 ## Tests
 
-`make test` runs 379 std.spec cases: 125 shared function fixtures, 35
+`make test` runs 382 std.spec cases: 125 shared function fixtures, 35
 behavior/lifecycle/typed specs, 80 routine/migration specs, 35 SELECT specs, 38 PARSE and
 compound specs, fourteen binary-import specs per library variant, and nineteen
-containment specs per variant. It also runs Python/ctypes checks, a native C
+containment specs per variant, plus three standalone trusted-service lifetime specs. It also runs Python/ctypes checks, a native C
 host and a Python host harness. Actual binary consumers use `import rexxae`.
 
 `make parity` compares 507 complete programs with RexxJS e3bd4e9, including host-call
@@ -163,7 +163,7 @@ Seven known differences have separate native/reference
 assertions and are not counted as matching programs. `make containment` also
 runs eleven compiler rejection probes, checks @pure entry points and pins
 the guest-function/import surfaces. `make memcheck` checks the C example and
-all eleven native spec executables, including recursive and suspended teardown.
+all twelve native spec executables, including recursive and suspended teardown.
 
 The engine imports std.json but builds without filesystem/system grants and
 with @pure public entry points. Host service tests deliberately import effect

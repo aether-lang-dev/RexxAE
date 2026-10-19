@@ -125,14 +125,19 @@ class ModuleTests(unittest.TestCase):
         p = run_console('REQUIRE "calculator" AS remote\n')
         self.assertIn('requires approved endpoint access', p.stderr)
 
+    def test_post_permission_does_not_allow_module_downloads(self):
+        p = self.run_script('REQUIRE "/static/calculator.rexx"\n')
+        self.assertIn('module GET capability was not approved', p.stderr)
+
 
 class ConsentTests(unittest.TestCase):
     endpoint = 'https://calculator.example.com:443/calculate'
 
-    def program(self, directory, purpose='Remote calculator operations'):
+    def program(self, directory, purpose='Remote calculator operations', module_request=False):
         path = Path(directory) / 'calculator.rexx'
+        extra = '/* @seeks http.get /static/calculator.rexx */\n' if module_request else ''
         path.write_text(f'/* @seeks http.post {self.endpoint} */\n'
-                        f'/* @purpose {purpose} */\nREQUIRE "calculator"\nSAY "SCRIPT_STARTED"\n')
+                        f'/* @purpose {purpose} */\n{extra}REQUIRE "calculator"\nSAY "SCRIPT_STARTED"\n')
         return path
 
     def settings(self, path, **extra):
@@ -168,9 +173,9 @@ class ConsentTests(unittest.TestCase):
                     self.assertEqual(p.stdout, '')
                     self.assertIn('exact requested endpoint', p.stderr)
 
-    def interactive(self, answer, purpose='Remote calculator operations'):
+    def interactive(self, answer, purpose='Remote calculator operations', module_request=False):
         with tempfile.TemporaryDirectory() as directory:
-            path = self.program(directory, purpose)
+            path = self.program(directory, purpose, module_request)
             master, slave = os.openpty()
             attributes = termios.tcgetattr(slave)
             attributes[3] &= ~termios.ECHO
@@ -241,6 +246,34 @@ class ConsentTests(unittest.TestCase):
         self.assertNotIn('\x1b', output)
         self.assertNotIn('\u202e', output)
         self.assertIn('trusted\\x1b[2J\\xe2\\x80\\xae claim', output)
+
+    def test_get_and_post_require_separate_answers_before_execution(self):
+        code, output = self.interactive(b'y\nn\n', module_request=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(output.count('Allow for this session?'), 2)
+        self.assertIn('HTTP GET https://calculator.example.com:443/static/calculator.rexx', output)
+        self.assertNotIn('SCRIPT_STARTED', output)
+        code, output = self.interactive(b'y\ny\n:quit\n', module_request=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(output.count('Allow for this session?'), 2)
+        self.assertLess(output.index('HTTP GET'), output.index('SCRIPT_STARTED'))
+
+    def test_advance_post_approval_does_not_approve_get_or_parent_domains(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.program(directory, module_request=True)
+            settings = self.settings(path, CALC_APPROVE_ENDPOINT=self.endpoint)
+            p = run_console('y\n', settings)
+            self.assertEqual(p.returncode, 1)
+            self.assertIn('CALC_APPROVE_MODULE_URL', p.stderr)
+            self.assertEqual(p.stdout, '')
+            for url in ('*', self.endpoint, 'https://example.com:443/static/calculator.rexx',
+                        'https://other.example.com:443/static/calculator.rexx'):
+                p = run_console(settings={**settings, 'CALC_APPROVE_MODULE_URL': url})
+                self.assertEqual(p.returncode, 1)
+                self.assertEqual(p.stdout, '')
+            p = run_console(settings={**settings, 'CALC_APPROVE_MODULE_URL':
+                                      'https://calculator.example.com:443/static/calculator.rexx'})
+            self.assertEqual((p.returncode, p.stdout, p.stderr), (0, 'SCRIPT_STARTED\n', ''))
 
 
 class HTTPConfigurationTests(unittest.TestCase):

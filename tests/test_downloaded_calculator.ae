@@ -1,0 +1,102 @@
+// Actual binary-engine execution of the served Rexx file. The mock supplies
+// HTTP replies, not CALC: calculations and request construction run in Rexx.
+import std.spec
+import std.io
+import std.string
+import std.map
+import std.json
+import std.sandbox
+import examples.calculator.downloaded
+import examples.calculator.policy
+import examples.calculator.protocol
+import examples.calculator.service
+
+const HEADER = "/* @exports CALC */\n/* @seeks http.post /calculate */\n"
+
+run_module(source: string, args: string, expected: string) {
+    result, error = downloaded.run(source, args, |request: ptr| {
+        body = string.copy(map.map_get_raw(request, "body"))
+        response, status = protocol.handle(body)
+        map.map_put_string_owned(request, "response", response)
+        if status == 200 { map.map_put_string_owned(request, "error", "") }
+        else { map.map_put_string_owned(request, "error", "HTTP 400") }
+    })
+    spec.assert_str_eq(error, "", "module execution succeeds")
+    spec.assert_str_eq(result, expected, "result from downloaded Rexx")
+}
+
+refused(source: string, args: string) {
+    result = map.map_new()
+    defer map.map_free(result)
+    map.map_put_string_owned(result, "calls", "0")
+    _value, error = downloaded.run(source, args, |request: ptr| {
+        map.map_put_string_owned(result, "calls", "1")
+    })
+    spec.assert_true(error != "", "module refused")
+    spec.assert_str_eq(string.copy(map.map_get_raw(result, "calls")), "0", "no transport callback")
+}
+
+main() {
+    fw = spec.init()
+    source, read_error = io.read_file("examples/calculator/static/calculator.rexx")
+    if read_error != "" { println(read_error); return 1 }
+    spec.describe(fw, "relative downloaded calculator modules") {
+        spec.it("resolves a root-relative reference against the calculator service origin") callback {
+            url, error = policy.module_url("https://calculator.example.com:8443/calculate", "/static/calculator.rexx")
+            spec.assert_str_eq(error, "", "resolve")
+            spec.assert_str_eq(url, "https://calculator.example.com:8443/static/calculator.rexx", "exact origin and port")
+            _value, denied = policy.module_url("https://calculator.example.com:8443/calculate", "//evil.example/static/calculator.rexx")
+            spec.assert_true(denied != "", "authority escape")
+            _other, traversal = policy.module_url("https://calculator.example.com:8443/calculate", "/static/../calculator.rexx")
+            spec.assert_true(traversal != "", "path escape")
+        }
+        spec.it("allows a separate GET declaration only before executable code") callback {
+            url = "http://localhost:8080/calculate"
+            header = "/* @seeks http.post ${url} */\n/* @purpose Calculator */\n/* @seeks http.get /static/calculator.rexx */\n"
+            spec.assert_str_eq(policy.preflight("${header}REQUIRE '/static/calculator.rexx'", url), "", "two distinct requests")
+            spec.assert_true(policy.preflight("${header}/* @seeks http.get /static/calculator.rexx */", url) != "", "duplicate GET")
+            spec.assert_true(policy.preflight("/* @seeks http.post ${url} */\nSAY 1\n/* @seeks http.get /static/calculator.rexx */", url) != "", "late GET")
+            text, error = policy.module_prompt(header, url, "calculator.rexx")
+            spec.assert_str_eq(error, "", "GET prompt")
+            spec.assert_true(string.contains(text, "HTTP GET http://localhost:8080/static/calculator.rexx") == 1, "exact resolved destination")
+            spec.assert_true(string.contains(text, "Self-claimed purpose (unverified)") == 1, "untrusted claim")
+        }
+        spec.it("executes the served CALC definition through the binary engine") callback {
+            run_module(source, "[\"add\",\"0.1\",\"0.2\"]", "\"0.3\"")
+            run_module(source, "[\"mul\",\"6\",\"7\"]", "\"42\"")
+        }
+        spec.it("uses downloaded code rather than a native CALC substitute") callback {
+            run_module("${HEADER}CALC: PROCEDURE\nRETURN 'from-the-downloaded-file'", "[\"a\",\"b\",\"c\"]", "\"from-the-downloaded-file\"")
+        }
+        spec.it("refuses extra requested capabilities and exports before execution") callback {
+            refused("${HEADER}/* @seeks fs.read /etc/passwd */\nCALC:\nRETURN 1", "[1,2,3]")
+            refused("${HEADER}/* @exports SYSTEM */\nCALC:\nRETURN 1", "[1,2,3]")
+            refused("${HEADER}SAY 'initialization'\nCALC:\nRETURN 1", "[1,2,3]")
+        }
+        spec.it("prevents remote code from selecting other POST resources") callback {
+            refused("${HEADER}CALC: PROCEDURE\nRETURN HTTP_POST('https://evil.example:443/calculate', {})", "[1,2,3]")
+            refused("${HEADER}CALC: PROCEDURE\nRETURN HTTP_POST('/other', {})", "[1,2,3]")
+            refused("${HEADER}CALC: PROCEDURE\nRETURN HTTP_POST('/calculate', 'wrong type')", "[1,2,3]")
+        }
+        spec.it("does not give downloaded code the application's module resolver or effects") callback {
+            refused("${HEADER}CALC: PROCEDURE\nREQUIRE 'system'\nRETURN 1", "[1,2,3]")
+            refused("${HEADER}CALC: PROCEDURE\nRETURN READ_FILE('/etc/passwd')", "[1,2,3]")
+        }
+        spec.it("bounds arguments and module execution") callback {
+            refused(source, "[]")
+            refused("${HEADER}CALC: PROCEDURE\nDO FOREVER\nEND", "[1,2,3]")
+        }
+        spec.it("keeps module downloads inside an enclosing deny-all fence") callback {
+            result = map.map_new()
+            defer map.map_free(result)
+            outer = sandbox.new("no module network") {}
+            defer sandbox.free(outer)
+            sandbox.enforce(outer) callback {
+                _value, error = service.fetch("http://localhost:8080/calculate", "", "/static/calculator.rexx")
+                map.map_put_string_owned(result, "error", error)
+            }
+            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "module download denied by enclosing sandbox", "no socket attempted")
+        }
+    }
+    return spec.run_summary(fw)
+}

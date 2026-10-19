@@ -8,6 +8,7 @@ import examples.calculator.policy
 import examples.calculator.service
 import examples.calculator.consent
 import examples.calculator.modules
+import examples.calculator.downloaded
 import std.map
 
 dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
@@ -17,9 +18,26 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
             rexxae.rexxae_reply_value(ctx, "null", "calculator module requires approved endpoint access")
             return
         }
-        if rexxae.rexxae_argument_type(ctx, 0) != 3 || string.copy(rexxae.rexxae_argument_text(ctx, 0)) != "calculator" {
-            rexxae.rexxae_reply_value(ctx, "null", "module unavailable; this console provides REQUIRE 'calculator'")
+        if rexxae.rexxae_argument_type(ctx, 0) != 3 {
+            rexxae.rexxae_reply_value(ctx, "null", "module reference must be a string")
             return
+        }
+        reference = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+        if reference != "calculator" && reference != "/static/calculator.rexx" {
+            rexxae.rexxae_reply_value(ctx, "null", "module unavailable; use /static/calculator.rexx")
+            return
+        }
+        if reference == "/static/calculator.rexx" {
+            if map.map_has(bindings, "_module_get") == 0 {
+                rexxae.rexxae_reply_value(ctx, "null", "module GET capability was not approved")
+                return
+            }
+            if map.map_has(bindings, "_module_source") == 0 {
+                code, error = service.fetch(endpoint, ca, reference)
+                if error == "" { error = downloaded.validate(code) }
+                if error != "" { rexxae.rexxae_reply_value(ctx, "null", error); return }
+                map.map_put_string_owned(bindings, "_module_source", code)
+            }
         }
         args, _parse_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
         defer json.json_free(args)
@@ -36,7 +54,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
         // before resuming execution. Pending contexts cannot be registered.
         if rexxae.rexxae_reply_value(ctx, "true", "") == 0 {
             if rexxae.rexxae_register_function(ctx, exported, 3, 3) == 0 {
-                map.map_put_string_owned(bindings, exported, "calculator")
+                map.map_put_string_owned(bindings, exported, reference)
             }
         }
         return
@@ -48,6 +66,19 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
     // Do not coerce objects, arrays, booleans or null into authority-bearing text.
     if rexxae.rexxae_argument_type(ctx, 0) != 3 || rexxae.rexxae_argument_type(ctx, 1) != 3 || rexxae.rexxae_argument_type(ctx, 2) != 3 {
         rexxae.rexxae_reply_value(ctx, "null", "CALC requires three strings: operation, left, right")
+        return
+    }
+    if string.copy(map.map_get_raw(bindings, name)) == "/static/calculator.rexx" {
+        code = string.copy(map.map_get_raw(bindings, "_module_source"))
+        arguments = string.copy(rexxae.rexxae_arguments_json(ctx))
+        result, error = downloaded.run(code, arguments, |request: ptr| {
+            path = string.copy(map.map_get_raw(request, "path"))
+            body = string.copy(map.map_get_raw(request, "body"))
+            response, failure = service.post(endpoint, ca, path, body)
+            map.map_put_string_owned(request, "response", response)
+            map.map_put_string_owned(request, "error", failure)
+        })
+        if rexxae.rexxae_reply_value(ctx, result, error) != 0 { rexxae.rexxae_reply_value(ctx, "null", "module result is outside the JSON profile") }
         return
     }
     op = string.copy(rexxae.rexxae_argument_text(ctx, 0))
@@ -93,6 +124,7 @@ main() {
     if ca == null { ca = "" }
     program = os.getenv("CALC_PROGRAM")
     source = ""
+    module_approved = false
     if endpoint != "" {
         if program == null || program == "" { io.stderr_write("CALC_PROGRAM required to run the calculator script\n"); return 1 }
         if string.starts_with(endpoint, "https://") == 1 && ca == "" { io.stderr_write("CALC_CA required for HTTPS\n"); return 1 }
@@ -106,6 +138,15 @@ main() {
             io.stderr_write("required calculator capability denied; script was not executed\n")
             return 1
         }
+        if policy.module_requested(text) {
+            approved_module = os.getenv("CALC_APPROVE_MODULE_URL")
+            if approved_module == null { approved_module = "" }
+            if !consent.approve_module(text, endpoint, program, approved_module) {
+                io.stderr_write("required module GET capability denied; script was not executed\n")
+                return 1
+            }
+            module_approved = true
+        }
         source = text
     } else {
         if program != null && program != "" { io.stderr_write("CALC_PROGRAM requires host-approved CALC_ENDPOINT\n"); return 1 }
@@ -115,6 +156,7 @@ main() {
     if ctx == null { return 1 }
     bindings = map.map_new()
     defer map.map_free(bindings)
+    if module_approved { map.map_put_string_owned(bindings, "_module_get", "approved") }
     rexxae.rexxae_register_function(ctx, "REQUIRE", 1, 2)
     rexxae.rexxae_step(ctx, 1)
     if source != "" { ctx = submit(ctx, source, endpoint, ca, bindings) }

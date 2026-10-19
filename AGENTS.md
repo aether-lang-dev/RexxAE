@@ -147,6 +147,9 @@ REQUIRE has a capability-empty parser profile: a quoted module reference and
 an optional literal AS alias are passed to an explicitly mounted REQUIRE
 resolver as FUNCTION arguments. Preserve RexxJS prefix semantics and the
 function/ADDRESS distinction. Relative references are not automatic network
-grants. The calculator console currently resolves only its installed calculator
-module; HTTP Rexx-module fetching remains unimplemented and must not be implied
-by the examples. Test both binary consumers and unmounted-loader denial.
+grants. The calculator console resolves /static/calculator.rexx against the
+configured calculator origin only after separate exact GET and POST consent.
+The downloaded CALC routine executes in an independent binary-engine context
+with only an endpoint-bound HTTP_POST service. Retain download size/step bounds,
+redirect/proxy refusal, enclosing-sandbox denial and changed-source execution
+proofs. Test both binary consumers and unmounted-loader denial.

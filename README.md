@@ -73,7 +73,7 @@ cancellation and session behavior.
 ## TinyWeb calculator demo
 
 The optional [calculator demo](docs/calculator.md) adds a native Aether console,
-an exactly approved `CALC` host function, and a TinyWeb HTTPS endpoint using
+an explicitly imported Rexx `CALC` function, and a TinyWeb HTTPS endpoint using
 pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
 `7b48889a` (the development compiler reports 0.830.0).
 
@@ -81,14 +81,18 @@ The [calculator script](examples/calculator/calculator.rexx) explicitly imports
 its API before calling it:
 
 ```rexx
-REQUIRE "calculator"
+/* @seeks http.post https://localhost:8443/calculate */
+/* @purpose Remote calculator operations */
+/* @seeks http.get /static/calculator.rexx */
+REQUIRE "/static/calculator.rexx"
 SAY CALC('add', '0.1', '0.2')
 ```
 
-`REQUIRE "calculator" AS remote` instead exports `remote_CALC`, matching
+`REQUIRE "/static/calculator.rexx" AS remote` instead exports `remote_CALC`, matching
 RexxJS's prefix semantics. Permission approval and module import are separate.
 See [importing the calculator API](docs/calculator.md#importing-the-calculator-api)
-for alias rules and the remaining work on relative HTTP module loading.
+for alias rules, URL resolution and separate GET/POST permissions.
+The function is defined in the [served Rexx module](examples/calculator/static/calculator.rexx).
 
 ### Local integration checks
 
@@ -117,8 +121,8 @@ CALC_ENDPOINT=http://localhost:8080/calculate \
 CALC_PROGRAM=examples/calculator/calculator-local.rexx ./build/calculator/calculator-console
 ```
 
-The native console first asks for session approval of the exact HTTP endpoint.
-After an explicit `y` or `yes`, the script prints `0.3`; then try
+The native console asks separately for the exact calculator POST and module GET.
+After an explicit `y` or `yes` for each of the POST and module GET requests, the script prints `0.3`; then try
 `SAY CALC('mul', '6', '7')`. No certificates,
 CA file or Python are needed. Plain HTTP is restricted to `localhost` and
 `127.0.0.1`; HTTPS remains required for remote endpoints.
@@ -151,7 +155,7 @@ The script requests HTTP access in its first-line declaration. The host checks
 that declaration against `CALC_ENDPOINT` and asks for session approval before
 execution. The prompt labels the script's purpose as **self-claimed** and
 **unverified**; trust in a parent domain or sibling subdomain is never inherited.
-After an explicit `y` or `yes`, `REQUIRE "calculator"` loads `CALC` for that exact endpoint.
+After an explicit `y` or `yes` for each of the POST and module GET requests, `REQUIRE "/static/calculator.rexx"` loads `CALC` for that exact endpoint.
 The startup calculation should print `0.3`. The native REPL
 then waits for input; try:
 

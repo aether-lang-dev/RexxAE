@@ -3,7 +3,7 @@ import std.io
 import std.string
 import examples.calculator.policy
 
-exports(approve)
+exports(approve, approve_module)
 
 // Host-only terminal detection. Piped script/input must never answer its own
 // permission question. Both the answer and the prompt need terminal descriptors.
@@ -12,13 +12,24 @@ extern isatty(fd: int) -> int
 approve(source: string, endpoint: string, program: string, preapproved: string) -> bool {
     prompt, err = policy.approval_prompt(source, endpoint, program)
     if err != "" { io.stderr_write("${err}\n"); return false }
+    return ask(prompt, endpoint, preapproved, "CALC_APPROVE_ENDPOINT")
+}
+
+approve_module(source: string, endpoint: string, program: string, preapproved: string) -> bool {
+    prompt, err = policy.module_prompt(source, endpoint, program)
+    if err != "" { io.stderr_write("${err}\n"); return false }
+    url, _url_error = policy.module_url(endpoint, "/static/calculator.rexx")
+    return ask(prompt, url, preapproved, "CALC_APPROVE_MODULE_URL")
+}
+
+ask(prompt: string, endpoint: string, preapproved: string, variable: string) -> bool {
     if preapproved != "" {
         if preapproved == endpoint { return true }
         io.stderr_write("advance approval must match the exact requested endpoint\n")
         return false
     }
     if isatty(0) != 1 || isatty(2) != 1 {
-        io.stderr_write("capability not approved: interactive approval requires terminal stdin and stderr; automation must set CALC_APPROVE_ENDPOINT to the exact endpoint\n")
+        io.stderr_write("capability not approved: interactive approval requires terminal stdin and stderr; automation must set ${variable} to the exact endpoint\n")
         return false
     }
     io.stderr_write(prompt)

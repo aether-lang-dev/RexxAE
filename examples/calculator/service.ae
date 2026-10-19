@@ -4,10 +4,11 @@ import std.cryptography.tls13_client
 import std.sandbox
 import std.map
 import std.string
+import std.json
 import examples.calculator.policy
 import examples.calculator.protocol
 
-exports(call)
+exports(call, fetch, post)
 
 // std.http.client's C dial path currently lacks std.net's sandbox gate.
 // Keep this bridge in the host adapter until the stdlib checks that path.
@@ -76,4 +77,86 @@ call(url: string, ca: string, op: string, a: string, b: string) -> (string, stri
     value = ""
     if map.map_get_raw(result, "value") != null { value = string.copy(map.map_get_raw(result, "value")) }
     return value, string.copy(map.map_get_raw(result, "error"))
+}
+
+// The downloaded calculator module gets one typed, endpoint-bound operation.
+// It cannot choose another URL, headers, redirects, proxy or trust store.
+post(endpoint: string, ca: string, path: string, body: string) -> (string, string) {
+    if path != "/calculate" { return "", "module POST destination is not approved" }
+    root, kind, _parse_error = json.parse_strict(body)
+    if kind != json.KIND_OK { return "", "invalid module POST JSON" }
+    defer json.json_free(root)
+    if json.json_type(root) != 5 || json.json_object_size_raw(root) != 3 { return "", "calculator POST requires exactly op, a and b" }
+    operation = json.json_object_get_raw(root, "op")
+    left = json.json_object_get_raw(root, "a")
+    right = json.json_object_get_raw(root, "b")
+    if json.json_type(operation) != 3 || json.json_type(left) != 3 || json.json_type(right) != 3 {
+        return "", "calculator POST requires three strings"
+    }
+    op, _oe = json.get_string(operation)
+    a, _ae = json.get_string(left)
+    b, _be = json.get_string(right)
+    value, err = call(endpoint, ca, op, a, b)
+    if err != "" { return "", err }
+    result = json.obj()
+    defer json.json_free(result)
+    json.set(result, "result", json.str(value))
+    text, _err = json.stringify(result)
+    return text, ""
+}
+
+fetch_exchange(endpoint: string, url: string, ca: string, host: string, port: int) -> (string, string) {
+    secure = string.starts_with(endpoint, "https://") == 1
+    if aether_sandbox_check_slow("tcp", "${host}:${port}") == 0 { return "", "module download denied by enclosing sandbox" }
+    if secure && aether_sandbox_check_slow("fs_read", ca) == 0 { return "", "module download denied by enclosing sandbox" }
+    destination = url
+    if !secure { destination = "http://127.0.0.1:${port}/static/calculator.rexx" }
+    req = client.request("GET", destination)
+    if req == null { return "", "cannot construct module download" }
+    defer client.request_free(req)
+    err = client.ignore_http_proxy(req)
+    if err == "" { err = client.set_follow_redirects(req, 0) }
+    if err == "" { err = client.set_timeout(req, 5s) }
+    if err == "" && secure { err = client.set_cafile(req, ca) }
+    if err != "" { return "", err }
+    response, send_error = client.send_stream(req)
+    if send_error != "" { return "", send_error }
+    defer client.response_free(response)
+    if client.response_status(response) != 200 { return "", "module HTTP status ${client.response_status(response)}" }
+    source = ""
+    while string.length(source) <= 16384 {
+        chunk = client.response_read(response, 16385 - string.length(source))
+        if chunk == "" { break }
+        source = "${source}${chunk}"
+    }
+    if string.length(source) > 16384 { return "", "module exceeds 16384 bytes" }
+    if client.response_error(response) != "" { return "", "module download read failed" }
+    return source, ""
+}
+
+fetch(endpoint: string, ca: string, reference: string) -> (string, string) {
+    host, port, err = policy.endpoint(endpoint)
+    if err != "" { return "", err }
+    url, url_error = policy.module_url(endpoint, reference)
+    if url_error != "" { return "", url_error }
+    secure = string.starts_with(endpoint, "https://") == 1
+    if secure && (ca == "" || string.char_at(ca, 0) != 47 || string.contains(ca, "*") == 1 || string.contains(ca, "?") == 1 || string.contains(ca, "[") == 1) {
+        return "", "an absolute literal CA file path is required"
+    }
+    result = map.map_new()
+    defer map.map_free(result)
+    map.map_put_string_owned(result, "error", "module download denied")
+    grants = sandbox.new("approved calculator module GET") {
+        grant_tcp(host, port)
+        if secure { grant_fs_read(ca) }
+    }
+    defer sandbox.free(grants)
+    sandbox.enforce(grants) callback {
+        text, error = fetch_exchange(endpoint, url, ca, host, port)
+        map.map_put_string_owned(result, "source", text)
+        map.map_put_string_owned(result, "error", error)
+    }
+    text = ""
+    if map.map_get_raw(result, "source") != null { text = string.copy(map.map_get_raw(result, "source")) }
+    return text, string.copy(map.map_get_raw(result, "error"))
 }

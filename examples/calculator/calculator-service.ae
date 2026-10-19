@@ -39,7 +39,19 @@ main() {
         return 0
     }
     if os.setenv("AETHER_PURE_TLS", "1") != "" { return 1 }
+    module_file = os.getenv("CALC_MODULE_FILE")
+    if module_file == null || module_file == "" { module_file = "examples/calculator/static/calculator.rexx" }
+    module_source, module_error = io.read_file(module_file)
+    if module_error != "" || string.length(module_source) == 0 || string.length(module_source) > 16384 {
+        io.stderr_write("cannot read calculator module (CALC_MODULE_FILE, maximum 16384 bytes)\n")
+        return 1
+    }
     server = tinyweb.web_server_host(host, port) {
+        tinyweb.end_point(tinyweb.GET, "/static/calculator.rexx") |req: ptr, res: ptr, ctx: ptr| {
+            tinyweb.response_set_header(res, "Content-Type", "text/plain; charset=utf-8")
+            tinyweb.response_set_header(res, "Cache-Control", "no-store")
+            tinyweb.response_write(res, module_source)
+        }
         tinyweb.end_point(tinyweb.GET, "/health") |req: ptr, res: ptr, ctx: ptr| {
             transport = "aether-tls13"
             if plain { transport = "none" }

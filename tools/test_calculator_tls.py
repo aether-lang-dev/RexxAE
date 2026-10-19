@@ -121,7 +121,7 @@ def main():
                 port = sockets()
                 endpoint = f'http://localhost:{port}/calculate'
                 program = directory / 'local.rexx'
-                program.write_text(f"/* @seeks http.post {endpoint} */\nREQUIRE \"calculator\"\nSAY CALC('add','0.1','0.2')\n")
+                program.write_text(f"/* @seeks http.post {endpoint} */\n/* @seeks http.get /static/calculator.rexx */\nREQUIRE \"/static/calculator.rexx\"\nSAY CALC('add','0.1','0.2')\n")
                 log_path = args.report.with_suffix('.http-server.log')
                 report['http_server_log'] = str(log_path)
                 with log_path.open('w') as log:
@@ -149,7 +149,8 @@ def main():
                         else:
                             raise AssertionError(f'HTTP not ready: {last}; see {log_path}')
                         p = subprocess.run([str(ROOT / 'build/calculator/calculator-console')], cwd=ROOT,
-                                           env=environment(CALC_ENDPOINT=endpoint, CALC_APPROVE_ENDPOINT=endpoint, CALC_PROGRAM=str(program),
+                                           env=environment(CALC_ENDPOINT=endpoint, CALC_APPROVE_ENDPOINT=endpoint,
+                                                           CALC_APPROVE_MODULE_URL=endpoint.removesuffix('/calculate') + '/static/calculator.rexx', CALC_PROGRAM=str(program),
                                                            HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',
                                                            NO_PROXY='', no_proxy=''),
                                            input="\nSAY CALC('mul','6','7')", capture_output=True, text=True, timeout=20)
@@ -170,7 +171,7 @@ def main():
             port = sockets()
             endpoint = f'https://127.0.0.1:{port}/calculate'
             program = directory / 'client.rexx'
-            program.write_text(f"/* @seeks http.post {endpoint} */\nREQUIRE \"calculator\"\nSAY CALC('add','0.1','0.2')\n")
+            program.write_text(f"/* @seeks http.post {endpoint} */\n/* @seeks http.get /static/calculator.rexx */\nREQUIRE \"/static/calculator.rexx\"\nSAY CALC('add','0.1','0.2')\n")
             server_log = args.report.with_suffix('.server.log')
             report['server_log'] = str(server_log)
             with server_log.open('w') as log:
@@ -209,6 +210,12 @@ def main():
                             status, text, _ = request(port, ctx, '/calculate', json.dumps(dict(op=op, a=a, b=b)))
                             require(status == 200 and json.loads(text) == {'result': expected}, text)
                     check('HTTPS decimal arithmetic', arithmetic)
+
+                    def module_source():
+                        status, text, _ = request(port, ctx, '/static/calculator.rexx')
+                        require(status == 200 and text == (ROOT / 'examples/calculator/static/calculator.rexx').read_text(),
+                                f'module GET {status}: {text!r}')
+                    check('TinyWeb serves the actual calculator Rexx module', module_source)
 
                     def bad_requests():
                         for body, expected in [('{', 400), ('[]', 400),
@@ -250,6 +257,7 @@ def main():
                     def console(cafile=cert, program_file=program, input_text='', url=endpoint):
                         p = subprocess.run([str(ROOT / 'build/calculator/calculator-console')], cwd=ROOT,
                                            env=environment(CALC_CA=str(cafile), CALC_ENDPOINT=url, CALC_APPROVE_ENDPOINT=url,
+                                                           CALC_APPROVE_MODULE_URL=url.removesuffix('/calculate') + '/static/calculator.rexx',
                                                            CALC_PROGRAM=str(program_file), AETHER_PURE_TLS='0',
                                                            HTTPS_PROXY='http://127.0.0.1:1', https_proxy='http://127.0.0.1:1',
                                                            HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',
@@ -261,7 +269,16 @@ def main():
                         p = console(input_text="\nLET total = CALC('mul','6','7')\nSAY total")
                         require(p.returncode == 0 and p.stdout == '0.3\n42\n' and not p.stderr,
                                 f'code={p.returncode} stdout={p.stdout!r} stderr={p.stderr!r}')
-                    check('native Rexx binary consumer, injected CALC, EOF and proxy isolation', native_success)
+                    check('native Rexx binary consumer, downloaded CALC, EOF and proxy isolation', native_success)
+
+                    def native_alias():
+                        alias_program = directory / 'alias.rexx'
+                        alias_program.write_text(program.read_text().replace('REQUIRE \"/static/calculator.rexx\"',
+                                                                            'REQUIRE \"/static/calculator.rexx\" AS remote').replace('SAY CALC(', 'SAY remote_CALC('))
+                        p = console(program_file=alias_program, input_text="SAY remote_CALC('mul','6','7')")
+                        require(p.returncode == 0 and p.stdout == '0.3\n42\n' and not p.stderr,
+                                f'{p.stdout!r} {p.stderr!r}')
+                    check('downloaded module AS uses RexxJS export-prefix semantics', native_alias)
 
                     def native_untrusted():
                         p = console(cafile=untrusted)
@@ -272,6 +289,8 @@ def main():
                     # A hostile HTTPS endpoint must not cause a second request.
                     class Redirect(http.server.BaseHTTPRequestHandler):
                         requests = 0
+                        mode = 'post-redirect'
+                        downloads = 0
 
                         def do_POST(self):
                             type(self).requests += 1
@@ -282,15 +301,27 @@ def main():
                             self.end_headers()
 
                         def do_GET(self):
-                            type(self).requests += 100
-                            self.send_response(500)
-                            self.send_header('Content-Length', '0')
+                            type(self).downloads += 1
+                            if type(self).mode == 'get-redirect':
+                                self.send_response(302)
+                                self.send_header('Location', f'https://127.0.0.1:{port}/static/calculator.rexx')
+                                self.send_header('Content-Length', '0')
+                                self.end_headers()
+                                return
+                            payload = (ROOT / 'examples/calculator/static/calculator.rexx').read_bytes()
+                            if type(self).mode == 'modified-module':
+                                payload = b"/* @exports CALC */\n/* @seeks http.post /calculate */\nCALC: PROCEDURE\nRETURN 'downloaded-code-executed'\n"
+                            self.send_response(200)
+                            self.send_header('Content-Length', str(len(payload)))
                             self.end_headers()
+                            self.wfile.write(payload)
 
                         def log_message(self, *args):
                             pass
 
-                    def native_redirect():
+                    def native_redirect(mode='post-redirect'):
+                        Redirect.mode = mode
+                        Redirect.requests = Redirect.downloads = 0
                         with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Redirect) as fixture:
                             fixture.daemon_threads = True
                             tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -302,16 +333,25 @@ def main():
                             try:
                                 url = f'https://127.0.0.1:{fixture.server_port}/calculate'
                                 redirect_program = directory / 'redirect.rexx'
-                                redirect_program.write_text(f"/* @seeks http.post {url} */\nREQUIRE \"calculator\"\nSAY CALC('add','1','2')\n")
+                                redirect_program.write_text(f"/* @seeks http.post {url} */\n/* @seeks http.get /static/calculator.rexx */\nREQUIRE \"/static/calculator.rexx\"\nSAY CALC('add','1','2')\n")
                                 p = console(program_file=redirect_program, url=url)
-                                require(p.stdout == '' and 'HTTP status 302' in p.stderr,
-                                        f'{p.stdout!r} {p.stderr!r}')
-                                require(Redirect.requests == 1, f'{Redirect.requests} requests to redirect fixture')
+                                if mode == 'modified-module':
+                                    require(p.stdout == 'downloaded-code-executed\n' and not p.stderr,
+                                            f'{p.stdout!r} {p.stderr!r}')
+                                else:
+                                    require(p.stdout == '' and 'HTTP status 302' in p.stderr,
+                                            f'{p.stdout!r} {p.stderr!r}')
+                                expected_posts = 1 if mode == 'post-redirect' else 0
+                                require(Redirect.requests == expected_posts and Redirect.downloads == 1,
+                                        f'{Redirect.requests} POST, {Redirect.downloads} GET requests')
                                 return p.stderr
                             finally:
                                 fixture.shutdown()
                                 worker.join(timeout=5)
-                    check('native client refuses redirect to a different service', native_redirect)
+                    check('native calculator refuses POST redirect to a different service', native_redirect)
+                    check('native module loader refuses GET redirect', lambda: native_redirect('get-redirect'))
+                    check('native console executes modified downloaded code without a native CALC substitute',
+                          lambda: native_redirect('modified-module'))
                     check('TinyWeb remains healthy after denied handshakes', ready)
                 finally:
                     server.terminate()

@@ -130,7 +130,7 @@ clean:
 	rm -rf build
 
 .PHONY: calculator calculator-test calculator-integration
-calculator: build/calculator/calculator-service build/calculator/calculator-console build/calculator/test_protocol build/calculator/test_service
+calculator: build/calculator/calculator-service build/calculator/calculator-console build/calculator/test_protocol build/calculator/test_service build/calculator/test_downloaded
 
 build/calculator:
 	mkdir -p $@
@@ -141,7 +141,7 @@ build/calculator/librexxae.$(LIBEXT): $(wildcard src/*.ae) | build/calculator
 build/calculator/calculator-service: examples/calculator/calculator-service.ae examples/calculator/protocol.ae examples/calculator/policy.ae examples/calculator/tls_config.ae | build/calculator
 	$(CALC_AE) build $< -o $@
 
-build/calculator/calculator-console: examples/calculator/calculator-console.ae examples/calculator/consent.ae examples/calculator/modules.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
+build/calculator/calculator-console: examples/calculator/calculator-console.ae examples/calculator/consent.ae examples/calculator/downloaded.ae examples/calculator/modules.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
 	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
 
 build/calculator/test_protocol: tests/test_calculator.ae examples/calculator/protocol.ae examples/calculator/policy.ae | build/calculator
@@ -153,9 +153,13 @@ build/calculator/test_service: tests/test_calculator_service.ae examples/calcula
 calculator-test: calculator
 	./build/calculator/test_protocol
 	./build/calculator/test_service
+	./build/calculator/test_downloaded
 	python3 tests/test_calculator_console.py
 
 calculator-integration:
 	python3 tools/test_calculator_tls.py --ae $(CALC_AE)
 
 build/test_require: examples/calculator/modules.ae
+
+build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/calculator/downloaded.ae examples/calculator/policy.ae examples/calculator/service.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
+	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@

@@ -31,8 +31,9 @@ cleans up its processes and private keys. Unavailable sockets fail the run.
 Checks include the native client reaching a loopback HTTP server without a CA;
 independent HTTPS arithmetic; malformed and oversized requests;
 TLS 1.3 negotiation and TLS 1.2 refusal; untrusted CA and wrong hostname refusal;
-the native Rexx host calling the real service while ignoring ambient proxies;
-native rejection of an untrusted CA and a redirect; and server health after bad
+the native console downloading and executing the served Rexx module while ignoring ambient proxies;
+RexxJS-style aliases; a modified downloaded routine returning its own value;
+native rejection of an untrusted CA and GET/POST redirects; and server health after bad
 handshakes. Each check is recorded separately. A build or startup failure stops
 dependent checks, leaving an overall failed report.
 
@@ -56,7 +57,7 @@ No Python, certificates or `CALC_CA` are needed. The checked-in calculator scrip
 `http://localhost:8080/calculate` and calls `CALC('add', '0.1', '0.2')`.
 It should print `0.3`; continue with `SAY CALC('mul', '6', '7')`, then `:quit`.
 Before the script runs, the native console asks for session approval of its
-exact HTTP request. Enter `y` or `yes` to grant it; Enter or any other answer
+exact HTTP POST request, then separately for GET of the Rexx module. Enter `y` or `yes` at each prompt to grant both; Enter or any other answer
 denies execution. `CALC_ENDPOINT` sets the host's endpoint limit, not consent.
 `CALC_HTTP=1` explicitly selects HTTP, defaulting to `127.0.0.1:8080`.
 `CALC_HOST=localhost` also binds literal `127.0.0.1`. Nonloopback bindings are
@@ -91,6 +92,11 @@ CALC_CERT=/absolute/path/fullchain.pem CALC_KEY=/absolute/path/key.pem \
   ./build/calculator/calculator-service
 ```
 
+The service reads one module asset at startup: `CALC_MODULE_FILE` defaults to
+`examples/calculator/static/calculator.rexx`, relative to the working directory.
+It serves only that file at the exact GET path, without exposing a directory.
+Restart after changing the asset. Run these local commands from the repository root.
+
 Defaults are `127.0.0.1:8443`. `CALC_HOST` and `CALC_PORT` change the binding.
 Startup parses the leaf and key and checks that the public key matches before
 binding. These are the defaults when `CALC_HTTP=1` is absent. Certificate chain
@@ -111,13 +117,16 @@ The host limits requests to `CALC_ENDPOINT`; the program's first line must match
 ```rexx
 /* @seeks http.post https://localhost:8443/calculate */
 /* @purpose Remote calculator operations */
+/* @seeks http.get /static/calculator.rexx */
+REQUIRE "/static/calculator.rexx"
 SAY CALC('add', '0.1', '0.2')
 ```
 
 This is a small declaration convention, not a general SAE manifest parser.
 Declarations request access; they cannot grant it. Approval happens before any
-startup instruction. A second declaration, a different port or a missing
-declaration refuses the program. Endpoint and CA configuration stay in the host
+startup instruction. Unknown or duplicate capability declarations, a different port or a missing
+POST declaration refuse the program. The GET declaration separately requests the
+root-relative module URL on that same origin. Endpoint and CA configuration stay in the host
 and cannot be changed by script variables or later console comments.
 
 ## Permission approval in the native REPL
@@ -159,12 +168,13 @@ checks still apply after consent; a user response cannot widen an outer fence.
 
 The question requires both terminal stdin and terminal stderr. Piped input must
 not answer a script's permission question. For explicit noninteractive host
-approval, set **both** `CALC_ENDPOINT` and `CALC_APPROVE_ENDPOINT` to the same
-complete endpoint:
+approval, set `CALC_ENDPOINT` and `CALC_APPROVE_ENDPOINT` to the same
+complete POST endpoint, and `CALC_APPROVE_MODULE_URL` to the complete GET URL:
 
 ```sh
 CALC_ENDPOINT=http://localhost:8080/calculate \
 CALC_APPROVE_ENDPOINT=http://localhost:8080/calculate \
+CALC_APPROVE_MODULE_URL=http://localhost:8080/static/calculator.rexx \
 CALC_PROGRAM=examples/calculator/calculator-local.rexx ./build/calculator/calculator-console </dev/null
 ```
 
@@ -175,62 +185,73 @@ integration runner supplies exact advance approvals for its generated scripts;
 offline tests use real pseudoterminals to exercise interactive yes/no, default
 denial, EOF, prompt escaping and session behavior without network access.
 
-This calculator host supports one required `http.post` request. Multiple
-requests and unsupported capabilities are refused; optional requests and remote script loading are not implemented. Explicit imports
-currently resolve only the installed calculator module. A future loader must
-apply the same approval and sandbox rules to imported code before it executes.
+The calculator script requests two permissions: POST of calculator operations and
+GET of its Rexx module. Both approvals happen before the first Rexx instruction
+or network request. POST approval never grants GET, including on the same origin.
+The GET prompt explicitly says that the download contains code to be executed.
+Additional capabilities requested by downloaded code are refused, never silently
+granted. This is a limited calculator convention, not a general manifest format.
 
 ## Importing the calculator API
 
-The calculator script explicitly loads its API before using it:
+The [calculator script](../examples/calculator/calculator.rexx) states where its
+function comes from:
 
 ```rexx
 /* @seeks http.post https://localhost:8443/calculate */
 /* @purpose Remote calculator operations */
-REQUIRE "calculator"
+/* @seeks http.get /static/calculator.rexx */
+REQUIRE "/static/calculator.rexx"
 SAY CALC('add', '0.1', '0.2')
 ```
 
-`REQUIRE "calculator"` makes the module's exported `CALC` function available.
-The permission declaration requests access to an endpoint; the import names
-which API supplies the function. Approval alone does not import the API.
-The calculator console currently provides this module from its installed
-Aether implementation. It does not fetch module code from the calculator service.
+The relative reference resolves against the scheme, hostname and explicit port of
+`CALC_ENDPOINT`: here, `https://localhost:8443/static/calculator.rexx`. TinyWeb serves
+that URL from [static/calculator.rexx](../examples/calculator/static/calculator.rexx),
+which defines and exports `CALC`. The console downloads and validates that Rexx
+source, binds its export, then executes the downloaded routine whenever `CALC`
+is called. The routine constructs the POST request and reads the result. It is
+not replaced with an installed native calculation. Permissions authorize effects;
+`REQUIRE` identifies the code that supplies the function.
 
 `AS` follows RexxJS's function-prefix rules:
 
 | Import | Exported name |
 |---|---|
-| `REQUIRE "calculator"` | `CALC` |
-| `REQUIRE "calculator" AS remote` | `remote_CALC` |
-| `REQUIRE "calculator" AS remote_` | `remote_CALC` |
-| `REQUIRE "calculator" AS remote_(.*)` | `remote_CALC` |
+| `REQUIRE "/static/calculator.rexx"` | `CALC` |
+| `REQUIRE "/static/calculator.rexx" AS remote` | `remote_CALC` |
+| `REQUIRE "/static/calculator.rexx" AS remote_` | `remote_CALC` |
+| `REQUIRE "/static/calculator.rexx" AS remote_(.*)` | `remote_CALC` |
 
-For example:
+For example, after the same declarations:
 
 ```rexx
-REQUIRE "calculator" AS remote
+REQUIRE "/static/calculator.rexx" AS remote
 SAY remote_CALC('add', '0.1', '0.2')
 ```
 
-`AS CALC` would export `CALC_CALC`, not turn the module into a callable object.
-Imported functions remain available during the console session. Imports cannot
-approve endpoints, widen the enclosing sandbox or load an unknown module.
-The engine emits an ordinary FUNCTION request named `REQUIRE`, with the module
-reference and optional alias as string arguments. An application must explicitly
-provide the resolver and bind approved exports before resuming execution.
-No filesystem, network or native-code loader is added to the engine.
+`AS CALC` would export `CALC_CALC`. Imported functions and the validated downloaded
+source remain available during the console session; further imports use that
+cached source. Restart to fetch an updated module. No version pin or signature
+verification is implemented yet.
 
-The parser accepts relative references such as
-`REQUIRE "/static/calculator.rexx" AS remote` and preserves the reference for
-an application resolver. **HTTP fetching of Rexx modules is not implemented by
-this calculator console yet**; it refuses that reference instead of silently
-substituting an installed module. That next adapter needs a defined base URL
-and separate GET approval before downloading code, followed by approval for
-any capabilities requested by the downloaded module. The basic parser profile
-supports a quoted module reference and optional literal `AS` alias, including
-quoted aliases and the RexxJS prefix pattern. Dynamic references and named
-`lib=...` forms are outside this implementation slice.
+This first downloaded-module profile accepts exactly `/static/calculator.rexx`,
+with no authority replacement, traversal, query or alternate path. Downloads
+are limited to 16 KiB and must begin with the export and POST declarations shown
+in the served source. Extra capability or export declarations and initialization
+code are refused. Each call runs in an independent binary-engine context with
+three arguments and a 100,000-step budget. Its sole mounted function is
+`HTTP_POST('/calculate', object)`; that adapter validates the calculator JSON
+contract and uses the approved POST endpoint. The downloaded routine receives
+no application registry, filesystem access, nested module resolver or ADDRESS
+service. Mutable module variables do not persist between calls.
+
+The legacy `REQUIRE "calculator"` resolver remains available for an installed
+Aether adapter, but these examples use the explicit HTTP source above.
+The engine itself emits a FUNCTION request named `REQUIRE` with the reference
+and optional alias as strings. Only the calculator application supplies network
+resolution; the core engine remains capability-empty. Dynamic references and
+named `lib=...` forms are outside this parser profile.
 
 RexxJS also uses `AS` to rename ADDRESS modules to an exact lowercase name and
 refuses `(.*)` patterns for those modules. The shared naming helper and tests
@@ -255,7 +276,9 @@ lowercase DNS names and IPv4, and refuses userinfo, wildcard hosts, IPv6, querie
 fragments and encoded authorities. It does not pretend to implement general URL
 normalization. Redirects and proxies are disabled, certificate verification stays
 enabled, each request has a five-second deadline and streamed responses are
-limited to 512 bytes. Results remain data, never Rexx source.
+limited to 512 bytes. Calculator POST results remain data. Rexx source is fetched only through the
+separately approved module GET, with the same proxy, redirect, TLS and timeout
+policy and a 16 KiB streaming limit.
 
 For HTTPS, the adapter adds an exact TCP grant and one literal CA-file read grant inside
 `sandbox.enforce`. The source audit found that `std.http.client`'s C dial path
@@ -289,7 +312,7 @@ the explicit port and `/calculate` path, and set `CALC_CA` to an absolute path
 to a trust bundle that validates the VM's certificate chain. The sample
 `calculator.example.com` hostname is a placeholder, not the deployed service.
 
-After its `REQUIRE "calculator"` import, the startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
+After its `REQUIRE "/static/calculator.rexx"` import, the startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
 calling the VM. Subsequent `CALC` calls in the REPL use the same approved
 service; ordinary Rexx variables and arithmetic execute locally. The console
 waits for one submission per line without a prompt. Use `:quit` or EOF to exit.
@@ -303,7 +326,9 @@ destination by passing a URL to `CALC`.
 `deploy/calculator/rexxae-calculator.service` and `calculator.env.example` are
 reviewable templates, not an installed service. Build on the target architecture
 and compatible OS, copy the server binary to `/opt/rexxae/bin/calculator-service`,
-create the `rexxcalc` service account, and install the config and P-256 keypair
+copy `examples/calculator/static/calculator.rexx` to
+`/opt/rexxae/share/calculator.rexx` (the template sets `CALC_MODULE_FILE` to that
+path), create the `rexxcalc` service account, and install the config and P-256 keypair
 under `/etc/rexxae`. Keep the key readable only by root and the service group.
 The unit runs without root, with a read-only filesystem, a private temporary
 directory and CPU/memory/task limits. Adjust limits after measurement.

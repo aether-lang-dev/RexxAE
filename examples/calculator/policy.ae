@@ -3,7 +3,18 @@
 import std.string
 import std.strbuilder
 
-exports(endpoint, preflight, loopback, purpose, approval_prompt)
+exports(endpoint, preflight, loopback, purpose, approval_prompt, module_url, module_requested, module_prompt)
+
+module_url(calculator: string, reference: string) -> (string, string) {
+    _host, _port, err = endpoint(calculator)
+    if err != "" { return "", err }
+    if reference != "/static/calculator.rexx" { return "", "only the exact /static/calculator.rexx import is supported" }
+    return "${string.substring(calculator, 0, string.length(calculator) - 10)}${reference}", ""
+}
+
+module_requested(source: string) -> bool {
+    return string.contains(source, "/* @seeks http.get /static/calculator.rexx */") == 1
+}
 
 loopback(host: string) -> bool { return host == "localhost" || host == "127.0.0.1" }
 
@@ -62,9 +73,23 @@ preflight(source: string, approved: string) -> string {
     if first != "/* @seeks http.post ${approved} */" {
         return "first line must declare the exact host-approved calculator endpoint"
     }
-    // No optional declarations or grants are interpreted by this minimal host.
+    // A second, separate GET request can authorize the relative module import.
+    // Declarations must precede code; unknown, duplicate or late asks fail closed.
     rest = string.substring(source, end, string.length(source))
-    if string.contains(rest, "@seeks") == 1 { return "multiple endpoint declarations are not supported" }
+    lines = string.split(rest, "\n")
+    defer string.array_free(lines)
+    code = false
+    get_seen = false
+    for i in 0..string.array_size(lines) {
+        line = string.trim(string.array_get(lines, i))
+        if string.contains(line, "@seeks") == 1 {
+            if code || get_seen || line != "/* @seeks http.get /static/calculator.rexx */" {
+                return "unsupported, duplicate or late capability declaration"
+            }
+            get_seen = true
+        }
+        if line != "" && !(string.starts_with(line, "/*") == 1 && string.ends_with(line, "*/") == 1) { code = true }
+    }
     _claimed, purpose_error = purpose(source)
     if purpose_error != "" { return purpose_error }
     return ""
@@ -118,4 +143,14 @@ approval_prompt(source: string, url: string, program: string) -> (string, string
     host, port, _endpoint_error = endpoint(url)
     claimed, _purpose_error = purpose(source)
     return "${display(program)} requests:\n  HTTP POST ${url}\n\nSelf-claimed purpose (unverified):\n  ${display(claimed)}\n\nDestination hostname: ${host}\nPort: ${port}\nPath: /calculate\nApproval covers only this exact scheme, operation, hostname, port and path.\nNo trust is inherited from a parent domain or sibling subdomains.\n\nAllow for this session? [y/N] ", ""
+}
+
+module_prompt(source: string, calculator: string, program: string) -> (string, string) {
+    err = preflight(source, calculator)
+    if err != "" { return "", err }
+    if !module_requested(source) { return "", "module GET capability was not requested" }
+    url, _url_error = module_url(calculator, "/static/calculator.rexx")
+    host, port, _endpoint_error = endpoint(calculator)
+    claimed, _purpose_error = purpose(source)
+    return "${display(program)} requests:\n  HTTP GET ${url}\n  Download Rexx code; CALC will execute this downloaded module.\n\nSelf-claimed purpose (unverified):\n  ${display(claimed)}\n\nDestination hostname: ${host}\nPort: ${port}\nPath: /static/calculator.rexx\nApproval covers only this exact scheme, operation, hostname, port and path.\nNo trust is inherited from a parent domain or sibling subdomains.\n\nAllow for this session? [y/N] ", ""
 }

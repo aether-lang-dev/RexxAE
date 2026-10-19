@@ -1,0 +1,91 @@
+// Executes an approved Rexx module through the binary engine. No source import
+// of the engine, native-code loader or ambient application registry is used.
+import rexxae
+import std.string
+import std.map
+import std.json
+import std.io
+
+exports(validate, run)
+
+validate(source: string) -> string {
+    if string.length(source) == 0 || string.length(source) > 16384 { return "module must be 1..16384 bytes" }
+    for i in 0..string.length(source) {
+        if string.char_at(source, i) == 0 { return "NUL in module source" }
+    }
+    header = "/* @exports CALC */\n/* @seeks http.post /calculate */\n"
+    if string.starts_with(source, header) != 1 { return "module must export CALC and request only POST /calculate" }
+    tail = string.substring(source, string.length(header), string.length(source))
+    if string.contains(tail, "@seeks") == 1 || string.contains(tail, "@exports") == 1 { return "additional module capabilities or exports are not supported" }
+    lines = string.split(tail, "\n")
+    defer string.array_free(lines)
+    entry = false
+    for i in 0..string.array_size(lines) {
+        line = string.trim(string.array_get(lines, i))
+        if line == "" || (string.starts_with(line, "/*") == 1 && string.ends_with(line, "*/") == 1) { continue }
+        upper = string.to_upper(line)
+        if upper != "CALC:" && string.starts_with(upper, "CALC: PROCEDURE") != 1 { return "module must start with its exported CALC routine, without initialization code" }
+        entry = true
+        break
+    }
+    if !entry { return "module has no CALC routine" }
+    ctx = rexxae.rexxae_create(source)
+    if ctx == null { return "cannot parse module" }
+    defer rexxae.rexxae_destroy(ctx)
+    if rexxae.rexxae_step(ctx, 0) == -1 { return string.copy(rexxae.rexxae_error(ctx)) }
+    return ""
+}
+
+// post is a trusted application callback receiving a map with path/body and
+// returning response/error entries. The runner validates the script-facing
+// boundary before invoking it. Tests can supply a socket-free calculator.
+run(source: string, arguments: string, post: fn) -> (string, string) {
+    invalid = validate(source)
+    if invalid != "" { return "", invalid }
+    args, kind, _parse_error = json.parse_strict(arguments)
+    if kind != json.KIND_OK { return "", "invalid module arguments" }
+    defer json.json_free(args)
+    if json.json_type(args) != 4 || json.json_array_size(args) != 3 { return "", "CALC requires three arguments" }
+    wrapper = "CALL CALC ARRAY_GET(__module_args,1), ARRAY_GET(__module_args,2), ARRAY_GET(__module_args,3)\nEXIT\n${source}"
+    ctx = rexxae.rexxae_create(wrapper)
+    if ctx == null { return "", "cannot create module execution" }
+    defer rexxae.rexxae_destroy(ctx)
+    rexxae.rexxae_set_variable_json(ctx, "__module_args", arguments)
+    rexxae.rexxae_register_function(ctx, "HTTP_POST", 2, 2)
+    for i in 0..100000 {
+        status = rexxae.rexxae_step(ctx, 1)
+        if status == -1 { return "", string.copy(rexxae.rexxae_error(ctx)) }
+        if status == 0 {
+            if rexxae.rexxae_exit_code(ctx) != 0 { return "", "module exited with a nonzero status" }
+            value = rexxae.rexxae_get_variable_json(ctx, "RESULT")
+            if value == null { return "", "module did not return a result" }
+            return string.copy(value), ""
+        }
+        if status == 1 { println(string.copy(rexxae.rexxae_text(ctx))) }
+        if status == 2 { rexxae.rexxae_reply(ctx, 13, "", "module has no application command access") }
+        if status == 4 {
+            if string.copy(rexxae.rexxae_function(ctx)) != "HTTP_POST" || rexxae.rexxae_argument_type(ctx, 0) != 3 || rexxae.rexxae_argument_type(ctx, 1) != 5 {
+                return "", "module HTTP_POST requires a path and JSON object"
+            }
+            path = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+            if path != "/calculate" { return "", "module POST destination is not approved" }
+            values, _values_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
+            body, _body_error = json.stringify(json.json_array_get_raw(values, 1))
+            json.json_free(values)
+            if string.length(body) > 512 { return "", "module POST body exceeds 512 bytes" }
+            request = map.map_new()
+            map.map_put_string_owned(request, "path", path)
+            map.map_put_string_owned(request, "body", body)
+            map.map_put_string_owned(request, "error", "module transport did not reply")
+            call(post, request)
+            error = string.copy(map.map_get_raw(request, "error"))
+            if error != "" { map.map_free(request); return "", error }
+            response = map.map_get_raw(request, "response")
+            if response == null { map.map_free(request); return "", "module transport did not supply a response" }
+            accepted = rexxae.rexxae_reply_value(ctx, string.copy(response), "")
+            map.map_free(request)
+            if accepted != 0 { return "", "module transport response is outside the JSON profile" }
+        }
+    }
+    return "", "module instruction limit reached"
+}

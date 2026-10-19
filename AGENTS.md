@@ -142,3 +142,11 @@ known differences or weaken containment to make a newer reference compatible.
 Current toolchain issues and a standalone trusted-service reproducer are in
 docs/aether-issues.md. Record failures honestly; do not modify read-only
 reference/toolchain checkouts to hide them.
+
+REQUIRE has a capability-empty parser profile: a quoted module reference and
+an optional literal AS alias are passed to an explicitly mounted REQUIRE
+resolver as FUNCTION arguments. Preserve RexxJS prefix semantics and the
+function/ADDRESS distinction. Relative references are not automatic network
+grants. The calculator console currently resolves only its installed calculator
+module; HTTP Rexx-module fetching remains unimplemented and must not be implied
+by the examples. Test both binary consumers and unmounted-loader denial.

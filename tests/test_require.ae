@@ -1,0 +1,50 @@
+import std.spec
+import std.string
+import src.engine
+import examples.calculator.modules
+
+request(source: string, expected: string) {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    spec.assert_eq(engine.rexxae_register_function(ctx, "REQUIRE", 1, 2), 0, "explicit loader")
+    spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "import request")
+    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), expected, "module and alias")
+    spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "request is stable")
+    spec.assert_eq(engine.rexxae_reply_value(ctx, "true", ""), 0, "approved import")
+    spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "no replay")
+}
+main() {
+    fw = spec.init()
+    spec.describe(fw, "REQUIRE AS") {
+        spec.it("supports plain imports, prefixes and capture patterns") callback {
+            request("REQUIRE 'calculator'", "[\"calculator\"]")
+            request("REQUIRE 'calculator' AS Remote", "[\"calculator\",\"Remote\"]")
+            request("REQUIRE 'calculator' AS remote_(.*)", "[\"calculator\",\"remote_(.*)\"]")
+            request("REQUIRE 'calculator' AS 'Remote';", "[\"calculator\",\"Remote\"]")
+            request("REQUIRE '/static/calculator.rexx' AS remote", "[\"/static/calculator.rexx\",\"remote\"]")
+        }
+        spec.it("matches RexxJS function prefix naming") callback {
+            spec.assert_str_eq(modules.function_name("CALC", ""), "CALC", "no alias")
+            spec.assert_str_eq(modules.function_name("CALC", "Remote"), "Remote_CALC", "underscore added")
+            spec.assert_str_eq(modules.function_name("CALC", "remote_"), "remote_CALC", "underscore retained")
+            spec.assert_str_eq(modules.function_name("CALC", "remote_(.*)"), "remote_CALC", "pattern prefix")
+            spec.assert_str_eq(modules.function_name("CALC", "(.*)"), "CALC", "empty prefix")
+        }
+        spec.it("matches ADDRESS aliases and refuses capture patterns there") callback {
+            name, err = modules.address_name("original", "Remote")
+            spec.assert_str_eq(name, "remote", "lowercase exact name")
+            spec.assert_str_eq(err, "", "valid alias")
+            _name, invalid = modules.address_name("original", "remote_(.*)")
+            spec.assert_true(invalid != "", "ADDRESS pattern refused")
+        }
+        spec.it("refuses an unmounted loader and malformed imports") callback {
+            ctx = engine.rexxae_create("REQUIRE '/static/calculator.rexx' AS remote")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "no ambient loading")
+            missing = engine.rexxae_create("REQUIRE 'calculator' AS")
+            defer engine.rexxae_destroy(missing)
+            spec.assert_eq(engine.rexxae_step(missing, 100), -1, "missing alias")
+        }
+    }
+    return spec.run_summary(fw)
+}

@@ -9,7 +9,7 @@ import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-CONSOLE = ROOT / 'build/calculator/console'
+CONSOLE = ROOT / 'build/calculator/calculator-console'
 
 
 def run_console(source='', settings=None):
@@ -61,7 +61,7 @@ class ConsoleTests(unittest.TestCase):
     def test_argument_types_and_operators_rejected_before_network(self):
         with tempfile.TemporaryDirectory() as d:
             program = Path(d) / 'client.rexx'
-            program.write_text('/* @seeks http.post https://localhost:8443/calculate */\n')
+            program.write_text('/* @seeks http.post https://localhost:8443/calculate */\nREQUIRE "calculator"\n')
             p = run_console("SAY CALC('add', {url:'evil'}, '2')\nSAY CALC('exec', '1', '2')\nSAY 'alive'\n",
                             {'CALC_ENDPOINT': 'https://localhost:8443/calculate',
                              'CALC_APPROVE_ENDPOINT': 'https://localhost:8443/calculate',
@@ -73,7 +73,7 @@ class ConsoleTests(unittest.TestCase):
     def test_local_http_mount_needs_no_ca(self):
         with tempfile.TemporaryDirectory() as d:
             program = Path(d) / 'local.rexx'
-            program.write_text('/* @seeks http.post http://localhost:8080/calculate */\n')
+            program.write_text('/* @seeks http.post http://localhost:8080/calculate */\nREQUIRE "calculator"\n')
             p = run_console("SAY CALC('exec', '1', '2')\nSAY 'alive'\n",
                             {'CALC_ENDPOINT': 'http://localhost:8080/calculate',
                              'CALC_APPROVE_ENDPOINT': 'http://localhost:8080/calculate',
@@ -93,13 +93,46 @@ class ConsoleTests(unittest.TestCase):
         self.assertIn('plain HTTP is restricted', p.stderr)
 
 
+class ModuleTests(unittest.TestCase):
+    def run_script(self, source, following=''):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'calculator.rexx'
+            path.write_text('/* @seeks http.post http://localhost:8080/calculate */\n' + source)
+            return run_console(following, {'CALC_ENDPOINT': 'http://localhost:8080/calculate',
+                                         'CALC_APPROVE_ENDPOINT': 'http://localhost:8080/calculate',
+                                         'CALC_PROGRAM': str(path)})
+
+    def test_permission_does_not_implicitly_import_calc(self):
+        p = self.run_script("SAY CALC('exec','1','2')")
+        self.assertIn('unknown or unavailable function: CALC', p.stderr)
+
+    def test_alias_variants_persist_into_console_submissions(self):
+        for alias, name in [('Remote', 'Remote_CALC'), ('remote_', 'remote_CALC'),
+                            ('remote_(.*)', 'remote_CALC'), ('(.*)', 'CALC'), ('"Remote"', 'Remote_CALC')]:
+            with self.subTest(alias=alias):
+                p = self.run_script(f'REQUIRE "calculator" AS {alias}', f"SAY {name}('exec','1','2')\n")
+                self.assertIn('unknown operation', p.stderr)
+                self.assertNotIn('unavailable function', p.stderr)
+
+    def test_alias_does_not_also_bind_the_unprefixed_name(self):
+        p = self.run_script('REQUIRE "calculator" AS remote', "SAY CALC('exec','1','2')\n")
+        self.assertIn('unknown or unavailable function: CALC', p.stderr)
+
+    def test_unknown_modules_and_unapproved_imports_are_refused(self):
+        p = self.run_script('REQUIRE "system" AS remote', "SAY remote_CALC('exec','1','2')\n")
+        self.assertIn('module unavailable', p.stderr)
+        self.assertIn('unknown or unavailable function', p.stderr)
+        p = run_console('REQUIRE "calculator" AS remote\n')
+        self.assertIn('requires approved endpoint access', p.stderr)
+
+
 class ConsentTests(unittest.TestCase):
     endpoint = 'https://calculator.example.com:443/calculate'
 
     def program(self, directory, purpose='Remote calculator operations'):
         path = Path(directory) / 'calculator.rexx'
         path.write_text(f'/* @seeks http.post {self.endpoint} */\n'
-                        f'/* @purpose {purpose} */\nSAY "SCRIPT_STARTED"\n')
+                        f'/* @purpose {purpose} */\nREQUIRE "calculator"\nSAY "SCRIPT_STARTED"\n')
         return path
 
     def settings(self, path, **extra):
@@ -214,7 +247,7 @@ class HTTPConfigurationTests(unittest.TestCase):
     def config(self, **settings):
         env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
         env.update(CALC_HTTP='1', CALC_CHECK_CONFIG='1', **settings)
-        return subprocess.run([str(ROOT / 'build/calculator/server')], env=env,
+        return subprocess.run([str(ROOT / 'build/calculator/calculator-service')], env=env,
                               capture_output=True, text=True, timeout=10)
 
     def test_local_http_without_certificates(self):
@@ -233,7 +266,7 @@ class HTTPConfigurationTests(unittest.TestCase):
 
     def test_https_still_requires_certificates_by_default(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
-        p = subprocess.run([str(ROOT / 'build/calculator/server')], env=env,
+        p = subprocess.run([str(ROOT / 'build/calculator/calculator-service')], env=env,
                            capture_output=True, text=True, timeout=10)
         self.assertEqual(p.returncode, 1)
         self.assertIn('CALC_CERT and CALC_KEY', p.stderr)
@@ -255,7 +288,7 @@ class TLSConfigurationTests(unittest.TestCase):
     def check_config(self, cert, key):
         env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
         env.update(CALC_CERT=str(cert), CALC_KEY=str(key), CALC_CHECK_CONFIG='1')
-        return subprocess.run([str(ROOT / 'build/calculator/server')], env=env,
+        return subprocess.run([str(ROOT / 'build/calculator/calculator-service')], env=env,
                               capture_output=True, text=True, timeout=10)
 
     def test_matching_p256_keypair_without_sockets(self):

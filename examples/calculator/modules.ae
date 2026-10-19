@@ -1,0 +1,22 @@
+// RexxJS REQUIRE AS naming rules, independent of how an application obtains
+// an approved module. These transformations do not grant any capabilities.
+import std.string
+
+exports(function_name, address_name)
+
+function_name(name: string, alias: string) -> string {
+    if alias == "" { return name }
+    marker = string.index_of(alias, "(.*)")
+    if marker >= 0 {
+        prefix = "${string.substring(alias, 0, marker)}${string.substring(alias, marker + 4, string.length(alias))}"
+        return "${prefix}${name}"
+    }
+    if string.ends_with(alias, "_") == 1 { return "${alias}${name}" }
+    return "${alias}_${name}"
+}
+
+address_name(name: string, alias: string) -> (string, string) {
+    if alias == "" { return name, "" }
+    if string.contains(alias, "(.*)") == 1 { return "", "Cannot use regex patterns in AS clause for ADDRESS modules" }
+    return string.to_lower(alias), ""
+}

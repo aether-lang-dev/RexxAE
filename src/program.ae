@@ -544,7 +544,46 @@ statement(ctx: ptr, depth: int, loop: int) {
     }
     if lex.keyword(ctx, "SELECT") { select_statement(ctx, depth, loop); return }
     if lex.keyword(ctx, "WHEN") || lex.keyword(ctx, "OTHERWISE") { state.fail(ctx, "selection clause requires an enclosing SELECT"); return }
-    if lex.keyword(ctx, "CALL") {
+    if lex.keyword(ctx, "REQUIRE") {
+        // Loading is an explicit embedding request, never native filesystem,
+        // network or dynamic-code access. An unmounted loader fails closed.
+        inst = instruction(ctx, "call")
+        value = node(ctx, "call")
+        json.set(value, "name", json.str("REQUIRE"))
+        args = json.arr()
+        lex.next(ctx)
+        if state.integer(ctx, "kind") != 2 { state.fail(ctx, "REQUIRE currently requires one quoted module name") }
+        item = json.obj()
+        json.set(item, "value", literal(ctx, values.string_value(state.read(ctx, "token"))))
+        json.push(args, item)
+        lex.next(ctx)
+        if lex.keyword(ctx, "AS") {
+            lex.next(ctx)
+            alias = state.read(ctx, "token")
+            if state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4 {
+                state.fail(ctx, "REQUIRE AS needs an alias")
+            } else if state.integer(ctx, "kind") == 2 {
+                lex.next(ctx)
+            } else {
+                // RexxJS treats AS as a literal, whitespace-free pattern,
+                // including prefix_(.*), rather than an expression.
+                start = state.integer(ctx, "token_start")
+                end = state.integer(ctx, "pos")
+                lex.next(ctx)
+                while state.integer(ctx, "kind") != 0 && state.integer(ctx, "kind") != 4 && state.integer(ctx, "blank") == 0 {
+                    end = state.integer(ctx, "pos")
+                    lex.next(ctx)
+                }
+                alias = string.substring(state.read(ctx, "source"), start, end)
+            }
+            alias_arg = json.obj()
+            json.set(alias_arg, "value", literal(ctx, values.string_value(alias)))
+            json.push(args, alias_arg)
+        }
+        json.set(value, "args", args)
+        json.set(inst, "value", value)
+        emit(ctx, inst)
+    } else if lex.keyword(ctx, "CALL") {
         inst = instruction(ctx, "call")
         json.set(inst, "value", call_statement(ctx, false))
         emit(ctx, inst)

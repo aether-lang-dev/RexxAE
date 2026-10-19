@@ -76,7 +76,8 @@ containment: build/test_containment build/test_containment_shared build/test_tru
 	./build/test_trusted_service
 	python3 tools/check_containment.py --ae $(AE)
 
-spec: build/test_session build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+spec: build/test_require build/test_session build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+	./build/test_require
 	./build/test_session
 	./build/test_functions
 	./build/test_execution
@@ -94,7 +95,8 @@ test: all spec containment
 	./build/counter
 	python3 examples/host.py $(LIB)
 
-parity: all
+parity: all build/test_require
+	python3 tests/test_require_reference.py $(LIB) $(REXXJS)
 	python3 tests/test_engine.py $(LIB) --oracle $(REXXJS)
 
 # Characterizes migration gaps; parity above remains a strict equality check.
@@ -108,6 +110,7 @@ check-inventory:
 	node tools/inventory.cjs $(REXXJS) --check
 
 memcheck: all spec build/test_containment build/test_containment_shared build/test_trusted_service
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_require
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_session
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/counter
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_functions
@@ -127,7 +130,7 @@ clean:
 	rm -rf build
 
 .PHONY: calculator calculator-test calculator-integration
-calculator: build/calculator/server build/calculator/console build/calculator/test_protocol build/calculator/test_service
+calculator: build/calculator/calculator-service build/calculator/calculator-console build/calculator/test_protocol build/calculator/test_service
 
 build/calculator:
 	mkdir -p $@
@@ -135,10 +138,10 @@ build/calculator:
 build/calculator/librexxae.$(LIBEXT): $(wildcard src/*.ae) | build/calculator
 	$(CALC_AE) build --emit=lib src/engine.ae -o $@
 
-build/calculator/server: examples/calculator/server.ae examples/calculator/protocol.ae examples/calculator/policy.ae examples/calculator/tls_config.ae | build/calculator
+build/calculator/calculator-service: examples/calculator/calculator-service.ae examples/calculator/protocol.ae examples/calculator/policy.ae examples/calculator/tls_config.ae | build/calculator
 	$(CALC_AE) build $< -o $@
 
-build/calculator/console: examples/calculator/console.ae examples/calculator/consent.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
+build/calculator/calculator-console: examples/calculator/calculator-console.ae examples/calculator/consent.ae examples/calculator/modules.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
 	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
 
 build/calculator/test_protocol: tests/test_calculator.ae examples/calculator/protocol.ae examples/calculator/policy.ae | build/calculator
@@ -154,3 +157,5 @@ calculator-test: calculator
 
 calculator-integration:
 	python3 tools/test_calculator_tls.py --ae $(CALC_AE)
+
+build/test_require: examples/calculator/modules.ae

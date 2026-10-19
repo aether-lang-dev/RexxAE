@@ -121,11 +121,11 @@ def main():
                 port = sockets()
                 endpoint = f'http://localhost:{port}/calculate'
                 program = directory / 'local.rexx'
-                program.write_text(f"/* @seeks http.post {endpoint} */\nSAY CALC('add','0.1','0.2')\n")
+                program.write_text(f"/* @seeks http.post {endpoint} */\nREQUIRE \"calculator\"\nSAY CALC('add','0.1','0.2')\n")
                 log_path = args.report.with_suffix('.http-server.log')
                 report['http_server_log'] = str(log_path)
                 with log_path.open('w') as log:
-                    server = subprocess.Popen([str(ROOT / 'build/calculator/server')], cwd=ROOT,
+                    server = subprocess.Popen([str(ROOT / 'build/calculator/calculator-service')], cwd=ROOT,
                                               env=environment(CALC_HTTP='1', CALC_HOST='localhost', CALC_PORT=str(port)),
                                               stdout=log, stderr=subprocess.STDOUT)
                     try:
@@ -148,7 +148,7 @@ def main():
                                 connection.close()
                         else:
                             raise AssertionError(f'HTTP not ready: {last}; see {log_path}')
-                        p = subprocess.run([str(ROOT / 'build/calculator/console')], cwd=ROOT,
+                        p = subprocess.run([str(ROOT / 'build/calculator/calculator-console')], cwd=ROOT,
                                            env=environment(CALC_ENDPOINT=endpoint, CALC_APPROVE_ENDPOINT=endpoint, CALC_PROGRAM=str(program),
                                                            HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',
                                                            NO_PROXY='', no_proxy=''),
@@ -170,11 +170,11 @@ def main():
             port = sockets()
             endpoint = f'https://127.0.0.1:{port}/calculate'
             program = directory / 'client.rexx'
-            program.write_text(f"/* @seeks http.post {endpoint} */\nSAY CALC('add','0.1','0.2')\n")
+            program.write_text(f"/* @seeks http.post {endpoint} */\nREQUIRE \"calculator\"\nSAY CALC('add','0.1','0.2')\n")
             server_log = args.report.with_suffix('.server.log')
             report['server_log'] = str(server_log)
             with server_log.open('w') as log:
-                server = subprocess.Popen([str(ROOT / 'build/calculator/server')], cwd=ROOT,
+                server = subprocess.Popen([str(ROOT / 'build/calculator/calculator-service')], cwd=ROOT,
                                           env=environment(CALC_CERT=str(cert), CALC_KEY=str(key),
                                                           CALC_HOST='127.0.0.1', CALC_PORT=str(port),
                                                           AETHER_PURE_TLS='0'),
@@ -248,7 +248,7 @@ def main():
                     check('TLS 1.2 refused', rejects_tls12)
 
                     def console(cafile=cert, program_file=program, input_text='', url=endpoint):
-                        p = subprocess.run([str(ROOT / 'build/calculator/console')], cwd=ROOT,
+                        p = subprocess.run([str(ROOT / 'build/calculator/calculator-console')], cwd=ROOT,
                                            env=environment(CALC_CA=str(cafile), CALC_ENDPOINT=url, CALC_APPROVE_ENDPOINT=url,
                                                            CALC_PROGRAM=str(program_file), AETHER_PURE_TLS='0',
                                                            HTTPS_PROXY='http://127.0.0.1:1', https_proxy='http://127.0.0.1:1',
@@ -302,7 +302,7 @@ def main():
                             try:
                                 url = f'https://127.0.0.1:{fixture.server_port}/calculate'
                                 redirect_program = directory / 'redirect.rexx'
-                                redirect_program.write_text(f"/* @seeks http.post {url} */\nSAY CALC('add','1','2')\n")
+                                redirect_program.write_text(f"/* @seeks http.post {url} */\nREQUIRE \"calculator\"\nSAY CALC('add','1','2')\n")
                                 p = console(program_file=redirect_program, url=url)
                                 require(p.stdout == '' and 'HTTP status 302' in p.stderr,
                                         f'{p.stdout!r} {p.stderr!r}')

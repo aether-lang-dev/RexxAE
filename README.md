@@ -43,7 +43,7 @@ older than the installed release. Use `make -B` when switching compilers to
 rebuild libraries and consumers together. Make keeps its Aether cache under
 `build/cache`.
 
-Linux validation targets installed Aether 0.829.0: 397 native specs, 507 RexxJS
+Linux validation targets installed Aether 0.829.0: 405 native specs, 507 RexxJS
 comparisons, both binary-library variants, containment probes and Valgrind.
 The previous compiler/stdlib annotation blocker is resolved. The repeated
 trusted-service lifetime reproducer now passes, with three automated regression
@@ -77,10 +77,18 @@ an exactly approved `CALC` host function, and a TinyWeb HTTPS endpoint using
 pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
 `7b48889a` (the development compiler reports 0.830.0).
 
-`CALC` is registered by the calculator console's Aether host after it approves
-the script's endpoint declaration. It is not a Rexx builtin or a function
-defined by `@seeks`; these scripts need that host binding. See
-[where CALC comes from](docs/calculator.md#where-calc-comes-from).
+The [calculator script](examples/calculator/calculator.rexx) explicitly imports
+its API before calling it:
+
+```rexx
+REQUIRE "calculator"
+SAY CALC('add', '0.1', '0.2')
+```
+
+`REQUIRE "calculator" AS remote` instead exports `remote_CALC`, matching
+RexxJS's prefix semantics. Permission approval and module import are separate.
+See [importing the calculator API](docs/calculator.md#importing-the-calculator-api)
+for alias rules and the remaining work on relative HTTP module loading.
 
 ### Local integration checks
 
@@ -99,14 +107,14 @@ For local testing without SSL, start the Aether server in one terminal:
 
 ```sh
 make calculator CALC_AE=/home/paul/scm/aether/build/ae
-CALC_HTTP=1 ./build/calculator/server
+CALC_HTTP=1 ./build/calculator/calculator-service
 ```
 
 In a second terminal, run the native REPL and the local test script:
 
 ```sh
 CALC_ENDPOINT=http://localhost:8080/calculate \
-CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
+CALC_PROGRAM=examples/calculator/calculator-local.rexx ./build/calculator/calculator-console
 ```
 
 The native console first asks for session approval of the exact HTTP endpoint.
@@ -127,23 +135,23 @@ its hostname and explicit port. The CA file shown is the usual Debian/Ubuntu
 trust bundle; use an absolute path to the appropriate CA bundle on your OS.
 
 ```sh
-make build/calculator/console CALC_AE=/home/paul/scm/aether/build/ae
+make build/calculator/calculator-console CALC_AE=/home/paul/scm/aether/build/ae
 calc_endpoint='https://calculator.example.com:8443/calculate'
 
 # Give the test script the exact endpoint the host will approve.
-printf '/* @seeks http.post %s */\n' "$calc_endpoint" > build/calculator/gcp-client.rexx
-tail -n +2 examples/calculator/client.rexx >> build/calculator/gcp-client.rexx
+printf '/* @seeks http.post %s */\n' "$calc_endpoint" > build/calculator/gcp-calculator.rexx
+tail -n +2 examples/calculator/calculator.rexx >> build/calculator/gcp-calculator.rexx
 
 CALC_ENDPOINT="$calc_endpoint" \
 CALC_CA=/etc/ssl/certs/ca-certificates.crt \
-CALC_PROGRAM=build/calculator/gcp-client.rexx ./build/calculator/console
+CALC_PROGRAM=build/calculator/gcp-calculator.rexx ./build/calculator/calculator-console
 ```
 
 The script requests HTTP access in its first-line declaration. The host checks
 that declaration against `CALC_ENDPOINT` and asks for session approval before
 execution. The prompt labels the script's purpose as **self-claimed** and
 **unverified**; trust in a parent domain or sibling subdomain is never inherited.
-After an explicit `y` or `yes`, it mounts `CALC` for that exact endpoint.
+After an explicit `y` or `yes`, `REQUIRE "calculator"` loads `CALC` for that exact endpoint.
 The startup calculation should print `0.3`. The native REPL
 then waits for input; try:
 
@@ -309,7 +317,7 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-`make test` runs 397 native std.spec cases (including both binary variants),
+`make test` runs 405 native std.spec cases (including both binary variants),
 ctypes protocol checks, twelve Python session/console tests, the C example
 and Python host harness. `make parity`
 compares 507 programs, including host-call arguments/results, with RexxJS

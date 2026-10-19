@@ -1,6 +1,6 @@
 # Declared-endpoint calculator
 
-This demo uses a TinyWeb HTTPS server and an Aether console importing the actual
+This demo uses a calculator service built with TinyWeb and a calculator console importing the actual
 compiled RexxAE library. Both endpoints explicitly import Aether's TLS backend
 and force `AETHER_PURE_TLS=1` for HTTPS. TLS terminates in the application.
 An explicit loopback HTTP mode also supports local testing without certificates.
@@ -38,21 +38,21 @@ dependent checks, leaving an overall failed report.
 
 ## Local HTTP without SSL
 
-Build the native server and console, then start the server in one terminal:
+Build the native server and console, then start the calculator service in one terminal:
 
 ```sh
 make calculator CALC_AE=/home/paul/scm/aether/build/ae
-CALC_HTTP=1 ./build/calculator/server
+CALC_HTTP=1 ./build/calculator/calculator-service
 ```
 
 In another terminal, from the repository root:
 
 ```sh
 CALC_ENDPOINT=http://localhost:8080/calculate \
-CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
+CALC_PROGRAM=examples/calculator/calculator-local.rexx ./build/calculator/calculator-console
 ```
 
-No Python, certificates or `CALC_CA` are needed. The checked-in script declares
+No Python, certificates or `CALC_CA` are needed. The checked-in calculator script declares
 `http://localhost:8080/calculate` and calls `CALC('add', '0.1', '0.2')`.
 It should print `0.3`; continue with `SAY CALC('mul', '6', '7')`, then `:quit`.
 Before the script runs, the native console asks for session approval of its
@@ -63,7 +63,7 @@ denies execution. `CALC_ENDPOINT` sets the host's endpoint limit, not consent.
 refused in this mode. `CALC_PORT` changes the port; update both the script
 declaration and `CALC_ENDPOINT` to match.
 
-HTTP client endpoints accept only the exact names `localhost` or `127.0.0.1`
+Calculator console destinations accept only the exact names `localhost` or `127.0.0.1`
 and always dial literal `127.0.0.1`, avoiding hostname resolution in this mode.
 The service mounts only its exact TCP grant, with no CA-file read grant. Proxy
 and redirect refusal, request deadlines and result limits apply to both modes.
@@ -73,7 +73,7 @@ There is no automatic downgrade from HTTPS. The GCP workflow below uses HTTPS.
 
 ```sh
 make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
-printf '\nLET x = 40\n= x + 2' | ./build/calculator/console
+printf '\nLET x = 40\n= x + 2' | ./build/calculator/calculator-console
 ```
 
 With no configuration the console mounts no services. Blank lines continue;
@@ -86,9 +86,9 @@ To run a server with your own **ECDSA P-256** PEM key and certificate chain:
 
 ```sh
 CALC_CERT=/absolute/path/fullchain.pem CALC_KEY=/absolute/path/key.pem \
-  CALC_CHECK_CONFIG=1 ./build/calculator/server
+  CALC_CHECK_CONFIG=1 ./build/calculator/calculator-service
 CALC_CERT=/absolute/path/fullchain.pem CALC_KEY=/absolute/path/key.pem \
-  ./build/calculator/server
+  ./build/calculator/calculator-service
 ```
 
 Defaults are `127.0.0.1:8443`. `CALC_HOST` and `CALC_PORT` change the binding.
@@ -102,7 +102,7 @@ For a localhost certificate trusted by the CA file you supply:
 ```sh
 CALC_ENDPOINT=https://localhost:8443/calculate \
 CALC_CA=/absolute/path/ca.pem \
-CALC_PROGRAM=examples/calculator/client.rexx ./build/calculator/console
+CALC_PROGRAM=examples/calculator/calculator.rexx ./build/calculator/calculator-console
 ```
 
 Then enter `SAY CALC('mul', '6', '7')`. The startup example prints `0.3`.
@@ -122,8 +122,8 @@ and cannot be changed by script variables or later console comments.
 
 ## Permission approval in the native REPL
 
-The console loads and validates the script, then asks before registering `CALC`
-or executing any Rexx instruction. For example, an illustrative remote endpoint
+The console loads and validates the script, then asks before importing the calculator API
+or executing any Rexx instruction. The subsequent explicit import binds the API. For example, an illustrative remote endpoint
 produces a prompt of this form:
 
 ```text
@@ -165,7 +165,7 @@ complete endpoint:
 ```sh
 CALC_ENDPOINT=http://localhost:8080/calculate \
 CALC_APPROVE_ENDPOINT=http://localhost:8080/calculate \
-CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console </dev/null
+CALC_PROGRAM=examples/calculator/calculator-local.rexx ./build/calculator/calculator-console </dev/null
 ```
 
 This is advance approval supplied by the trusted launcher, not an instruction
@@ -176,29 +176,65 @@ offline tests use real pseudoterminals to exercise interactive yes/no, default
 denial, EOF, prompt escaping and session behavior without network access.
 
 This calculator host supports one required `http.post` request. Multiple
-requests and unsupported capabilities are refused; optional requests, module
-imports and remote script loading are not implemented. A future loader must
+requests and unsupported capabilities are refused; optional requests and remote script loading are not implemented. Explicit imports
+currently resolve only the installed calculator module. A future loader must
 apply the same approval and sandbox rules to imported code before it executes.
 
-## Where CALC comes from
+## Importing the calculator API
 
-`CALC` is supplied by this demo's embedding application. It is neither a Rexx
-builtin nor a routine defined in `client.rexx`. The `@seeks` comment requests
-permission for an endpoint; it does not import a function or create a binding.
+The calculator script explicitly loads its API before using it:
 
-After approving the declaration, [console.ae](../examples/calculator/console.ae)
-calls `rexxae_register_function(ctx, "CALC", 3, 3)` before executing the script.
-When Rexx calls `CALC`, the engine suspends with a FUNCTION request. The console
-dispatches that request to [service.ae](../examples/calculator/service.ae),
-which sends the calculator JSON request to the approved URL and returns its
-result through `rexxae_reply_value`. The engine then resumes the script.
+```rexx
+/* @seeks http.post https://localhost:8443/calculate */
+/* @purpose Remote calculator operations */
+REQUIRE "calculator"
+SAY CALC('add', '0.1', '0.2')
+```
 
-The host owns both the name and its implementation. The plain REPL does not
-register `CALC`; running this script there produces an unavailable-function
-error. The example therefore requires the calculator console or another host
-mounting the same function. A reusable HTTP host function with a Rexx-defined
-`CALC` wrapper would be a separate, more general adapter; this demo currently
-keeps the calculator protocol in its Aether host service.
+`REQUIRE "calculator"` makes the module's exported `CALC` function available.
+The permission declaration requests access to an endpoint; the import names
+which API supplies the function. Approval alone does not import the API.
+The calculator console currently provides this module from its installed
+Aether implementation. It does not fetch module code from the calculator service.
+
+`AS` follows RexxJS's function-prefix rules:
+
+| Import | Exported name |
+|---|---|
+| `REQUIRE "calculator"` | `CALC` |
+| `REQUIRE "calculator" AS remote` | `remote_CALC` |
+| `REQUIRE "calculator" AS remote_` | `remote_CALC` |
+| `REQUIRE "calculator" AS remote_(.*)` | `remote_CALC` |
+
+For example:
+
+```rexx
+REQUIRE "calculator" AS remote
+SAY remote_CALC('add', '0.1', '0.2')
+```
+
+`AS CALC` would export `CALC_CALC`, not turn the module into a callable object.
+Imported functions remain available during the console session. Imports cannot
+approve endpoints, widen the enclosing sandbox or load an unknown module.
+The engine emits an ordinary FUNCTION request named `REQUIRE`, with the module
+reference and optional alias as string arguments. An application must explicitly
+provide the resolver and bind approved exports before resuming execution.
+No filesystem, network or native-code loader is added to the engine.
+
+The parser accepts relative references such as
+`REQUIRE "/static/calculator.rexx" AS remote` and preserves the reference for
+an application resolver. **HTTP fetching of Rexx modules is not implemented by
+this calculator console yet**; it refuses that reference instead of silently
+substituting an installed module. That next adapter needs a defined base URL
+and separate GET approval before downloading code, followed by approval for
+any capabilities requested by the downloaded module. The basic parser profile
+supports a quoted module reference and optional literal `AS` alias, including
+quoted aliases and the RexxJS prefix pattern. Dynamic references and named
+`lib=...` forms are outside this implementation slice.
+
+RexxJS also uses `AS` to rename ADDRESS modules to an exact lowercase name and
+refuses `(.*)` patterns for those modules. The shared naming helper and tests
+cover those rules; this console provides a function module only.
 
 ## Wire contract and containment
 
@@ -246,14 +282,14 @@ Aether console loads the compiled RexxAE library, runs a Rexx startup script
 and then accepts further Rexx input. This client workflow uses no Python.
 
 The README's [GCP REPL commands](../README.md#always-on-gcp-calculator-through-the-native-repl)
-prepare `build/calculator/gcp-client.rexx` from the checked-in
-`examples/calculator/client.rexx`, replacing its localhost declaration with
+prepare `build/calculator/gcp-calculator.rexx` from the checked-in
+`examples/calculator/calculator.rexx`, replacing its localhost declaration with
 the announced endpoint. Set `CALC_ENDPOINT` to exactly that same URL, including
 the explicit port and `/calculate` path, and set `CALC_CA` to an absolute path
 to a trust bundle that validates the VM's certificate chain. The sample
 `calculator.example.com` hostname is a placeholder, not the deployed service.
 
-The startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
+After its `REQUIRE "calculator"` import, the startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
 calling the VM. Subsequent `CALC` calls in the REPL use the same approved
 service; ordinary Rexx variables and arithmetic execute locally. The console
 waits for one submission per line without a prompt. Use `:quit` or EOF to exit.
@@ -266,7 +302,7 @@ destination by passing a URL to `CALC`.
 
 `deploy/calculator/rexxae-calculator.service` and `calculator.env.example` are
 reviewable templates, not an installed service. Build on the target architecture
-and compatible OS, copy the server binary to `/opt/rexxae/bin/calculator-server`,
+and compatible OS, copy the server binary to `/opt/rexxae/bin/calculator-service`,
 create the `rexxcalc` service account, and install the config and P-256 keypair
 under `/etc/rexxae`. Keep the key readable only by root and the service group.
 The unit runs without root, with a read-only filesystem, a private temporary

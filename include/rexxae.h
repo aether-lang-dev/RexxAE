@@ -20,6 +20,10 @@ enum RexxAEStatus {
     REXXAE_FUNCTION = 4
 };
 
+/* REQUIRE "module" [AS alias] requests the explicitly registered REQUIRE
+ * function with one or two string arguments. The application resolves modules
+ * under its own policy. After replying, register approved exports before the
+ * next step. The engine performs no filesystem/network/native module loading. */
 RexxAE aether_rexxae_create(const char *source);
 /* Start a new program from a DONE or ERROR context. Copies script variables,
  * mounted function registrations and selected ADDRESS environment. The prior

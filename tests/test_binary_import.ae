@@ -203,5 +203,26 @@ main() {
             spec.assert_eq(rexxae.rexxae_step(next, 100), -1, "unmounted")
         }
     }
+    spec.describe(fw, "binary REQUIRE AS protocol") {
+        spec.it("suspends for an import then binds its prefixed export") callback {
+            ctx = rexxae.rexxae_create("REQUIRE 'calculator' AS remote_(.*)\nSAY remote_CALC('add','1','2')")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "REQUIRE", 1, 2), 0, "resolver")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "import")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(ctx)), "[\"calculator\",\"remote_(.*)\"]", "module and alias")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "true", ""), 0, "resolve")
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "remote_CALC", 3, 3), 0, "bind export")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "prefixed call")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_function(ctx)), "REMOTE_CALC", "alias applied")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "\"3\"", ""), 0, "reply")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "output")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "3", "result")
+        }
+        spec.it("does not load relative references without a mounted resolver") callback {
+            ctx = rexxae.rexxae_create("REQUIRE '/static/calculator.rexx' AS remote")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "no ambient loader")
+        }
+    }
     return spec.run_summary(fw)
 }

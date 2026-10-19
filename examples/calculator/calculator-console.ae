@@ -7,10 +7,42 @@ import std.json
 import examples.calculator.policy
 import examples.calculator.service
 import examples.calculator.consent
+import examples.calculator.modules
+import std.map
 
-dispatch(ctx: ptr, endpoint: string, ca: string) {
-    if endpoint == "" || string.copy(rexxae.rexxae_function(ctx)) != "CALC" {
-        rexxae.rexxae_reply_value(ctx, "null", "service not mounted")
+dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
+    name = string.copy(rexxae.rexxae_function(ctx))
+    if name == "REQUIRE" {
+        if endpoint == "" {
+            rexxae.rexxae_reply_value(ctx, "null", "calculator module requires approved endpoint access")
+            return
+        }
+        if rexxae.rexxae_argument_type(ctx, 0) != 3 || string.copy(rexxae.rexxae_argument_text(ctx, 0)) != "calculator" {
+            rexxae.rexxae_reply_value(ctx, "null", "module unavailable; this console provides REQUIRE 'calculator'")
+            return
+        }
+        args, _parse_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
+        defer json.json_free(args)
+        alias = ""
+        if json.json_array_size(args) == 2 {
+            if rexxae.rexxae_argument_type(ctx, 1) != 3 {
+                rexxae.rexxae_reply_value(ctx, "null", "AS requires a string alias")
+                return
+            }
+            alias = string.copy(rexxae.rexxae_argument_text(ctx, 1))
+        }
+        exported = string.to_upper(modules.function_name("CALC", alias))
+        // Acknowledge the import to return to RUNNABLE, then bind its API
+        // before resuming execution. Pending contexts cannot be registered.
+        if rexxae.rexxae_reply_value(ctx, "true", "") == 0 {
+            if rexxae.rexxae_register_function(ctx, exported, 3, 3) == 0 {
+                map.map_put_string_owned(bindings, exported, "calculator")
+            }
+        }
+        return
+    }
+    if endpoint == "" || map.map_has(bindings, name) == 0 {
+        rexxae.rexxae_reply_value(ctx, "null", "calculator module not loaded")
         return
     }
     // Do not coerce objects, arrays, booleans or null into authority-bearing text.
@@ -28,7 +60,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string) {
     rexxae.rexxae_reply_value(ctx, text, err)
 }
 
-submit(previous: @keep ptr, source: string, endpoint: string, ca: string) -> ptr {
+submit(previous: @keep ptr, source: string, endpoint: string, ca: string, bindings: ptr) -> ptr {
     next = rexxae.rexxae_create_next(previous, source)
     if next == null { io.stderr_write("cannot create submission\n"); return previous }
     if rexxae.rexxae_step(next, 0) == -1 {
@@ -46,7 +78,7 @@ submit(previous: @keep ptr, source: string, endpoint: string, ca: string) -> ptr
         }
         if status == 1 { println(string.copy(rexxae.rexxae_text(next))) }
         if status == 2 { rexxae.rexxae_reply(next, 13, "", "environment not mounted") }
-        if status == 4 { dispatch(next, endpoint, ca) }
+        if status == 4 { dispatch(next, endpoint, ca, bindings) }
         steps = steps + 1
     }
     io.stderr_write("instruction limit reached; submission discarded\n")
@@ -62,7 +94,7 @@ main() {
     program = os.getenv("CALC_PROGRAM")
     source = ""
     if endpoint != "" {
-        if program == null || program == "" { io.stderr_write("CALC_PROGRAM required to mount CALC\n"); return 1 }
+        if program == null || program == "" { io.stderr_write("CALC_PROGRAM required to run the calculator script\n"); return 1 }
         if string.starts_with(endpoint, "https://") == 1 && ca == "" { io.stderr_write("CALC_CA required for HTTPS\n"); return 1 }
         text, err = io.read_file(program)
         if err != "" { io.stderr_write("cannot read CALC_PROGRAM\n"); return 1 }
@@ -81,9 +113,11 @@ main() {
     if os.setenv("AETHER_PURE_TLS", "1") != "" { return 1 }
     ctx = rexxae.rexxae_create("")
     if ctx == null { return 1 }
-    if endpoint != "" { rexxae.rexxae_register_function(ctx, "CALC", 3, 3) }
+    bindings = map.map_new()
+    defer map.map_free(bindings)
+    rexxae.rexxae_register_function(ctx, "REQUIRE", 1, 2)
     rexxae.rexxae_step(ctx, 1)
-    if source != "" { ctx = submit(ctx, source, endpoint, ca) }
+    if source != "" { ctx = submit(ctx, source, endpoint, ca, bindings) }
     // :quit exits; = expression is shorthand for SAY. Blank lines continue.
     // A partial final line is submitted once, even when eof is already true.
     while true {
@@ -94,7 +128,7 @@ main() {
         if command != "" {
             input = line
             if string.starts_with(command, "=") == 1 { input = "SAY ${string.substring(command, 1, string.length(command))}" }
-            ctx = submit(ctx, input, endpoint, ca)
+            ctx = submit(ctx, input, endpoint, ca, bindings)
         }
         if eof { break }
     }

@@ -119,7 +119,31 @@ it is not a 512-byte transport allocation cap. Public deployment still needs
 an ingress request/rate budget and measured resource limits. No arbitrary Rexx
 source is evaluated by the server.
 
-## Deployment candidate
+## Always-on GCP service and native REPL
+
+**Service URL: to be announced.** The deployment model is one GCP VM running
+the Aether TinyWeb calculator continuously under systemd. Clients connect to
+that existing HTTPS service; they do not start a local server. The native
+Aether console loads the compiled RexxAE library, runs a Rexx startup script
+and then accepts further Rexx input. This client workflow uses no Python.
+
+The README's [GCP REPL commands](../README.md#always-on-gcp-calculator-through-the-native-repl)
+prepare `build/calculator/gcp-client.rexx` from the checked-in
+`examples/calculator/client.rexx`, replacing its localhost declaration with
+the announced endpoint. Set `CALC_ENDPOINT` to exactly that same URL, including
+the explicit port and `/calculate` path, and set `CALC_CA` to an absolute path
+to a trust bundle that validates the VM's certificate chain. The sample
+`calculator.example.com` hostname is a placeholder, not the deployed service.
+
+The startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
+calling the VM. Subsequent `CALC` calls in the REPL use the same approved
+service; ordinary Rexx variables and arithmetic execute locally. The console
+waits for one submission per line without a prompt. Use `:quit` or EOF to exit.
+The declaration requests the service, and host configuration approves it;
+changing only one of them refuses startup. A script cannot choose another
+destination by passing a URL to `CALC`.
+
+### VM service setup
 
 `deploy/calculator/rexxae-calculator.service` and `calculator.env.example` are
 reviewable templates, not an installed service. Build on the target architecture

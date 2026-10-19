@@ -75,7 +75,9 @@ cancellation and session behavior.
 The optional [calculator demo](docs/calculator.md) adds a native Aether console,
 an exactly approved `CALC` host function, and a TinyWeb HTTPS endpoint using
 pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
-`7b48889a` (the development compiler reports 0.830.0):
+`7b48889a` (the development compiler reports 0.830.0).
+
+### Local integration checks
 
 ```sh
 make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
@@ -87,6 +89,48 @@ specs cover protocol validation, endpoint policy, enclosing sandbox restrictions
 native EOF/session behavior and TLS keypair validation. Live TLS checks require
 socket permission; this workspace cannot perform them. Deployment templates
 under `deploy/calculator` are not installed or provisioned automatically.
+
+### Always-on GCP calculator through the native REPL
+
+**Public GCP URL: to be announced.** In this mode the TinyWeb calculator runs
+continuously on a GCP VM. Your local Aether console runs the test Rexx script
+and sends `CALC` requests to that service. The client path uses the compiled
+RexxAE library and Aether TLS 1.3. It requires no Python or local server.
+
+Once the URL is announced, replace `calculator.example.com:8443` below with
+its hostname and explicit port. The CA file shown is the usual Debian/Ubuntu
+trust bundle; use an absolute path to the appropriate CA bundle on your OS.
+
+```sh
+make build/calculator/console CALC_AE=/home/paul/scm/aether/build/ae
+calc_endpoint='https://calculator.example.com:8443/calculate'
+
+# Give the test script the exact endpoint the host will approve.
+printf '/* @seeks http.post %s */\n' "$calc_endpoint" > build/calculator/gcp-client.rexx
+tail -n +2 examples/calculator/client.rexx >> build/calculator/gcp-client.rexx
+
+CALC_ENDPOINT="$calc_endpoint" \
+CALC_CA=/etc/ssl/certs/ca-certificates.crt \
+CALC_PROGRAM=build/calculator/gcp-client.rexx ./build/calculator/console
+```
+
+The script requests HTTP access in its first-line declaration. The host checks
+that declaration against `CALC_ENDPOINT` before execution, then mounts `CALC`
+for that endpoint. The startup calculation should print `0.3`. The native REPL
+then waits for input; try:
+
+```text
+SAY CALC('mul', '6', '7')
+42
+LET fraction = CALC('div', '1', '8')
+SAY fraction
+0.125
+:quit
+```
+
+Each `CALC` call reaches the GCP service. Variables remain local to the Rexx
+session. See [GCP client and service setup](docs/calculator.md#always-on-gcp-service-and-native-repl)
+for the deployment model and endpoint configuration.
 
 ## Embed through the C interface
 

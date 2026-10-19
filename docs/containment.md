@@ -56,7 +56,7 @@ inside that callback, not passed around as values.
 Each step/event runs in a fresh sealed deny-all enforcement frame, with the
 same host-owned grants and service routing. This originally avoided a trusted
 snapshot lifetime defect reproduced on 0.802 and 0.819. The original standalone
-long-lived-frame reproducer passes on the current target, installed 0.823.0.
+long-lived-frame reproducer passes on installed 0.823.0 and the current target, 0.829.0.
 The per-event host structure remains valid; independent tests deliberately use
 one long-lived frame so it cannot mask a recurrence. See
 [aether-issues.md](aether-issues.md) for current and historical evidence.
@@ -67,7 +67,7 @@ run under deny-all; every attempted acquisition is refused and audited. They
 are test adversaries, not recommended application bindings. Production hosts
 should leave those bindings unregistered.
 
-Nineteen std.spec cases per artifact cover:
+Twenty std.spec cases per artifact cover:
 
 - Positive host file access and the injected service's successful read.
 - Unmounted functions, native names, loaders and dynamic constructor attempts.
@@ -79,6 +79,7 @@ Nineteen std.spec cases per artifact cover:
 - PROCEDURE/EXPOSE spoofing, mounted service resumes and restored scope isolation.
 - Nested grants, frozen-grant mutation and attempted widening through trust.
 - Context registry isolation, inaccessible host lexical state and bounded loops.
+- Host session continuation retaining mounted services while preserving deny-all authority.
 
 Three additional std.spec cases in `tests/test_trusted_service.ae` run without
 the engine. They assert repeated reads in one frame, restoration after success
@@ -104,7 +105,7 @@ OS sandbox for arbitrary Python code.
 
 ## Compiler guards and observed gaps
 
-All 17 public engine entry points are @pure. Builds pass no --with grants.
+All 18 public engine entry points are @pure. Builds pass no --with grants.
 The containment checker verifies those tags, the reviewed guest surface and
 engine/service import boundaries. Eleven negative compilation probes check
 fs/net/os gates, direct foreign symbols, direct and transitive @pure violations,

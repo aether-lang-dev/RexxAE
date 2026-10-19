@@ -16,8 +16,14 @@ language and builtins in `.ae` files.
 - `/home/paul/scm/aether/` contains the compiler, `std/` and `contrib/`.
   Prefer these facilities to new C code or an npm dependency. The dev-tree
   `build/ae` may differ from the installed `ae`; check the executable version.
-  The current target is installed Aether **0.823.0**.
+  The current target is installed Aether **0.829.0**.
 - Keep reference checkouts unchanged unless the user asks otherwise.
+- The optional calculator host needs Aether commit 7b48889a's EOF-aware IO;
+  development `build/ae` reports 0.830.0. Use `CALC_AE` and the isolated
+  `build/calculator` targets. Run `make calculator-test`; the terminal runner
+  `tools/test_calculator_tls.py` performs required live TLS checks and records
+  failure when sockets are unavailable. Never count those checks as passed
+  from successful compilation or offline tests alone.
 - Preserve RexxJS compatibility where tested. Record unsupported features,
   semantic restrictions and proposed omissions explicitly. npm dependence
   alone does not decide whether a feature belongs in RexxAE.
@@ -47,7 +53,7 @@ Retain the other complementary layers:
 
 Run the relevant specs while developing and `make test parity` before
 finishing a change. Use `make -B test parity memcheck AE=/home/paul/.aether/bin/ae`
-to rebuild and verify against installed 0.823.0. The development-tree executable
+to rebuild and verify against installed 0.829.0. The development-tree executable
 may be older; verify its version before selecting it. Do not hide failing fixtures,
 silently skip available tests, or describe untested functionality as parity.
 Do not run builds and tests against a compiler being rebuilt concurrently.
@@ -59,12 +65,17 @@ explicitly separate host adapter requires effects. Scripts reach application
 commands through the embedding API. Future native functions, modules and
 typed values must preserve explicit host authority.
 
-RexxJS e3bd4e9 is the target. PROCEDURE/EXPOSE isolates script variables and
+RexxJS 8317bd1 is the current reference. PROCEDURE/EXPOSE isolates script variables and
 restores argv for PROCEDURE calls; plain calls still share. Never snapshot or
 restore host registries, grants, program instructions or other private state
 as procedure variables. Exercise CALL
 frames with recursion, loop unwinding, suspended host requests and both binary
 library variants whenever changing execution/cache ownership.
+
+The console session API rexxae_create_next accepts only terminal contexts and
+copies v:/h: entries plus ADDRESS selection. Never add pending requests, private
+execution metadata or guest-controlled authority to that inheritance. Contexts
+are independently owned; test both binary consumers and denial after reentry.
 
 The ABI is currently experimental. Document changes in `include/rexxae.h`
 and README. Inputs are copied; output payloads are borrowed. Context teardown
@@ -110,13 +121,17 @@ roadmap when citing it as a precedent.
 
 ## Updated reference audit
 
-RexxJS e3bd4e9 is the current target; spreadsheet 5bc0e29 vendors 60d6ab0,
-three commits behind. docs/reference-update.md and docs/reference-audit.json
-record the measured migration and vendor differences. `make reference-audit`
-characterizes both pins; it is not a compatibility pass. `make parity` stays
-strict. Keep script-derived tail substitution distinct from literal host
-JSON/property access. Do not move migration failures into known differences
-or weaken containment to make a newer reference appear compatible.
+RexxJS 8317bd1 is the current target; spreadsheet c19848d vendors b3d5e4e.
+All 61 shared core source files match. docs/reference-update.md and
+reference-audit.json record the measured gaps: 507/507 existing programs match,
+but only 16/28 new update/boundary probes match. The next native task is
+variable-led ADDRESS clauses. Assigned CALL expressions need a reference
+semantics decision; do not copy surprising reference parser output silently.
+`make reference-audit` characterizes both pins using
+tests/reference_update_20261019.json; it is not a compatibility pass.
+`make parity` stays strict. Keep script-derived tail substitution distinct
+from literal host JSON/property access. Do not move migration failures into
+known differences or weaken containment to make a newer reference compatible.
 
 Current toolchain issues and a standalone trusted-service reproducer are in
 docs/aether-issues.md. Record failures honestly; do not modify read-only

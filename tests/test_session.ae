@@ -1,0 +1,125 @@
+import std.spec
+import std.string
+import src.engine
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "host session continuation") {
+        spec.it("preserves values in independently owned contexts without replay") callback {
+            first = engine.rexxae_create("LET count = 1\nSAY count")
+            defer engine.rexxae_destroy(first)
+            spec.assert_eq(engine.rexxae_step(first, 100), 1, "first output")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "done")
+            second = engine.rexxae_create_next(first, "count = count + 1\nSAY count")
+            defer engine.rexxae_destroy(second)
+            spec.assert_true(second != null, "new context")
+            spec.assert_eq(engine.rexxae_step(second, 100), 1, "one new output")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(second)), "2", "prior instructions not replayed")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(first, "count")), "1", "prior context independent")
+            spec.assert_eq(engine.rexxae_step(second, 100), 0, "done")
+        }
+        spec.it("owns typed values after the previous context is destroyed") callback {
+            first = engine.rexxae_create("LET data = JSON_PARSE('{\"items\":[1,true,null]}')")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "seed")
+            second = engine.rexxae_create_next(first, "SAY JSON_STRINGIFY(data)")
+            engine.rexxae_destroy(first)
+            defer engine.rexxae_destroy(second)
+            spec.assert_eq(engine.rexxae_step(second, 100), 1, "typed value")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(second)), "{\"items\":[1,true,null]}", "owned structure")
+        }
+        spec.it("inherits only host-mounted functions and does not replay them") callback {
+            first = engine.rexxae_create("LET answer = TESTECHO(1)")
+            spec.assert_eq(engine.rexxae_register_function(first, "TESTECHO", 1, 1), 0, "mount")
+            spec.assert_eq(engine.rexxae_step(first, 100), 4, "first call")
+            spec.assert_eq(engine.rexxae_reply_value(first, "10", ""), 0, "reply")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "done")
+            second = engine.rexxae_create_next(first, "LET answer = TESTECHO(answer)")
+            engine.rexxae_destroy(first)
+            defer engine.rexxae_destroy(second)
+            spec.assert_eq(engine.rexxae_step(second, 100), 4, "second call")
+            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(second)), "[10]", "new call only")
+            spec.assert_eq(engine.rexxae_reply_value(second, "20", ""), 0, "reply")
+            spec.assert_eq(engine.rexxae_step(second, 100), 0, "done")
+        }
+        spec.it("refuses to branch from active or pending execution") callback {
+            active = engine.rexxae_create("DO FOREVER\nEND")
+            defer engine.rexxae_destroy(active)
+            spec.assert_true(engine.rexxae_create_next(active, "EXIT") == null, "runnable")
+            spec.assert_eq(engine.rexxae_step(active, 2), 3, "budget exhausted")
+            spec.assert_true(engine.rexxae_create_next(active, "EXIT") == null, "budget suspension")
+            pending = engine.rexxae_create("CALL TESTWAIT")
+            defer engine.rexxae_destroy(pending)
+            spec.assert_eq(engine.rexxae_register_function(pending, "TESTWAIT", 0, 0), 0, "mount")
+            spec.assert_eq(engine.rexxae_step(pending, 100), 4, "function pending")
+            spec.assert_true(engine.rexxae_create_next(pending, "EXIT") == null, "pending refused")
+            spec.assert_eq(engine.rexxae_step(pending, 100), 4, "request intact")
+            command = engine.rexxae_create("ADDRESS APP 'work'")
+            defer engine.rexxae_destroy(command)
+            spec.assert_eq(engine.rexxae_step(command, 100), 2, "command pending")
+            spec.assert_true(engine.rexxae_create_next(command, "EXIT") == null, "pending command refused")
+            say = engine.rexxae_create("SAY 1\nLET next = 2")
+            defer engine.rexxae_destroy(say)
+            spec.assert_eq(engine.rexxae_step(say, 100), 1, "SAY")
+            spec.assert_true(engine.rexxae_create_next(say, "EXIT") == null, "SAY is still active")
+            spec.assert_true(engine.rexxae_create_next(null, "EXIT") == null, "null")
+        }
+        spec.it("recovers from syntax failure without losing session variables") callback {
+            first = engine.rexxae_create("LET x = 7")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "seed")
+            bad = engine.rexxae_create_next(first, "LET x =")
+            engine.rexxae_destroy(first)
+            spec.assert_eq(engine.rexxae_step(bad, 100), -1, "parse error")
+            next = engine.rexxae_create_next(bad, "SAY x")
+            engine.rexxae_destroy(bad)
+            defer engine.rexxae_destroy(next)
+            spec.assert_eq(engine.rexxae_step(next, 100), 1, "recovered")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(next)), "7", "retained")
+        }
+        spec.it("copies restored caller variables after a failed PROCEDURE") callback {
+            first = engine.rexxae_create("LET x = 'caller'\nCALL work\nEXIT\nwork: PROCEDURE\nx = 'local'\nRETURN 1 / 0")
+            spec.assert_eq(engine.rexxae_step(first, 100), -1, "runtime error")
+            next = engine.rexxae_create_next(first, "SAY x\nLET result = 1")
+            engine.rexxae_destroy(first)
+            defer engine.rexxae_destroy(next)
+            spec.assert_eq(engine.rexxae_step(next, 100), 1, "fresh error/cache state")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(next)), "caller", "locals stay hidden")
+            spec.assert_eq(engine.rexxae_step(next, 100), 0, "done")
+        }
+        spec.it("retains environment selection without carrying instructions or labels") callback {
+            first = engine.rexxae_create("ADDRESS APP\nCALL work\nEXIT\nwork:\nRETURN 7")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "done")
+            next = engine.rexxae_create_next(first, "'next'")
+            defer engine.rexxae_destroy(next)
+            spec.assert_eq(engine.rexxae_step(next, 100), 2, "environment retained")
+            spec.assert_str_eq(string.copy(engine.rexxae_address(next)), "app", "same selection")
+            missing = engine.rexxae_create_next(first, "CALL work")
+            defer engine.rexxae_destroy(missing)
+            engine.rexxae_destroy(first)
+            spec.assert_eq(engine.rexxae_step(missing, 100), -1, "old definitions not copied")
+        }
+        spec.it("reclaims contexts through repeated session replacement") callback {
+            ctx = engine.rexxae_create("LET total = 0\nLET data = JSON_PARSE('[true,null]')")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "seed")
+            i = 0
+            while i < 50 {
+                next = engine.rexxae_create_next(ctx, "total = total + 1")
+                engine.rexxae_destroy(ctx)
+                ctx = next
+                spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "entry complete")
+                i = i + 1
+            }
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "total")), "50", "each entry once")
+            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "data")), "[true,null]", "owned state remains valid")
+        }
+        spec.it("script registry-shaped variables cannot mount functions in later entries") callback {
+            first = engine.rexxae_create("LET h.EXEC = {min:0,max:1}\nLET permissions.net = '*'")
+            spec.assert_eq(engine.rexxae_step(first, 100), 0, "data only")
+            next = engine.rexxae_create_next(first, "CALL EXEC 'anything'")
+            engine.rexxae_destroy(first)
+            defer engine.rexxae_destroy(next)
+            spec.assert_eq(engine.rexxae_step(next, 100), -1, "service remains unmounted")
+        }
+    }
+    return spec.run_summary(fw)
+}

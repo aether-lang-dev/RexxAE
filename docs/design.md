@@ -113,7 +113,7 @@ Next work: expand typed builtins and resolve documented parser differences;
 add full JSON paths, named arguments, Unicode and numeric formatting;
 implement positional PARSE, classic stem semantics if selected, language errors, INTERPRET
 and modules while preserving resumability. PROCEDURE/EXPOSE now follows the
-e3bd4e9 reference; plain routines retain shared variables. See reference-update.md
+8317bd1 reference; plain routines retain shared variables. See reference-update.md
 for measured compatibility and embedding requirements. Reusable compiled programs,
 application variable lookup, ABI versioning, static/object packaging,
 cross-platform CI, resource accounting and concurrency remain to establish.
@@ -128,8 +128,16 @@ after success. This avoids mutating parsed JSON interiors on older runtimes;
 variables have value ownership rather than RexxJS object aliases.
 
 Containment is tested through the compiled artifacts, with the host retaining
-fs/net/os authority and injecting only checked service calls. All 17 engine
+fs/net/os authority and injecting only checked service calls. All 18 engine
 entry points are @pure. Import and guest-function snapshots hold the layer
 boundary; explicit service fences and std.sandbox audit assertions hold runtime
 authority. See containment.md for the sae precedents, compiler findings and
 what remains outside in-process protection.
+
+
+Host console sessions use rexxae_create_next on terminal contexts. Only script
+values, existing mounted-function registrations and ADDRESS selection carry
+forward. New instructions and caches prevent replay; code definitions, argv,
+pending requests and private call state never cross an entry boundary. The
+previous context is independently owned so a host can discard an interrupted
+candidate without rerunning it. See repl.md for the public contract and limits.

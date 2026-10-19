@@ -1,0 +1,59 @@
+import std.spec
+import std.sandbox
+import std.map
+import std.string
+import std.os
+import examples.calculator.service
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "calculator service containment") {
+        spec.it("cannot widen an enclosing deny-all sandbox") callback {
+            result = map.map_new()
+            defer map.map_free(result)
+            outer = sandbox.new("no network or files") {}
+            defer sandbox.free(outer)
+            sandbox.enforce(outer) callback {
+                _value, err = service.call("https://localhost:8443/calculate", "/etc/ssl/certs/ca-certificates.crt", "add", "1", "2")
+                map.map_put_string_owned(result, "error", err)
+            }
+            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "calculator denied by enclosing sandbox", "no socket attempted")
+        }
+        spec.it("rejects wildcard CA grants before transport") callback {
+            _value, err = service.call("https://localhost:8443/calculate", "/tmp/*", "add", "1", "2")
+            spec.assert_true(err != "", "literal CA file only")
+        }
+        spec.it("cannot widen an outer TCP grant to another port") callback {
+            ca = "${os.getcwd()}/tests/fixtures/public.txt"
+            result = map.map_new()
+            defer map.map_free(result)
+            outer = sandbox.new("another port only") {
+                grant_tcp("localhost", 8444)
+                grant_fs_read(ca)
+            }
+            defer sandbox.free(outer)
+            sandbox.enforce(outer) callback {
+                _value, err = service.call("https://localhost:8443/calculate", ca, "add", "1", "2")
+                map.map_put_string_owned(result, "error", err)
+            }
+            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "calculator denied by enclosing sandbox", "port remains restricted")
+        }
+        spec.it("cannot read the CA file without enclosing filesystem permission") callback {
+            ca = "${os.getcwd()}/tests/fixtures/public.txt"
+            result = map.map_new()
+            defer map.map_free(result)
+            outer = sandbox.new("TCP only") { grant_tcp("localhost", 8443) }
+            defer sandbox.free(outer)
+            sandbox.enforce(outer) callback {
+                _value, err = service.call("https://localhost:8443/calculate", ca, "add", "1", "2")
+                map.map_put_string_owned(result, "error", err)
+            }
+            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "calculator denied by enclosing sandbox", "CA read remains restricted")
+        }
+        spec.it("rejects alternate resources before transport") callback {
+            _value, err = service.call("https://localhost:8443/calculate/other", "/tmp/ca.pem", "add", "1", "2")
+            spec.assert_true(err != "", "fixed calculator path")
+        }
+    }
+    return spec.run_summary(fw)
+}

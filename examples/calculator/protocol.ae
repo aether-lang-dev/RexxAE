@@ -1,0 +1,109 @@
+// Shared wire contract. No networking, filesystem or process authority.
+import std.json
+import std.string
+import std.decimal
+
+exports(operand, calculate, handle, request_body, response_value)
+
+decimal_text(text: string, limit: int) -> bool {
+    n = string.length(text)
+    if n == 0 || n > limit { return false }
+    i = 0
+    if string.char_at(text, 0) == 45 { i = 1 }
+    digits = 0
+    dot = false
+    while i < n {
+        c = string.char_at(text, i)
+        if c == 46 && !dot && digits > 0 {
+            dot = true
+            digits = 0
+        } else {
+            if c < 48 || c > 57 { return false }
+            digits = digits + 1
+        }
+        i = i + 1
+    }
+    return digits > 0
+}
+
+operand(text: string) -> bool { return decimal_text(text, 64) }
+
+calculate(op: string, a: string, b: string) -> (string, string) {
+    if !operand(a) || !operand(b) { return "", "operands must be decimal strings of 1..64 bytes" }
+    if op != "add" && op != "sub" && op != "mul" && op != "div" { return "", "unknown operation" }
+    left, le = decimal.from_string(a)
+    if le != "" { return "", le }
+    defer decimal.free(left)
+    right, re = decimal.from_string(b)
+    if re != "" { return "", re }
+    defer decimal.free(right)
+    result = null
+    if op == "add" { result = decimal.add(left, right) }
+    if op == "sub" { result = decimal.subtract(left, right) }
+    if op == "mul" {
+        product, err = decimal.multiply(left, right)
+        if err != "" { return "", err }
+        result = product
+    }
+    if op == "div" {
+        quotient, err = decimal.divide(left, right)
+        if err != "" { return "", err }
+        result = quotient
+    }
+    defer decimal.free(result)
+    return decimal.to_string(result), ""
+}
+
+request_body(op: string, a: string, b: string) -> string {
+    obj = json.obj()
+    defer json.json_free(obj)
+    json.set(obj, "op", json.str(op))
+    json.set(obj, "a", json.str(a))
+    json.set(obj, "b", json.str(b))
+    text, _err = json.stringify(obj)
+    return text
+}
+
+handle(body: string) -> (string, int) {
+    if string.length(body) > 512 { return "{\"error\":\"request too large\"}", 413 }
+    obj, kind, _parse_error = json.parse_strict(body)
+    if kind != json.KIND_OK { return "{\"error\":\"invalid JSON\"}", 400 }
+    defer json.json_free(obj)
+    if json.json_type(obj) != 5 || json.json_object_size_raw(obj) != 3 {
+        return "{\"error\":\"expected exactly op, a and b\"}", 400
+    }
+    op = json.json_object_get_raw(obj, "op")
+    a = json.json_object_get_raw(obj, "a")
+    b = json.json_object_get_raw(obj, "b")
+    if json.json_type(op) != 3 || json.json_type(a) != 3 || json.json_type(b) != 3 {
+        return "{\"error\":\"op, a and b must be strings\"}", 400
+    }
+    operation, _oe = json.get_string(op)
+    left, _ae = json.get_string(a)
+    right, _be = json.get_string(b)
+    value, err = calculate(operation, left, right)
+    out = json.obj()
+    defer json.json_free(out)
+    status = 200
+    if err != "" {
+        json.set(out, "error", json.str(err))
+        status = 400
+    } else { json.set(out, "result", json.str(value)) }
+    text, _err = json.stringify(out)
+    return text, status
+}
+
+response_value(body: string) -> (string, string) {
+    if string.length(body) > 512 { return "", "calculator response too large" }
+    obj, kind, _parse_error = json.parse_strict(body)
+    if kind != json.KIND_OK { return "", "invalid calculator response" }
+    defer json.json_free(obj)
+    value = json.json_object_get_raw(obj, "result")
+    if json.json_type(obj) != 5 || json.json_object_size_raw(obj) != 1 || json.json_type(value) != 3 {
+        return "", "invalid calculator result"
+    }
+    text, _err = json.get_string(value)
+    // Multiplication may produce twice the input width; division adds 16 places.
+    if !decimal_text(text, 160) { return "", "invalid calculator result" }
+    return text, ""
+}

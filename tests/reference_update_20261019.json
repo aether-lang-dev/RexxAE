@@ -1,0 +1,254 @@
+[
+  {
+    "name": "call_first_variable",
+    "source": "a = 'v'\nCALL show a, 2\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[v][2]"
+    ]
+  },
+  {
+    "name": "call_first_concatenation",
+    "source": "CALL show 'a' || 'b', 'c'\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[ab][c]"
+    ]
+  },
+  {
+    "name": "call_later_concatenation",
+    "source": "CALL show 'a', 'b' || 'c'\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[a][bc]"
+    ]
+  },
+  {
+    "name": "call_nested_arithmetic",
+    "source": "CALL show 'a', LENGTH('xyz') + 1\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[a][4]"
+    ]
+  },
+  {
+    "name": "call_nested_functions",
+    "source": "CALL show UPPER('q'), LENGTH('xy')\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[Q][2]"
+    ]
+  },
+  {
+    "name": "call_blank_abuttal",
+    "source": "a = 'v'\nCALL show a 'w', a'x'\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[v w][vx]"
+    ]
+  },
+  {
+    "name": "call_builtin_named_variables",
+    "source": "length = 'v'\nleft = 'w'\nCALL show length, left\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[v][w]"
+    ]
+  },
+  {
+    "name": "call_first_arithmetic",
+    "source": "n = 5\nCALL show n - 1, n * 2\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[4][10]"
+    ]
+  },
+  {
+    "name": "call_first_function_concatenation",
+    "source": "CALL show LENGTH('abc') || 'x', 1\nEXIT\nshow: PROCEDURE\nPARSE ARG p, q\nSAY '[' || p || '][' || q || ']'\nRETURN",
+    "latest_output": [
+      "[3x][1]"
+    ]
+  },
+  {
+    "name": "assigned_call_commas",
+    "source": "LET result = CALL pair 'a', 'b'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "latest_output": [
+      "'a',b"
+    ],
+    "reference_note": "Observed assigned-CALL parser behavior differs from ordinary CALL; this is characterization, not a recommended native target."
+  },
+  {
+    "name": "assigned_call_concatenation",
+    "source": "LET result = CALL pair 'a' || 'b', 'c'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "latest_output": [
+      "a"
+    ],
+    "reference_note": "Observed assigned-CALL parser behavior differs from ordinary CALL; this is characterization, not a recommended native target."
+  },
+  {
+    "name": "assigned_call_arithmetic",
+    "source": "LET n = 5\nLET result = CALL pair n - 1, n * 2\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "latest_output": [
+      "5-"
+    ],
+    "reference_note": "Observed assigned-CALL parser behavior differs from ordinary CALL; this is characterization, not a recommended native target."
+  },
+  {
+    "name": "assigned_call_nested_functions",
+    "source": "LET result = CALL pair UPPER('q'), LENGTH('xy')\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "latest_output": [
+      "('Q')2"
+    ],
+    "reference_note": "Observed assigned-CALL parser behavior differs from ordinary CALL; this is characterization, not a recommended native target."
+  },
+  {
+    "name": "assigned_call_blank_abuttal",
+    "source": "LET a = 'v'\nLET result = CALL pair a 'w', a'x'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "latest_output": [
+      "v'w',"
+    ],
+    "reference_note": "Observed assigned-CALL parser behavior differs from ordinary CALL; this is characterization, not a recommended native target."
+  },
+  {
+    "name": "address_double_doubled_quotes",
+    "source": "ADDRESS REC \"say \"\"hi\"\" now\"",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "say \"hi\" now"
+      ]
+    ]
+  },
+  {
+    "name": "address_single_doubled_quotes",
+    "source": "ADDRESS REC 'it''s here'",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "it's here"
+      ]
+    ]
+  },
+  {
+    "name": "address_other_quotes",
+    "source": "ADDRESS REC 'cell.set input=\"x\"'",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "cell.set input=\"x\""
+      ]
+    ]
+  },
+  {
+    "name": "address_variable",
+    "source": "LET cmd = 'cell.get A1'\nADDRESS REC cmd",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "cell.get A1"
+      ]
+    ]
+  },
+  {
+    "name": "address_variable_keeps_environment",
+    "source": "LET cmd = 'one'\nADDRESS REC cmd\n' two'",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "one"
+      ],
+      [
+        "rec",
+        " two"
+      ]
+    ]
+  },
+  {
+    "name": "address_concat",
+    "source": "LET ref = 'B2'\nADDRESS REC 'cell.get ' || ref",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "cell.get B2"
+      ]
+    ]
+  },
+  {
+    "name": "address_blank",
+    "source": "LET n = 3\nADDRESS REC 'level' n",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "level 3"
+      ]
+    ]
+  },
+  {
+    "name": "address_environment_only",
+    "source": "ADDRESS REC",
+    "latest_output": []
+  },
+  {
+    "name": "address_abuttal",
+    "source": "LET n = 3\nADDRESS REC 'level='n",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "level=3"
+      ]
+    ]
+  },
+  {
+    "name": "address_variable_first_concat",
+    "source": "LET cmd = 'get '\nLET ref = 'B2'\nADDRESS REC cmd || ref",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "get B2"
+      ]
+    ]
+  },
+  {
+    "name": "address_compound_variable",
+    "source": "LET command.text = 'cell.get A1'\nADDRESS REC command.text",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        "cell.get A1"
+      ]
+    ]
+  },
+  {
+    "name": "address_reply_variables",
+    "source": "LET cmd = 'one'\nADDRESS REC cmd\nSAY RC RESULT",
+    "latest_output": [
+      "0 host-result"
+    ],
+    "latest_commands": [
+      [
+        "rec",
+        "one"
+      ]
+    ]
+  },
+  {
+    "name": "address_empty_variable",
+    "source": "LET cmd = ''\nADDRESS REC cmd",
+    "latest_output": [],
+    "latest_commands": [
+      [
+        "rec",
+        ""
+      ]
+    ]
+  },
+  {
+    "name": "address_parenthesized_concat",
+    "source": "LET ref = 'B2'\nADDRESS REC ('get ' || ref)",
+    "latest_output": [],
+    "reference_note": "Current reference silently ignores this parenthesized ADDRESS clause; do not infer general expression support."
+  }
+]

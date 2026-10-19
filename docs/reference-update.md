@@ -1,76 +1,135 @@
-# Reference update audit, 2026-10-16
+# Reference update audit, 2026-10-19
 
-The native engine has migrated from its original `57b97c7` profile to the
-updated standalone dialect. Current reference checkouts:
+This is a measured assessment of the new references, not an implementation of
+all newly audited syntax. No engine semantics changed during this audit.
+The four Aether discussion issues are outside this work.
 
 | Source | Revision |
 |---|---|
-| Standalone RexxJS | `e3bd4e975e96d674d85be5deb6b76a7c26f0deef` |
-| Spreadsheet | `5bc0e29b1b236c8c71b282fda4648d8d9bfa1684` |
-| Spreadsheet's vendored RexxJS | `60d6ab0168c2a568333ae88432cef40755ff0d1a` |
+| Standalone RexxJS | `8317bd1c2adeb966ea0eb9a91331f80c45bb79a1` |
+| Spreadsheet | `c19848d9997fb746a077c336d50b86e739a99483` |
+| Spreadsheet's vendored RexxJS | `b3d5e4ef7085180e2a9016ec11fb1eefccb2f5a2` |
+| Installed Aether | `0.829.0` |
 
-The vendor is three commits behind standalone. Its shared core differs only
-in parser.js and interpreter-address-handling.js. Those later commits fix
-next-clause IF/THEN/ELSE, command concatenation and `|`/`&` conditions. No
-reference checkout was modified during this audit.
+All 61 shared core source files in the standalone and vendor checkouts are
+identical. The standalone commits beyond the vendor change a VLOOKUP test,
+comments and contributor instructions, not the core interpreter. Reference
+checkouts were left unchanged.
 
-## Measured compatibility
+## What changed since e3bd4e9
 
-`make reference-audit` executes all 507 strict-parity programs, and separately
-reports the 24 focused migration probes (also included in that suite), against
-both checkouts. Exact sources and outputs are in
-[reference-audit.json](reference-audit.json). Audit completion only means the
-comparison completed; `make parity` is the strict standalone gate and passes.
+- `3288853`: ordinary CALL arguments now use expression parsing, including
+  concatenation and function calls combined with arithmetic.
+- `c0004b4`: doubled quotes in a combined ADDRESS literal are decoded once.
+- `b3d5e4e`: combined ADDRESS accepts a variable or supported concatenation
+  as the command clause, leaving the environment selected afterward.
+- The remaining commits adjust contributor instructions and the Excel
+  VLOOKUP test's JSON literal spelling. The extras lockfile also changed.
 
-| Reference | Strict-suite matching | Migration probes matching | Previous reference snapshots unchanged |
+The registry is unchanged: 386 language functions plus 119 converters,
+42 optional manifests and 82 optional source candidates. Regenerating the
+inventory changes only its reference revision. No additional npm-dependent
+function needs disposition because of these commits.
+
+## Measured results
+
+A forced rebuild with `/home/paul/.aether/bin/ae` (0.829.0) passes all 397
+native std.spec cases, C/Python hosts, both Aether binary consumers, containment
+checks and Valgrind. The development-tree executable still reports 0.820.0,
+so it was not used. The sandbox lifetime reproducer still passes on 0.829.
+
+| Reference | Existing strict suite | New update/boundary probes | Previous reference snapshots unchanged |
 |---|---:|---:|---:|
-| Standalone e3bd4e9 | 507 / 507 | 24 / 24 | 7 / 7 |
-| Vendored 60d6ab0 | 503 / 507 | 20 / 24 | 7 / 7 |
+| Standalone 8317bd1 | 507 / 507 | 16 / 28 | 7 / 7 |
+| Vendored b3d5e4e | 507 / 507 | 16 / 28 | 7 / 7 |
 
-The four vendor differences are split IF instruction/THEN clauses, command
-concatenation and logical conditions. Native behavior follows standalone's
-later fixes. The five failures found in the initial update audit were resolved
-by implementing uppercase unset names and substituted script tails. The Python
-harness now uses `parsed_message` as its temporary, avoiding an accidental
-`config.message` tail collision; a dedicated fixture still tests that collision.
-None of those failures were moved into the known-difference list.
+`make parity` remains a strict passing gate for the existing 507 programs.
+`make reference-audit` additionally evaluates
+[reference_update_20261019.json](../tests/reference_update_20261019.json),
+including unsupported boundary cases. Audit completion is not a parity pass;
+the 12 nonmatching probes were not moved into accepted differences or silently
+counted as covered. Exact results are in [reference-audit.json](reference-audit.json).
+The original 24 migration probes remain in the existing strict suite.
 
-The function registry remains 386 language functions plus 119 converters,
-with 42 optional manifests and 82 optional source candidates. RexxAE's reviewed
-surface is unchanged at 71 builtins; this migration adds language behavior.
+| Probe group | Matching | Meaning |
+|---|---:|---|
+| Ordinary CALL expressions from the new upstream specs | 9 / 9 | Native evaluation already agrees, including first/later arguments, arithmetic, functions, blank concatenation and abuttal. |
+| Quoted ADDRESS, doubled quotes, literal-led concatenation, environment-only form | 7 / 7 | Already compatible. |
+| Variable-led ADDRESS and result/environment behavior | 0 / 6 | Clear native parser gap; first implementation priority. |
+| Assigned CALL expression boundaries | 0 / 5 | Native rejects these; reference behavior is surprising and needs a semantics decision. |
+| Parenthesized ADDRESS boundary | 0 / 1 | Native errors; reference silently ignores it. No general expression support can be inferred. |
 
-## Delivered migration and limits
+## Next native change: variable-led ADDRESS
 
-| Area | Native behavior |
-|---|---|
-| Unset symbols | Uppercase derived symbol names; case-sensitive variable storage. |
-| Compound tails | Independent, single substitution of each set simple tail; literal host API paths. |
-| PROCEDURE/EXPOSE | Isolated script-variable generations, exposed names/roots, restored caller argv. Plain calls still share. |
-| Concatenation | Blank concatenation and abuttal in assignment, SAY and parenthesized arguments. |
-| Unparenthesized calls | Initial scalar-builtin profile such as `LET x = UPPER s`, respecting exact variable shadowing. Use parentheses for typed/host functions and richer argument forms. |
-| Controlled DO completion | A previously unset counter retains the first value past the bound; preexisting values restore. LEAVE retains the current iteration. |
-| DO OVER stem / stem. | Arrays and object values; canonical integer keys sorted before other keys. Empty objects error. String/scalar/array-like inputs remain unsupported. |
-| Split IF/THEN clauses | THEN and branch instructions may start subsequent clauses. |
-| CALL and commands | Audited builtin argument expressions/zero, command concatenation and logical operators match standalone. |
+These now work in both reference engines and are rejected by the native
+parser before execution:
 
-Native specifications cover recursive generations, EXPOSE roots, missing
-exposed variables, nested plain calls, argv restoration, errors, EXIT, loop
-unwinding, pending destruction and recursion limits. Both actual Aether binary
-consumers exercise scoped host suspension and vetoes. Containment probes try
-EXPOSE and assignments against names resembling private host registries and
-grants; these remain script data with no authority.
+```rexx
+LET cmd = 'cell.get A1'
+ADDRESS REC cmd
 
-Procedure snapshots include only `v:` script variables. Registries, grants,
-pending requests, instructions and private metadata never enter a generation.
-Script-derived compound names and literal host JSON property access are separate
-contracts. A script variable sharing a property name cannot change a host API
-path. Copied object values still differ from RexxJS's general alias semantics.
+LET prefix = 'get '
+LET ref = 'B2'
+ADDRESS REC prefix || ref
 
-Installed Aether 0.823.0 is now the target. Its standalone trusted-service
-lifetime reproducer passes under Valgrind; three std.spec regressions cover
-repeated reads, restoration after refusal and enclosing sandbox vetoes. The
-earlier compiler/stdlib annotation blocker is also resolved. Details and
-historical failures are in [aether-issues.md](aether-issues.md).
+LET command.text = 'cell.get A1'
+ADDRESS REC command.text
+```
+
+The other focused gaps test an empty command variable, RC/RESULT after the
+host reply, and the selected environment remaining in force for the next
+quoted command. All six share the same missing clause-entry path:
+`src/program.ae` only consumes a combined ADDRESS clause when its first token
+is a quoted literal. The evaluator and existing host-request protocol already
+provide the required mechanisms; no new Aether runtime feature is needed.
+
+Implementation sequence:
+
+1. Lower supported variable-led ADDRESS clauses to the existing command
+   expression instruction; retain environment-only ADDRESS behavior.
+2. Add the six cases to native std.spec and strict differential fixtures,
+   plus both binary consumers and host-veto containment coverage. Exercise
+   budgeted stepping, environment persistence and reply variables; no implicit
+   shell execution or additional authority.
+3. Promote the 16 newly characterized matching programs into the strict/native
+   fixtures, rather than relying on an audit-only report for lasting coverage.
+4. Resolve assigned CALL semantics before extending that parser path.
+
+## Assigned CALL is not settled by the new commit
+
+The commit description mentions ordinary CALL and `LET v = CALL`, but the
+new upstream tests cover ordinary CALL. In direct execution, assigned CALL
+still behaves differently. For example:
+
+```rexx
+LET result = CALL pair 'a', 'b'
+SAY result.returnValue
+EXIT
+pair: PROCEDURE
+ARG p,q
+RETURN p || q
+```
+
+The intuitive ordinary-CALL equivalent returns `ab`; current RexxJS returns
+`'a',b`. A nested-call case returns `('Q')2`, and arithmetic arguments produce
+`5-` in the corresponding probe. RexxAE currently gives its explicit
+"assigned CALL currently requires simple blank-separated arguments" error.
+These observed reference outputs are recorded with notes in the audit, not
+recommended as semantics to reproduce without discussion. A fix or an explicit
+compatibility choice in RexxJS should precede treating this as a native port
+requirement. Parenthesized ADDRESS is likewise an unresolved boundary rather
+than a feature to implement by copying a silent no-op.
+
+## Spreadsheet observations relevant to this update
+
+The updated CLI's `sheet run` sends command lines as JSON through RUNCOMMAND.
+The ADDRESS commits were motivated by this integration. Supporting the same
+command-expression boundary in RexxAE is broadly useful without recreating
+the spreadsheet or its command transport.
+
+The inspected changes to `app/sheet/rexx.ts` only extend SPARKLINE_RANGE's type
+and options arguments; that remains an application function, not a RexxAE
+core builtin requirement. Spreadsheet UI/CLI tests were not run in this audit.
 
 ## What the updated spreadsheet actually needs
 

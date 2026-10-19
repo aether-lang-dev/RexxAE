@@ -13,7 +13,7 @@ import src.templates
 import src.evaluate
 import src.builtins
 
-exports(rexxae_create, rexxae_destroy, rexxae_step, rexxae_reply,
+exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_reply,
     rexxae_text, rexxae_address, rexxae_error, rexxae_line, rexxae_exit_code,
     rexxae_register_function, rexxae_function, rexxae_arguments_json,
     rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
@@ -363,6 +363,29 @@ rexxae_create(source: string) -> ptr {
     state.number(ctx, "status", 3)
     program.compile(ctx)
     if state.read(ctx, "error") != "" { state.number(ctx, "status", -1) }
+    return ctx
+}
+// Host-only session continuation: copy owned script values and the existing
+// service registry into a newly parsed program, never private execution state.
+// The previous terminal context remains valid and independently owned.
+@pure
+rexxae_create_next(previous: ptr, source: string) -> ptr {
+    if previous == null { return null }
+    status = state.integer(previous, "status")
+    if status != 0 && status != -1 { return null }
+    ctx = rexxae_create(source)
+    if ctx == null { return null }
+    keys = map.map_keys_raw(previous)
+    defer map.map_keys_free(keys)
+    i = 0
+    while i < map.map_keys_size_raw(keys) {
+        key = map.map_keys_get_raw(keys, i)
+        if string.starts_with(key, "v:") != 0 || string.starts_with(key, "h:") != 0 {
+            state.write(ctx, key, state.read(previous, key))
+        }
+        i = i + 1
+    }
+    state.write(ctx, "address", state.read(previous, "address"))
     return ctx
 }
 @pure

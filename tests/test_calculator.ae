@@ -1,0 +1,119 @@
+import std.spec
+import std.string
+import examples.calculator.protocol
+import examples.calculator.policy
+
+expect_calculation(op: string, a: string, b: string, expected: string) {
+    result, err = protocol.calculate(op, a, b)
+    spec.assert_str_eq(err, "", "calculation succeeds")
+    spec.assert_str_eq(result, expected, "decimal result")
+}
+
+denied(url: string) {
+    _host, _port, err = policy.endpoint(url)
+    spec.assert_true(err != "", "reject ${url}")
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "calculator protocol and endpoint authority") {
+        spec.it("calculates decimal arithmetic without binary floating point") callback {
+            expect_calculation("add", "0.1", "0.2", "0.3")
+            expect_calculation("sub", "-1", "2.5", "-3.5")
+            expect_calculation("mul", "123456789123456789", "10", "1234567891234567890")
+            expect_calculation("div", "1", "3", "0.3333333333333333")
+            expect_calculation("div", "-1", "8", "-0.125")
+        }
+        spec.it("rejects division by zero and unknown operators") callback {
+            _value, err = protocol.calculate("div", "1", "0.00")
+            spec.assert_true(err != "", "divide by zero")
+            _other, oe = protocol.calculate("exec", "1", "2")
+            spec.assert_true(oe != "", "no eval or command operator")
+        }
+        spec.it("bounds decimal input and rejects exponent and nondecimal syntax") callback {
+            spec.assert_true(protocol.operand("-0.001"), "signed fraction")
+            spec.assert_true(!protocol.operand(""), "empty")
+            spec.assert_true(!protocol.operand("-"), "sign only")
+            spec.assert_true(!protocol.operand(".5"), "missing integer")
+            spec.assert_true(!protocol.operand("1."), "missing fraction")
+            spec.assert_true(!protocol.operand("1e999999"), "exponent CPU amplification")
+            spec.assert_true(!protocol.operand(" 1"), "whitespace")
+            spec.assert_true(!protocol.operand("1\u0000shell"), "NUL suffix")
+            spec.assert_true(!protocol.operand("11111111111111111111111111111111111111111111111111111111111111111"), "65 bytes")
+        }
+        spec.it("serves the exact JSON request and response contract") callback {
+            text, status = protocol.handle(protocol.request_body("add", "0.1", "0.2"))
+            spec.assert_eq(status, 200, "HTTP success")
+            result, err = protocol.response_value(text)
+            spec.assert_str_eq(err, "", "valid reply")
+            spec.assert_str_eq(result, "0.3", "result string")
+        }
+        spec.it("rejects wrong types, missing fields, extras and malformed JSON") callback {
+            _a, sa = protocol.handle("{\"op\":\"add\",\"a\":1,\"b\":\"2\"}")
+            spec.assert_eq(sa, 400, "no numeric coercion")
+            _b, sb = protocol.handle("{\"op\":\"add\",\"a\":\"1\"}")
+            spec.assert_eq(sb, 400, "missing")
+            _c, sc = protocol.handle("{\"op\":\"add\",\"a\":\"1\",\"b\":\"2\",\"url\":\"http://evil\"}")
+            spec.assert_eq(sc, 400, "extra authority")
+            _d, sd = protocol.handle("[1,2,3]")
+            spec.assert_eq(sd, 400, "array")
+            _e, se = protocol.handle("{")
+            spec.assert_eq(se, 400, "malformed")
+        }
+        spec.it("limits request size before JSON parsing") callback {
+            big = ""
+            for i in 0..513 { big = "${big}x" }
+            _text, status = protocol.handle(big)
+            spec.assert_eq(status, 413, "size limit")
+        }
+        spec.it("validates remote results as bounded decimal strings") callback {
+            _a, ea = protocol.response_value("{\"result\":42}")
+            spec.assert_true(ea != "", "wrong type")
+            _b, eb = protocol.response_value("{\"result\":\"--.\"}")
+            spec.assert_true(eb != "", "bad grammar")
+            _c, ec = protocol.response_value("{\"result\":\"1\",\"next\":\"http://evil\"}")
+            spec.assert_true(ec != "", "extra fields")
+        }
+        spec.it("extracts the exact DNS host and port") callback {
+            host, port, err = policy.endpoint("https://localhost:8443/calculate")
+            spec.assert_str_eq(err, "", "valid endpoint")
+            spec.assert_str_eq(host, "localhost", "host")
+            spec.assert_eq(port, 8443, "port")
+            ip, p, ie = policy.endpoint("https://127.0.0.1:443/calculate")
+            spec.assert_str_eq(ie, "", "IPv4")
+            spec.assert_str_eq(ip, "127.0.0.1", "IPv4 host")
+            spec.assert_eq(p, 443, "explicit 443")
+        }
+        spec.it("rejects URL authority and path escape tricks") callback {
+            denied("http://localhost:8443/calculate")
+            denied("https://user@localhost:8443/calculate")
+            denied("https://localhost:8443@evil/calculate")
+            denied("https://localhost:8443/calculate?next=evil")
+            denied("https://localhost:8443/calculate#fragment")
+            denied("https://localhost:8443/../calculate")
+            denied("https://localhost:8443/other/calculate")
+            denied("https://local%68ost:8443/calculate")
+            denied("https://localhost\\evil:8443/calculate")
+            denied("https://*.example.org:8443/calculate")
+            denied("https://LOCALHOST:8443/calculate")
+            denied("https://localhost.:8443/calculate")
+            denied("https://-host:8443/calculate")
+            denied("https://localhost/calculate")
+            denied("https://localhost:0/calculate")
+            denied("https://localhost:65536/calculate")
+            denied("https://localhost:08443/calculate")
+            denied("https://localhost:+8443/calculate")
+            denied("https://[::1]:8443/calculate")
+        }
+        spec.it("requires preflight approval before script execution") callback {
+            url = "https://localhost:8443/calculate"
+            source = "/* @seeks http.post ${url} */\nSAY CALC('add','1','2')"
+            spec.assert_str_eq(policy.preflight(source, url), "", "approved")
+            spec.assert_true(policy.preflight(source, "https://localhost:8444/calculate") != "", "wrong port")
+            spec.assert_true(policy.preflight("SAY 'side effect'\n${source}", url) != "", "late declaration")
+            spec.assert_true(policy.preflight("${source}\n/* @seeks http.post https://evil:443/calculate */", url) != "", "second grant")
+            spec.assert_true(policy.preflight("/* @seeks http.post https://localhost:8443/calculate.evil */", url) != "", "prefix mismatch")
+        }
+    }
+    return spec.run_summary(fw)
+}

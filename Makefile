@@ -1,5 +1,7 @@
-# Validated target: Aether 0.823.0 (check the selected executable version).
+# Validated target: Aether 0.829.0 (check the selected executable version).
 AE ?= ae
+# Requires fd_read_line_status from Aether commit 7b48889a (0.830 development).
+CALC_AE ?= $(AE)
 CC ?= cc
 REXXJS ?= ../RexxJS
 AETHER_CACHE_DIR ?= $(abspath build/cache)
@@ -13,8 +15,11 @@ RPATH := @loader_path
 endif
 LIB := build/librexxae.$(LIBEXT)
 
-.PHONY: reference-audit containment all aether-lib binary-test test spec parity inventory check-inventory memcheck clean
+.PHONY: repl reference-audit containment all aether-lib binary-test test spec parity inventory check-inventory memcheck clean
 all: $(LIB) build/counter
+
+repl: $(LIB)
+	python3 examples/repl.py $(LIB)
 
 aether-lib: build/aether/librexxae.$(LIBEXT)
 
@@ -71,7 +76,8 @@ containment: build/test_containment build/test_containment_shared build/test_tru
 	./build/test_trusted_service
 	python3 tools/check_containment.py --ae $(AE)
 
-spec: build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+spec: build/test_session build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+	./build/test_session
 	./build/test_functions
 	./build/test_execution
 	./build/test_function_fixtures
@@ -84,6 +90,7 @@ spec: build/test_parse build/test_select build/test_routines build/test_function
 
 test: all spec containment
 	python3 tests/test_engine.py $(LIB)
+	python3 tests/test_repl.py $(LIB)
 	./build/counter
 	python3 examples/host.py $(LIB)
 
@@ -92,7 +99,7 @@ parity: all
 
 # Characterizes migration gaps; parity above remains a strict equality check.
 reference-audit: all
-	python3 tools/audit_reference.py $(LIB) --oracle $(REXXJS) --spreadsheet ../spraedsheet
+	python3 tools/audit_reference.py $(LIB) --oracle $(REXXJS) --spreadsheet ../spraedsheet --probes tests/reference_update_20261019.json
 
 inventory:
 	node tools/inventory.cjs $(REXXJS)
@@ -101,6 +108,7 @@ check-inventory:
 	node tools/inventory.cjs $(REXXJS) --check
 
 memcheck: all spec build/test_containment build/test_containment_shared build/test_trusted_service
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_session
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/counter
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_functions
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_execution
@@ -117,3 +125,32 @@ memcheck: all spec build/test_containment build/test_containment_shared build/te
 
 clean:
 	rm -rf build
+
+.PHONY: calculator calculator-test calculator-integration
+calculator: build/calculator/server build/calculator/console build/calculator/test_protocol build/calculator/test_service
+
+build/calculator:
+	mkdir -p $@
+
+build/calculator/librexxae.$(LIBEXT): $(wildcard src/*.ae) | build/calculator
+	$(CALC_AE) build --emit=lib src/engine.ae -o $@
+
+build/calculator/server: examples/calculator/server.ae examples/calculator/protocol.ae examples/calculator/tls_config.ae | build/calculator
+	$(CALC_AE) build $< -o $@
+
+build/calculator/console: examples/calculator/console.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
+	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
+
+build/calculator/test_protocol: tests/test_calculator.ae examples/calculator/protocol.ae examples/calculator/policy.ae | build/calculator
+	$(CALC_AE) build $< -o $@
+
+build/calculator/test_service: tests/test_calculator_service.ae examples/calculator/service.ae examples/calculator/protocol.ae examples/calculator/policy.ae | build/calculator
+	$(CALC_AE) build $< -o $@
+
+calculator-test: calculator
+	./build/calculator/test_protocol
+	./build/calculator/test_service
+	python3 tests/test_calculator_console.py
+
+calculator-integration:
+	python3 tools/test_calculator_tls.py --ae $(CALC_AE)

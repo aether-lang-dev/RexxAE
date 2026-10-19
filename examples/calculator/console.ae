@@ -1,0 +1,95 @@
+// Real binary-library consumer. All effects belong to this host.
+import rexxae
+import std.io
+import std.os
+import std.string
+import std.json
+import examples.calculator.policy
+import examples.calculator.service
+
+dispatch(ctx: ptr, endpoint: string, ca: string) {
+    if endpoint == "" || string.copy(rexxae.rexxae_function(ctx)) != "CALC" {
+        rexxae.rexxae_reply_value(ctx, "null", "service not mounted")
+        return
+    }
+    // Do not coerce objects, arrays, booleans or null into authority-bearing text.
+    if rexxae.rexxae_argument_type(ctx, 0) != 3 || rexxae.rexxae_argument_type(ctx, 1) != 3 || rexxae.rexxae_argument_type(ctx, 2) != 3 {
+        rexxae.rexxae_reply_value(ctx, "null", "CALC requires three strings: operation, left, right")
+        return
+    }
+    op = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+    a = string.copy(rexxae.rexxae_argument_text(ctx, 1))
+    b = string.copy(rexxae.rexxae_argument_text(ctx, 2))
+    value, err = service.call(endpoint, ca, op, a, b)
+    encoded = json.str(value)
+    defer json.json_free(encoded)
+    text, _err = json.stringify(encoded)
+    rexxae.rexxae_reply_value(ctx, text, err)
+}
+
+submit(previous: @keep ptr, source: string, endpoint: string, ca: string) -> ptr {
+    next = rexxae.rexxae_create_next(previous, source)
+    if next == null { io.stderr_write("cannot create submission\n"); return previous }
+    if rexxae.rexxae_step(next, 0) == -1 {
+        io.stderr_write("${string.copy(rexxae.rexxae_error(next))}\n")
+        rexxae.rexxae_destroy(next)
+        return previous
+    }
+    steps = 0
+    while steps < 100000 {
+        status = rexxae.rexxae_step(next, 1)
+        if status == 0 || status == -1 {
+            if status == -1 { io.stderr_write("${string.copy(rexxae.rexxae_error(next))}\n") }
+            rexxae.rexxae_destroy(previous)
+            return next
+        }
+        if status == 1 { println(string.copy(rexxae.rexxae_text(next))) }
+        if status == 2 { rexxae.rexxae_reply(next, 13, "", "environment not mounted") }
+        if status == 4 { dispatch(next, endpoint, ca) }
+        steps = steps + 1
+    }
+    io.stderr_write("instruction limit reached; submission discarded\n")
+    rexxae.rexxae_destroy(next)
+    return previous
+}
+
+main() {
+    endpoint = os.getenv("CALC_ENDPOINT")
+    if endpoint == null { endpoint = "" }
+    ca = os.getenv("CALC_CA")
+    if ca == null { ca = "" }
+    program = os.getenv("CALC_PROGRAM")
+    source = ""
+    if endpoint != "" {
+        if program == null || program == "" || ca == "" { io.stderr_write("CALC_PROGRAM and CALC_CA required to mount CALC\n"); return 1 }
+        text, err = io.read_file(program)
+        if err != "" { io.stderr_write("cannot read CALC_PROGRAM\n"); return 1 }
+        denial = policy.preflight(text, endpoint)
+        if denial != "" { io.stderr_write("${denial}\n"); return 1 }
+        source = text
+    } else {
+        if program != null && program != "" { io.stderr_write("CALC_PROGRAM requires host-approved CALC_ENDPOINT\n"); return 1 }
+    }
+    if os.setenv("AETHER_PURE_TLS", "1") != "" { return 1 }
+    ctx = rexxae.rexxae_create("")
+    if ctx == null { return 1 }
+    if endpoint != "" { rexxae.rexxae_register_function(ctx, "CALC", 3, 3) }
+    rexxae.rexxae_step(ctx, 1)
+    if source != "" { ctx = submit(ctx, source, endpoint, ca) }
+    // :quit exits; = expression is shorthand for SAY. Blank lines continue.
+    // A partial final line is submitted once, even when eof is already true.
+    while true {
+        line, eof, err = io.fd_read_line_status(0)
+        if err != "" { io.stderr_write("${err}\n"); rexxae.rexxae_destroy(ctx); return 1 }
+        command = string.trim(line)
+        if command == ":quit" { break }
+        if command != "" {
+            input = line
+            if string.starts_with(command, "=") == 1 { input = "SAY ${string.substring(command, 1, string.length(command))}" }
+            ctx = submit(ctx, input, endpoint, ca)
+        }
+        if eof { break }
+    }
+    rexxae.rexxae_destroy(ctx)
+    return 0
+}

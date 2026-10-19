@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "referenceRevision": "e3bd4e975e96d674d85be5deb6b76a7c26f0deef",
+  "referenceRevision": "8317bd1c2adeb966ea0eb9a91331f80c45bb79a1",
   "methodology": "Live core registration, loaded source export identity, literal imports and extras manifests/static candidates. No extra modules loaded or functions invoked. Dispositions are provisional.",
   "counts": {
     "registeredNames": 505,

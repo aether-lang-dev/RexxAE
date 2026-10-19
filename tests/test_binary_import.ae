@@ -178,5 +178,30 @@ main() {
             spec.assert_str_eq(string.copy(rexxae.rexxae_get_variable_json(ctx, "config.response.ok")), "true", "owned boolean")
         }
     }
+    spec.describe(fw, "binary session continuation") {
+        spec.it("retains typed state and mounted services without replay") callback {
+            first = rexxae.rexxae_create("LET x = 7\nLET data = [1,true]")
+            spec.assert_eq(rexxae.rexxae_register_function(first, "TESTNEXT", 1, 1), 0, "mount")
+            spec.assert_eq(rexxae.rexxae_step(first, 100), 0, "done")
+            next = rexxae.rexxae_create_next(first, "CALL TESTNEXT data\nSAY x RESULT")
+            rexxae.rexxae_destroy(first)
+            defer rexxae.rexxae_destroy(next)
+            spec.assert_eq(rexxae.rexxae_step(next, 100), 4, "copied mount")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(next)), "[[1,true]]", "typed value retained")
+            spec.assert_true(rexxae.rexxae_create_next(next, "EXIT") == null, "pending cannot fork")
+            spec.assert_eq(rexxae.rexxae_reply_value(next, "8", ""), 0, "reply")
+            spec.assert_eq(rexxae.rexxae_step(next, 100), 1, "output")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(next)), "7 8", "fresh entry")
+            spec.assert_eq(rexxae.rexxae_step(next, 100), 0, "done")
+        }
+        spec.it("does not turn copied script data into a mounted service") callback {
+            first = rexxae.rexxae_create("LET h.EXEC = {min:0,max:1}")
+            spec.assert_eq(rexxae.rexxae_step(first, 100), 0, "data")
+            next = rexxae.rexxae_create_next(first, "CALL EXEC 'anything'")
+            rexxae.rexxae_destroy(first)
+            defer rexxae.rexxae_destroy(next)
+            spec.assert_eq(rexxae.rexxae_step(next, 100), -1, "unmounted")
+        }
+    }
     return spec.run_summary(fw)
 }

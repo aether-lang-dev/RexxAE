@@ -21,6 +21,13 @@ enum RexxAEStatus {
 };
 
 RexxAE aether_rexxae_create(const char *source);
+/* Start a new program from a DONE or ERROR context. Copies script variables,
+ * mounted function registrations and selected ADDRESS environment. The prior
+ * context remains valid; destroy both independently. Returns NULL for an active
+ * or pending context. Parse errors return a new ERROR context with copied state.
+ * Instructions, routine definitions, argv and execution caches are not copied.
+ * This is a host operation; scripts cannot use it to acquire services. */
+RexxAE aether_rexxae_create_next(RexxAE previous, const char *source);
 void aether_rexxae_destroy(RexxAE ctx);
 /* Execute at most budget instructions; budget <= 0 executes none.
  * COMMAND/FUNCTION repeat until reply; DONE and ERROR are terminal.

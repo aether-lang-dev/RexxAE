@@ -1,6 +1,6 @@
 # Labeled routines and resumable CALL
 
-RexxAE follows RexxJS `e3bd4e9`: plain routines share variables and argv;
+RexxAE follows RexxJS `8317bd1`: plain routines share variables and argv;
 PROCEDURE routines create a fresh script-variable generation and restore
 caller arguments when they return. EXPOSE selects variables to share.
 

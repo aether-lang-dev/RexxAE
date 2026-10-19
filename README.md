@@ -10,16 +10,17 @@ This is a working implementation slice, not a complete port. It has typed
 values, 71 builtins with limited profiles, registered application functions, labeled routines with CALL/RETURN,
 comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
 
-Current target checkouts are RexxJS `e3bd4e9` and spreadsheet `5bc0e29`
-(vendoring `60d6ab0`). The migrated engine passes **507 strict differential
-programs** against standalone RexxJS, including 24 update probes.
-PROCEDURE/EXPOSE, substituted compound tails, uppercase unset symbols,
-abuttal, object OVER and updated loop completion are implemented. See
-[the reference report](docs/reference-update.md) for limits and vendor differences.
+Current references are RexxJS `8317bd1` and spreadsheet `c19848d`
+(vendoring `b3d5e4e`). All **507 existing differential programs** still match
+both reference engines. A separate 28-program update audit matches 16 and
+identifies variable-led ADDRESS clauses as the next native change; assigned
+CALL expressions also need a reference-semantics decision. The audit includes
+unsupported/boundary cases and is not counted as passing parity. See
+[the reference report](docs/reference-update.md) for the concrete gaps.
 
 ## Build and test
 
-Targets Aether **0.823.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.829.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -27,6 +28,7 @@ No npm install is required.
 make                            # self-contained library and C counter host
 make aether-lib                 # shared-runtime variant for Aether consumers
 make test                       # std.spec, binary linkage, ctypes, host harness
+make repl                       # console session; = expression, :help, :begin / :run
 make parity REXXJS=../RexxJS     # strict comparison with the selected checkout
 make reference-audit             # characterize standalone and vendored targets
 make binary-test                # both Aether binary-library variants
@@ -35,13 +37,13 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Use `AE=/home/paul/.aether/bin/ae` to select the installed 0.823.0 compiler.
+Use `AE=/home/paul/.aether/bin/ae` to select the installed 0.829.0 compiler.
 Check `ae --version` before testing; the development-tree executable may be
 older than the installed release. Use `make -B` when switching compilers to
 rebuild libraries and consumers together. Make keeps its Aether cache under
 `build/cache`.
 
-Linux validation targets installed Aether 0.823.0: 382 native specs, 507 RexxJS
+Linux validation targets installed Aether 0.829.0: 397 native specs, 507 RexxJS
 comparisons, both binary-library variants, containment probes and Valgrind.
 The previous compiler/stdlib annotation blocker is resolved. The repeated
 trusted-service lifetime reproducer now passes, with three automated regression
@@ -49,6 +51,42 @@ specs protecting repeated calls and enclosing restrictions. See
 [Aether findings](docs/aether-issues.md).
 The Makefile has a macOS library/rpath branch; macOS and Windows remain
 untested. Static/object packaging is a follow-up.
+
+## Console REPL
+
+`make repl` starts a Python console around the native Aether engine. Variables
+persist without replaying earlier entries:
+
+```text
+rexx> LET total = 10
+rexx> = total * 2
+20
+rexx> :show total
+10
+```
+
+Use `:begin` / `:run` for multiline Rexx, `:reset` to clear session state and
+`:quit` to exit. The default console mounts no effect services and vetoes
+application commands. [repl.md](docs/repl.md) describes ownership, error recovery,
+cancellation and session behavior.
+
+## TinyWeb calculator demo
+
+The optional [calculator demo](docs/calculator.md) adds a native Aether console,
+an exactly approved `CALC` host function, and a TinyWeb HTTPS endpoint using
+pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
+`7b48889a` (the development compiler reports 0.830.0):
+
+```sh
+make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
+python3 tools/test_calculator_tls.py --ae /home/paul/scm/aether/build/ae
+```
+
+The terminal runner writes `build/calculator/tls-report.json` and logs. Offline
+specs cover protocol validation, endpoint policy, enclosing sandbox restrictions,
+native EOF/session behavior and TLS keypair validation. Live TLS checks require
+socket permission; this workspace cannot perform them. Deployment templates
+under `deploy/calculator` are not installed or provisioned automatically.
 
 ## Embed through the C interface
 
@@ -194,13 +232,14 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-`make test` runs 382 native std.spec cases (including both binary variants),
-ctypes protocol checks, the C example and Python host harness. `make parity`
+`make test` runs 397 native std.spec cases (including both binary variants),
+ctypes protocol checks, twelve Python session/console tests, the C example
+and Python host harness. `make parity`
 compares 507 programs, including host-call arguments/results, with RexxJS
-`e3bd4e9`. All pass. Seven documented compatibility differences remain
+`8317bd1` and the spreadsheet vendor. All pass. Seven documented compatibility differences remain
 separately asserted, and are not counted as parity. The same 125
 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
-the C example and all twelve native spec executables. Eleven compiler
+the C example and all thirteen native spec executables. Eleven compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract.
 

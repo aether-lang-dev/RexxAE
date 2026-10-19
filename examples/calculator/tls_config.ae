@@ -1,0 +1,40 @@
+// Validate the TLS keypair before TinyWeb binds. Uses Aether crypto only.
+import std.bytes
+import std.list
+import std.cryptography.tls13_server
+import std.cryptography.tls13_cert
+import std.cryptography.p256
+
+exports(validate)
+
+free_chain(chain: ptr) {
+    for i in 0..list.list_size(chain) { bytes.free(list.list_get_raw(chain, i)) }
+    list.list_free(chain)
+}
+
+validate(cert_text: string, key_text: string) -> string {
+    chain, lengths = tls13_server.parse_cert_chain_pem(cert_text)
+    if chain == null { return "invalid PEM certificate chain" }
+    defer free_chain(chain)
+    defer list.list_free(lengths)
+    private = tls13_server.parse_ec_private_key_pem(key_text)
+    if private == null { return "invalid PEM private key" }
+    defer bytes.free(private)
+    if bytes.length(private) != 32 { return "TLS requires an ECDSA P-256 private key" }
+    leaf = tls13_cert.LeafCert { tbs: null, tbs_len: 0, sig_alg_oid: null, signature: null, signature_len: 0, spki_algo_oid: null, spki_key: null, spki_key_len: 0, issuer: null, issuer_len: 0, subject: null, subject_len: 0, not_before: null, not_before_len: 0, not_after: null, not_after_len: 0, dns_names: null, ip_addrs: null }
+    der = list.list_get_raw(chain, 0)
+    err = tls13_cert.parse_certificate(bytes.view(der)[0..bytes.length(der)], &leaf)
+    defer tls13_cert.free_leaf(&leaf)
+    if err != "" { return "invalid leaf certificate" }
+    if leaf.spki_key_len != 65 { return "certificate must contain an uncompressed P-256 public key" }
+    if bytes.get(leaf.spki_key, 0) != 4 { return "invalid certificate EC point" }
+    x, y = p256.scalar_mult_base(private)
+    defer bytes.free(x)
+    defer bytes.free(y)
+    for i in 0..32 {
+        if bytes.get(x, i) != bytes.get(leaf.spki_key, i + 1) || bytes.get(y, i) != bytes.get(leaf.spki_key, i + 33) {
+            return "certificate and P-256 private key do not match"
+        }
+    }
+    return ""
+}

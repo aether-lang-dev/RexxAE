@@ -1,0 +1,61 @@
+// Deliberately restricted endpoint grammar until std.url exports whole-URL parsing.
+// Canonical HTTPS, explicit port, DNS/IPv4 host, exact /calculate path only.
+import std.string
+
+exports(endpoint, preflight)
+
+endpoint(url: string) -> (string, int, string) {
+    if string.length(url) > 300 || string.starts_with(url, "https://") != 1 || string.ends_with(url, "/calculate") != 1 {
+        return "", 0, "endpoint must be https://host:port/calculate"
+    }
+    authority = string.substring(url, 8, string.length(url) - 10)
+    colon = string.index_of(authority, ":")
+    if colon <= 0 { return "", 0, "explicit endpoint port required" }
+    host = string.substring(authority, 0, colon)
+    if host != string.to_lower(host) || string.length(host) > 253 { return "", 0, "noncanonical host" }
+    i = 0
+    label = 0
+    last = 0
+    while i < string.length(host) {
+        c = string.char_at(host, i)
+        if c == 46 {
+            if label == 0 || last == 45 { return "", 0, "invalid host label" }
+            label = 0
+        } else {
+            if !((c >= 97 && c <= 122) || (c >= 48 && c <= 57) || (c == 45 && label > 0)) {
+                return "", 0, "invalid host"
+            }
+            label = label + 1
+            if label > 63 { return "", 0, "host label too long" }
+        }
+        last = c
+        i = i + 1
+    }
+    if label == 0 || last == 45 { return "", 0, "invalid host label" }
+    port_text = string.substring(authority, colon + 1, string.length(authority))
+    if string.length(port_text) == 0 || string.length(port_text) > 5 || string.char_at(port_text, 0) == 48 {
+        return "", 0, "invalid port"
+    }
+    for j in 0..string.length(port_text) {
+        c = string.char_at(port_text, j)
+        if c < 48 || c > 57 { return "", 0, "invalid port" }
+    }
+    port, err = string.to_int(port_text)
+    if err != "" || port < 1 || port > 65535 { return "", 0, "invalid port" }
+    return host, port, ""
+}
+
+preflight(source: string, approved: string) -> string {
+    _host, _port, err = endpoint(approved)
+    if err != "" { return err }
+    end = string.index_of(source, "\n")
+    if end < 0 { end = string.length(source) }
+    first = string.trim(string.substring(source, 0, end))
+    if first != "/* @seeks http.post ${approved} */" {
+        return "first line must declare the exact host-approved calculator endpoint"
+    }
+    // No optional declarations or grants are interpreted by this minimal host.
+    rest = string.substring(source, end, string.length(source))
+    if string.contains(rest, "@seeks") == 1 { return "multiple endpoint declarations are not supported" }
+    return ""
+}

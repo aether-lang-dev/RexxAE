@@ -1,19 +1,18 @@
 # Compatibility baselines
 
-## Updated checkouts, 2026-10-16
+## Updated checkouts, 2026-10-19
 
 | Source | Current revision | Audit result |
 |---|---|---|
-| RexxJS standalone | `e3bd4e975e96d674d85be5deb6b76a7c26f0deef` | 507/507 strict programs and 24/24 migration probes match. |
-| spraedsheet | `5bc0e29b1b236c8c71b282fda4648d8d9bfa1684` | Formula and script host integration reviewed. |
-| Spreadsheet's vendored RexxJS | `60d6ab0168c2a568333ae88432cef40755ff0d1a` | Three commits behind standalone; 503/507 strict programs match. |
+| RexxJS standalone | `8317bd1c2adeb966ea0eb9a91331f80c45bb79a1` | 507/507 existing strict programs; 16/28 new update/boundary probes match. |
+| spraedsheet | `c19848d9997fb746a077c336d50b86e739a99483` | Vendor and command/formula integration changes inspected; UI not executed. |
+| Spreadsheet's vendored RexxJS | `b3d5e4ef7085180e2a9016ec11fb1eefccb2f5a2` | Same results; all 61 shared core source files match standalone. |
+| Installed Aether | `0.829.0` | Forced rebuild, 397 native specs, C/Aether binary consumers, containment and Valgrind pass. |
 
-Only parser.js and interpreter-address-handling.js differ among the shared
-vendored core files at these current pins. The remaining three commits fix
-IF/THEN/ELSE clause placement, command concatenation and logical conditions.
-The 24 migration probes match 24/24 against standalone and 20/24 against the
-vendor. All seven previously pinned reference snapshots remain unchanged.
-See [reference-update.md](reference-update.md) and the machine-readable audit.
+Seven previously pinned reference snapshots are unchanged. The original
+24 migration probes remain in strict parity; the new audit separately measures
+28 programs in tests/reference_update_20261019.json. See
+[reference-update.md](reference-update.md) and the machine-readable audit.
 The historical observations below describe 57b97c7, not the new dialect.
 
 ## Initial implementation baseline, 2026-10-15

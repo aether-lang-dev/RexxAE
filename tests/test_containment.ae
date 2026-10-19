@@ -218,6 +218,29 @@ main() {
             exercise("CALL require 'std.os'", -1, 0, 0, "")
             exercise("LET result = object.constructor.constructor('return process')", -1, 0, 0, "")
         }
+        spec.it("session continuation retains mounts without widening sandbox authority") callback {
+            seed = rexxae.rexxae_create("LET path = 'tests/fixtures/private.txt'")
+            defer rexxae.rexxae_destroy(seed)
+            spec.assert_eq(rexxae.rexxae_register_function(seed, "HOSTREAD", 1, 1), 0, "mount")
+            spec.assert_eq(rexxae.rexxae_step(seed, 100), 0, "terminal seed")
+            worker = sandbox.new("continued execution deny all") {}
+            defer sandbox.free(worker)
+            if true {
+                seal except seed, worker, rexxae, sandbox, file, audit, spec, `string`
+                sandbox.enforce(worker) callback {
+                    audit.clear()
+                    next = rexxae.rexxae_create_next(seed, "CALL HOSTREAD path")
+                    defer rexxae.rexxae_destroy(next)
+                    spec.assert_eq(rexxae.rexxae_step(next, 100), 4, "copied mount")
+                    spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(next)), "[\"tests/fixtures/private.txt\"]", "copied data")
+                    _text, err = file.read(string.copy(rexxae.rexxae_argument_text(next, 0)))
+                    spec.assert_true(err != "", "continuation inherits deny-all")
+                    spec.assert_true(audit.denied_count() >= 1, "runtime veto")
+                    spec.assert_eq(rexxae.rexxae_reply_value(next, "null", "vetoed"), 0, "host refusal")
+                    spec.assert_eq(rexxae.rexxae_step(next, 100), -1, "terminal")
+                }
+            }
+        }
         spec.it("lets the host stop and destroy a runaway guest") callback {
             ctx = rexxae.rexxae_create("DO FOREVER\nLET n = 1\nEND")
             defer rexxae.rexxae_destroy(ctx)

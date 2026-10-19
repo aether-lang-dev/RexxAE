@@ -12,6 +12,8 @@ parser.add_argument('library')
 parser.add_argument('--oracle', default='../RexxJS')
 parser.add_argument('--spreadsheet', default='../spraedsheet')
 parser.add_argument('--output', default='docs/reference-audit.json')
+parser.add_argument('--probes', default='tests/reference_migration.json')
+parser.add_argument('--previous-reference', default='e3bd4e975e96d674d85be5deb6b76a7c26f0deef')
 options = parser.parse_args()
 helper = Path('tests/test_engine.py')
 saved_argv = sys.argv
@@ -44,14 +46,15 @@ def revision(path):
 
 
 programs = native.parity_programs()
-changes = json.loads(Path('tests/reference_migration.json').read_text())
+changes = json.loads(Path(options.probes).read_text())
 known = json.loads(Path('tests/known_differences.json').read_text())
 entries = programs + [(c['name'], c['source']) for c in changes]
 observed = [current(source) for _, source in entries]
 spreadsheet = Path(options.spreadsheet)
 pin = (spreadsheet / 'vendor/rexxjs/UPSTREAM').read_text().splitlines()[0].split()[-1]
 report = {
-    'previous_reference_revision': '57b97c7d8b3079f65c53d0ac6a179fe3760fe27b',
+    'previous_reference_revision': options.previous_reference,
+    'probe_fixture': options.probes,
     'native_source_sha256': hashlib.sha256(b''.join(p.name.encode() + p.read_bytes() for p in sorted(Path('src').glob('*.ae')))).hexdigest(),
     'spreadsheet_revision': revision(spreadsheet),
     'spreadsheet_vendored_revision': pin,
@@ -70,7 +73,8 @@ for label, root, commit in [('standalone', Path(options.oracle), revision(option
     for row, actual, expected in zip(changes, observed[len(programs):], results[len(programs):]):
         if label == 'standalone' and ('error' in expected or expected['output'] != row['latest_output'] or expected['commands'] != row.get('latest_commands', []) or expected['exit'] != 0):
             raise SystemExit(f"Migration expectation changed for {row['name']}: {expected}")
-        probes.append(dict(name=row['name'], source=row['source'], matches=actual == expected, native=actual, reference=expected))
+        probes.append(dict(name=row['name'], source=row['source'], matches=actual == expected, native=actual, reference=expected,
+                           **({'reference_note': row['reference_note']} if 'reference_note' in row else {})))
     pinned = reference(root, [c['source'] for c in known])
     pinned_matches = sum('error' not in result and result['output'] == case['reference_output'] and
                          result['commands'] == case.get('reference_commands', []) for case, result in zip(known, pinned))

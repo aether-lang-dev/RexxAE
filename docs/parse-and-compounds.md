@@ -1,6 +1,6 @@
 # PARSE templates and compound values
 
-This page describes the native profile targeting RexxJS `e3bd4e9`, including
+This page describes the native profile targeting RexxJS `8317bd1`, including
 script-derived compound tails and uppercase unset symbols. Host API paths
 remain literal. See [reference-update.md](reference-update.md).
 

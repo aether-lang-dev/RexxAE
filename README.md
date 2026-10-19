@@ -109,7 +109,9 @@ CALC_ENDPOINT=http://localhost:8080/calculate \
 CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
 ```
 
-The script prints `0.3`; then try `SAY CALC('mul', '6', '7')`. No certificates,
+The native console first asks for session approval of the exact HTTP endpoint.
+After an explicit `y` or `yes`, the script prints `0.3`; then try
+`SAY CALC('mul', '6', '7')`. No certificates,
 CA file or Python are needed. Plain HTTP is restricted to `localhost` and
 `127.0.0.1`; HTTPS remains required for remote endpoints.
 
@@ -138,8 +140,11 @@ CALC_PROGRAM=build/calculator/gcp-client.rexx ./build/calculator/console
 ```
 
 The script requests HTTP access in its first-line declaration. The host checks
-that declaration against `CALC_ENDPOINT` before execution, then mounts `CALC`
-for that endpoint. The startup calculation should print `0.3`. The native REPL
+that declaration against `CALC_ENDPOINT` and asks for session approval before
+execution. The prompt labels the script's purpose as **self-claimed** and
+**unverified**; trust in a parent domain or sibling subdomain is never inherited.
+After an explicit `y` or `yes`, it mounts `CALC` for that exact endpoint.
+The startup calculation should print `0.3`. The native REPL
 then waits for input; try:
 
 ```text
@@ -154,6 +159,11 @@ SAY fraction
 Each `CALC` call reaches the GCP service. Variables remain local to the Rexx
 session. See [GCP client and service setup](docs/calculator.md#always-on-gcp-service-and-native-repl)
 for the deployment model and endpoint configuration.
+
+Enter, denial or EOF prevents the script from running. Piped input cannot
+approve requests; automation must explicitly set `CALC_APPROVE_ENDPOINT` to
+exactly `CALC_ENDPOINT`. See [permission approval](docs/calculator.md#permission-approval-in-the-native-repl)
+for the prompt and the host policy contract.
 
 ## Embed through the C interface
 

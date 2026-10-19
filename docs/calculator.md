@@ -55,6 +55,9 @@ CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
 No Python, certificates or `CALC_CA` are needed. The checked-in script declares
 `http://localhost:8080/calculate` and calls `CALC('add', '0.1', '0.2')`.
 It should print `0.3`; continue with `SAY CALC('mul', '6', '7')`, then `:quit`.
+Before the script runs, the native console asks for session approval of its
+exact HTTP request. Enter `y` or `yes` to grant it; Enter or any other answer
+denies execution. `CALC_ENDPOINT` sets the host's endpoint limit, not consent.
 `CALC_HTTP=1` explicitly selects HTTP, defaulting to `127.0.0.1:8080`.
 `CALC_HOST=localhost` also binds literal `127.0.0.1`. Nonloopback bindings are
 refused in this mode. `CALC_PORT` changes the port; update both the script
@@ -103,10 +106,11 @@ CALC_PROGRAM=examples/calculator/client.rexx ./build/calculator/console
 ```
 
 Then enter `SAY CALC('mul', '6', '7')`. The startup example prints `0.3`.
-The host approves `CALC_ENDPOINT`; the program's first line must match exactly:
+The host limits requests to `CALC_ENDPOINT`; the program's first line must match exactly:
 
 ```rexx
 /* @seeks http.post https://localhost:8443/calculate */
+/* @purpose Remote calculator operations */
 SAY CALC('add', '0.1', '0.2')
 ```
 
@@ -115,6 +119,66 @@ Declarations request access; they cannot grant it. Approval happens before any
 startup instruction. A second declaration, a different port or a missing
 declaration refuses the program. Endpoint and CA configuration stay in the host
 and cannot be changed by script variables or later console comments.
+
+## Permission approval in the native REPL
+
+The console loads and validates the script, then asks before registering `CALC`
+or executing any Rexx instruction. For example, an illustrative remote endpoint
+produces a prompt of this form:
+
+```text
+"calculator.rexx" requests:
+  HTTP POST https://calculator.example.com:443/calculate
+
+Self-claimed purpose (unverified):
+  "Remote calculator operations"
+
+Destination hostname: calculator.example.com
+Port: 443
+Path: /calculate
+Approval covers only this exact scheme, operation, hostname, port and path.
+No trust is inherited from a parent domain or sibling subdomains.
+
+Allow for this session? [y/N]
+```
+
+The purpose is optional script-supplied text, declared by a single
+`/* @purpose text */` comment immediately after the first-line `@seeks` comment.
+It is limited to 240 bytes and is never treated as verified identity, evidence
+of safety, or permission. Missing purpose is displayed as `(not supplied)`.
+The console quotes metadata and escapes controls, quotes, backslashes and
+non-ASCII bytes so a purpose or filename cannot emit terminal control sequences.
+The full validated destination is displayed separately by the host.
+
+An explicit `y` or `yes` grants the request for this process's REPL session.
+Blank input, any other answer, EOF or an input error denies it, and the script
+does not execute. Nothing is remembered for a later launch. Approval of
+`example.com` never approves `calculator.example.com`, a sibling, a wildcard,
+another port, another path, or another scheme. The service's enclosing sandbox
+checks still apply after consent; a user response cannot widen an outer fence.
+
+The question requires both terminal stdin and terminal stderr. Piped input must
+not answer a script's permission question. For explicit noninteractive host
+approval, set **both** `CALC_ENDPOINT` and `CALC_APPROVE_ENDPOINT` to the same
+complete endpoint:
+
+```sh
+CALC_ENDPOINT=http://localhost:8080/calculate \
+CALC_APPROVE_ENDPOINT=http://localhost:8080/calculate \
+CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console </dev/null
+```
+
+This is advance approval supplied by the trusted launcher, not an instruction
+the Rexx script can set. A nonempty mismatching approval fails closed. Without
+advance approval, nonterminal input or redirected stderr refuses startup. The
+integration runner supplies exact advance approvals for its generated scripts;
+offline tests use real pseudoterminals to exercise interactive yes/no, default
+denial, EOF, prompt escaping and session behavior without network access.
+
+This calculator host supports one required `http.post` request. Multiple
+requests and unsupported capabilities are refused; optional requests, module
+imports and remote script loading are not implemented. A future loader must
+apply the same approval and sandbox rules to imported code before it executes.
 
 ## Where CALC comes from
 
@@ -193,8 +257,9 @@ The startup script's `SAY CALC('add', '0.1', '0.2')` should print `0.3` after
 calling the VM. Subsequent `CALC` calls in the REPL use the same approved
 service; ordinary Rexx variables and arithmetic execute locally. The console
 waits for one submission per line without a prompt. Use `:quit` or EOF to exit.
-The declaration requests the service, and host configuration approves it;
-changing only one of them refuses startup. A script cannot choose another
+The declaration requests the service, and host configuration bounds it. The
+user's session approval (or exact explicit advance approval) authorizes it;
+changing only the declaration or endpoint limit refuses startup. A script cannot choose another
 destination by passing a URL to `CALC`.
 
 ### VM service setup

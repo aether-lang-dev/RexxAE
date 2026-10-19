@@ -132,6 +132,39 @@ main() {
             denied("http://2130706433:8080/calculate")
             denied("http://localhost:8080/calculate/../calculate")
         }
+        spec.it("shows self-claimed purpose and exact subdomain scope without inherited trust") callback {
+            url = "https://calculator.example.com:443/calculate"
+            source = "/* @seeks http.post ${url} */\n/* @purpose Remote calculator operations */\nSAY 1"
+            text, err = policy.approval_prompt(source, url, "calculator.rexx")
+            spec.assert_str_eq(err, "", "valid request")
+            spec.assert_true(string.contains(text, "Self-claimed purpose (unverified):") == 1, "claim label")
+            spec.assert_true(string.contains(text, "Remote calculator operations") == 1, "claim contents")
+            spec.assert_true(string.contains(text, "HTTP POST ${url}") == 1, "operation and endpoint")
+            spec.assert_true(string.contains(text, "Destination hostname: calculator.example.com") == 1, "exact subdomain")
+            spec.assert_true(string.contains(text, "No trust is inherited from a parent domain or sibling subdomains.") == 1, "no domain trust shortcut")
+            spec.assert_true(string.ends_with(text, "[y/N] ") == 1, "default denial")
+        }
+        spec.it("makes missing purpose explicit and rejects malformed purpose metadata") callback {
+            url = "http://localhost:8080/calculate"
+            source = "/* @seeks http.post ${url} */\nSAY 1"
+            text, err = policy.approval_prompt(source, url, "local.rexx")
+            spec.assert_str_eq(err, "", "purpose optional")
+            spec.assert_true(string.contains(text, "(not supplied)") == 1, "no invented purpose")
+            spec.assert_true(policy.preflight("/* @seeks http.post ${url} */\n/* @purpose missing terminator", url) != "", "malformed metadata")
+            spec.assert_true(policy.preflight("/* @seeks http.post ${url} */\n/* @purpose one */ SAY 1 /* two */", url) != "", "comment injection")
+            long_claim = ""
+            for i in 0..241 { long_claim = "${long_claim}x" }
+            spec.assert_true(policy.preflight("/* @seeks http.post ${url} */\n/* @purpose ${long_claim} */", url) != "", "bounded purpose")
+        }
+        spec.it("escapes untrusted quotes and controls in approval text") callback {
+            url = "http://localhost:8080/calculate"
+            source = "/* @seeks http.post ${url} */\n/* @purpose claim \"approved\" \\ path */"
+            text, err = policy.approval_prompt(source, url, "line\nname.rexx")
+            spec.assert_str_eq(err, "", "metadata is displayable")
+            spec.assert_true(string.contains(text, "line\\x0aname.rexx") == 1, "filename newline escaped")
+            spec.assert_true(string.contains(text, "\\x22approved\\x22") == 1, "quotes escaped")
+            spec.assert_true(string.contains(text, "\\x5c path") == 1, "backslash escaped")
+        }
     }
     return spec.run_summary(fw)
 }

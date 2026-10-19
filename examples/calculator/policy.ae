@@ -1,8 +1,9 @@
 // Deliberately restricted endpoint grammar until std.url exports whole-URL parsing.
 // HTTPS remotely; explicit plain HTTP only for localhost/127.0.0.1 testing.
 import std.string
+import std.strbuilder
 
-exports(endpoint, preflight, loopback)
+exports(endpoint, preflight, loopback, purpose, approval_prompt)
 
 loopback(host: string) -> bool { return host == "localhost" || host == "127.0.0.1" }
 
@@ -64,5 +65,57 @@ preflight(source: string, approved: string) -> string {
     // No optional declarations or grants are interpreted by this minimal host.
     rest = string.substring(source, end, string.length(source))
     if string.contains(rest, "@seeks") == 1 { return "multiple endpoint declarations are not supported" }
+    _claimed, purpose_error = purpose(source)
+    if purpose_error != "" { return purpose_error }
     return ""
+}
+
+// Optional untrusted metadata immediately after the endpoint declaration.
+purpose(source: string) -> (string, string) {
+    first_end = string.index_of(source, "\n")
+    if first_end < 0 { return "(not supplied)", "" }
+    rest = string.substring(source, first_end + 1, string.length(source))
+    end = string.index_of(rest, "\n")
+    if end < 0 { end = string.length(rest) }
+    line = string.trim(string.substring(rest, 0, end))
+    if string.starts_with(line, "/* @purpose") != 1 { return "(not supplied)", "" }
+    if string.starts_with(line, "/* @purpose ") != 1 || string.ends_with(line, " */") != 1 {
+        return "", "purpose must be a single /* @purpose text */ comment on line two"
+    }
+    text = string.substring(line, 12, string.length(line) - 3)
+    if string.length(text) == 0 || string.length(text) > 240 || string.contains(text, "*/") == 1 {
+        return "", "self-claimed purpose must be 1..240 bytes without a comment terminator"
+    }
+    return text, ""
+}
+
+// Never print untrusted terminal controls, bidi bytes, quotes or backslashes
+// verbatim in an approval prompt. All metadata is visibly quoted ASCII.
+display(text: string) -> string {
+    out = strbuilder.new(64)
+    strbuilder.append(out, "\"")
+    limit = string.length(text)
+    if limit > 512 { limit = 512 }
+    digits = "0123456789abcdef"
+    for i in 0..limit {
+        c = string.char_at(text, i)
+        if c >= 32 && c <= 126 && c != 34 && c != 92 {
+            strbuilder.append(out, string.substring(text, i, i + 1))
+        } else {
+            hi = (c & 255) / 16
+            lo = c & 15
+            strbuilder.append(out, "\\x${string.substring(digits, hi, hi + 1)}${string.substring(digits, lo, lo + 1)}")
+        }
+    }
+    if string.length(text) > limit { strbuilder.append(out, " (truncated)") }
+    strbuilder.append(out, "\"")
+    return strbuilder.finish(out)
+}
+
+approval_prompt(source: string, url: string, program: string) -> (string, string) {
+    err = preflight(source, url)
+    if err != "" { return "", err }
+    host, port, _endpoint_error = endpoint(url)
+    claimed, _purpose_error = purpose(source)
+    return "${display(program)} requests:\n  HTTP POST ${url}\n\nSelf-claimed purpose (unverified):\n  ${display(claimed)}\n\nDestination hostname: ${host}\nPort: ${port}\nPath: /calculate\nApproval covers only this exact scheme, operation, hostname, port and path.\nNo trust is inherited from a parent domain or sibling subdomains.\n\nAllow for this session? [y/N] ", ""
 }

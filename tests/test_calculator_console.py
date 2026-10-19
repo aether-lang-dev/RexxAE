@@ -1,8 +1,11 @@
 """Offline checks of the Aether binary host, including the new EOF API."""
 import os
 from pathlib import Path
+import select
 import subprocess
 import tempfile
+import termios
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +64,7 @@ class ConsoleTests(unittest.TestCase):
             program.write_text('/* @seeks http.post https://localhost:8443/calculate */\n')
             p = run_console("SAY CALC('add', {url:'evil'}, '2')\nSAY CALC('exec', '1', '2')\nSAY 'alive'\n",
                             {'CALC_ENDPOINT': 'https://localhost:8443/calculate',
+                             'CALC_APPROVE_ENDPOINT': 'https://localhost:8443/calculate',
                              'CALC_CA': '/no/such/ca.pem', 'CALC_PROGRAM': str(program)})
         self.assertIn('requires three strings', p.stderr)
         self.assertIn('unknown operation', p.stderr)
@@ -72,6 +76,7 @@ class ConsoleTests(unittest.TestCase):
             program.write_text('/* @seeks http.post http://localhost:8080/calculate */\n')
             p = run_console("SAY CALC('exec', '1', '2')\nSAY 'alive'\n",
                             {'CALC_ENDPOINT': 'http://localhost:8080/calculate',
+                             'CALC_APPROVE_ENDPOINT': 'http://localhost:8080/calculate',
                              'CALC_PROGRAM': str(program)})
         self.assertEqual(p.returncode, 0)
         self.assertIn('unknown operation', p.stderr)
@@ -86,6 +91,123 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(p.returncode, 1)
         self.assertEqual(p.stdout, '')
         self.assertIn('plain HTTP is restricted', p.stderr)
+
+
+class ConsentTests(unittest.TestCase):
+    endpoint = 'https://calculator.example.com:443/calculate'
+
+    def program(self, directory, purpose='Remote calculator operations'):
+        path = Path(directory) / 'calculator.rexx'
+        path.write_text(f'/* @seeks http.post {self.endpoint} */\n'
+                        f'/* @purpose {purpose} */\nSAY "SCRIPT_STARTED"\n')
+        return path
+
+    def settings(self, path, **extra):
+        return {'CALC_ENDPOINT': self.endpoint, 'CALC_PROGRAM': str(path),
+                'CALC_CA': '/host-configured-ca.pem', **extra}
+
+    def test_piped_yes_cannot_authorize_or_execute_a_script(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.program(directory)
+            p = run_console('y\nSAY "INJECTED"\n', self.settings(path))
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(p.stdout, '')
+        self.assertIn('terminal stdin and stderr', p.stderr)
+        self.assertIn('script was not executed', p.stderr)
+
+    def test_exact_advance_approval_for_headless_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.program(directory)
+            p = run_console('SAY "NEXT"\n', self.settings(path, CALC_APPROVE_ENDPOINT=self.endpoint))
+        self.assertEqual((p.returncode, p.stdout, p.stderr), (0, 'SCRIPT_STARTED\nNEXT\n', ''))
+
+    def test_advance_approval_never_expands_domains_or_resources(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.program(directory)
+            for approval in ('*', 'https://example.com:443/calculate',
+                             'https://other.example.com:443/calculate',
+                             'https://calculator.example.com:8443/calculate',
+                             'https://calculator.example.com:443/other',
+                             'http://calculator.example.com:443/calculate'):
+                with self.subTest(approval=approval):
+                    p = run_console(settings=self.settings(path, CALC_APPROVE_ENDPOINT=approval))
+                    self.assertEqual(p.returncode, 1)
+                    self.assertEqual(p.stdout, '')
+                    self.assertIn('exact requested endpoint', p.stderr)
+
+    def interactive(self, answer, purpose='Remote calculator operations'):
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.program(directory, purpose)
+            master, slave = os.openpty()
+            attributes = termios.tcgetattr(slave)
+            attributes[3] &= ~termios.ECHO
+            termios.tcsetattr(slave, termios.TCSANOW, attributes)
+            env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
+            env.update(self.settings(path))
+            process = subprocess.Popen([str(CONSOLE)], stdin=slave, stdout=slave, stderr=slave, env=env)
+            os.close(slave)
+            output = bytearray()
+            try:
+                deadline = time.monotonic() + 5
+                while b'Allow for this session? [y/N] ' not in output:
+                    self.assertLess(time.monotonic(), deadline, output.decode(errors='replace'))
+                    if select.select([master], [], [], 0.1)[0]:
+                        output.extend(os.read(master, 4096))
+                before = bytes(output)
+                self.assertNotIn(b'SCRIPT_STARTED', before)
+                os.write(master, answer)
+                while time.monotonic() < deadline:
+                    if select.select([master], [], [], 0.1)[0]:
+                        try:
+                            chunk = os.read(master, 4096)
+                        except OSError:
+                            break
+                        if not chunk:
+                            break
+                        output.extend(chunk)
+                    elif process.poll() is not None:
+                        break
+                code = process.wait(timeout=2)
+                return code, output.decode().replace('\r\n', '\n')
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
+                os.close(master)
+
+    def test_prompt_labels_claim_and_does_not_inherit_parent_trust(self):
+        code, output = self.interactive(b'n\n')
+        self.assertEqual(code, 1)
+        self.assertIn('Self-claimed purpose (unverified):', output)
+        self.assertIn('Destination hostname: calculator.example.com', output)
+        self.assertIn('Port: 443\nPath: /calculate', output)
+        self.assertIn('No trust is inherited from a parent domain or sibling subdomains.', output)
+        self.assertNotIn('SCRIPT_STARTED', output)
+
+    def test_blank_no_unknown_and_eof_deny_before_execution(self):
+        for answer in (b'\n', b'no\n', b'perhaps\n', b'\x04'):
+            with self.subTest(answer=answer):
+                code, output = self.interactive(answer)
+                self.assertEqual(code, 1)
+                self.assertNotIn('SCRIPT_STARTED', output)
+                self.assertIn('script was not executed', output)
+
+    def test_explicit_yes_mounts_once_then_enters_repl(self):
+        for answer in (b'y\n', b'YES\n'):
+            with self.subTest(answer=answer):
+                code, output = self.interactive(answer + b'SAY CALC("exec", "1", "2")\nSAY "NEXT"\n:quit\n')
+                self.assertEqual(code, 0)
+                self.assertIn('SCRIPT_STARTED\n', output)
+                self.assertIn('unknown operation', output)
+                self.assertIn('NEXT\n', output)
+                self.assertEqual(output.count('Allow for this session?'), 1)
+
+    def test_claim_cannot_inject_terminal_controls_or_bidi(self):
+        code, output = self.interactive(b'n\n', 'trusted\x1b[2J\u202e claim')
+        self.assertEqual(code, 1)
+        self.assertNotIn('\x1b', output)
+        self.assertNotIn('\u202e', output)
+        self.assertIn('trusted\\x1b[2J\\xe2\\x80\\xae claim', output)
 
 
 class HTTPConfigurationTests(unittest.TestCase):

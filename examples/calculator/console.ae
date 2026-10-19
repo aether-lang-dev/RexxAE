@@ -6,6 +6,7 @@ import std.string
 import std.json
 import examples.calculator.policy
 import examples.calculator.service
+import examples.calculator.consent
 
 dispatch(ctx: ptr, endpoint: string, ca: string) {
     if endpoint == "" || string.copy(rexxae.rexxae_function(ctx)) != "CALC" {
@@ -67,6 +68,12 @@ main() {
         if err != "" { io.stderr_write("cannot read CALC_PROGRAM\n"); return 1 }
         denial = policy.preflight(text, endpoint)
         if denial != "" { io.stderr_write("${denial}\n"); return 1 }
+        preapproved = os.getenv("CALC_APPROVE_ENDPOINT")
+        if preapproved == null { preapproved = "" }
+        if !consent.approve(text, endpoint, program, preapproved) {
+            io.stderr_write("required calculator capability denied; script was not executed\n")
+            return 1
+        }
         source = text
     } else {
         if program != null && program != "" { io.stderr_write("CALC_PROGRAM requires host-approved CALC_ENDPOINT\n"); return 1 }

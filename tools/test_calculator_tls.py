@@ -149,7 +149,7 @@ def main():
                         else:
                             raise AssertionError(f'HTTP not ready: {last}; see {log_path}')
                         p = subprocess.run([str(ROOT / 'build/calculator/console')], cwd=ROOT,
-                                           env=environment(CALC_ENDPOINT=endpoint, CALC_PROGRAM=str(program),
+                                           env=environment(CALC_ENDPOINT=endpoint, CALC_APPROVE_ENDPOINT=endpoint, CALC_PROGRAM=str(program),
                                                            HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',
                                                            NO_PROXY='', no_proxy=''),
                                            input="\nSAY CALC('mul','6','7')", capture_output=True, text=True, timeout=20)
@@ -249,7 +249,7 @@ def main():
 
                     def console(cafile=cert, program_file=program, input_text='', url=endpoint):
                         p = subprocess.run([str(ROOT / 'build/calculator/console')], cwd=ROOT,
-                                           env=environment(CALC_CA=str(cafile), CALC_ENDPOINT=url,
+                                           env=environment(CALC_CA=str(cafile), CALC_ENDPOINT=url, CALC_APPROVE_ENDPOINT=url,
                                                            CALC_PROGRAM=str(program_file), AETHER_PURE_TLS='0',
                                                            HTTPS_PROXY='http://127.0.0.1:1', https_proxy='http://127.0.0.1:1',
                                                            HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',

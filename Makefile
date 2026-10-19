@@ -138,7 +138,7 @@ build/calculator/librexxae.$(LIBEXT): $(wildcard src/*.ae) | build/calculator
 build/calculator/server: examples/calculator/server.ae examples/calculator/protocol.ae examples/calculator/policy.ae examples/calculator/tls_config.ae | build/calculator
 	$(CALC_AE) build $< -o $@
 
-build/calculator/console: examples/calculator/console.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
+build/calculator/console: examples/calculator/console.ae examples/calculator/consent.ae examples/calculator/service.ae examples/calculator/policy.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
 	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
 
 build/calculator/test_protocol: tests/test_calculator.ae examples/calculator/protocol.ae examples/calculator/policy.ae | build/calculator

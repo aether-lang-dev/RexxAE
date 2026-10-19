@@ -1,0 +1,30 @@
+// Trusted host UI; no script executes until this decision has completed.
+import std.io
+import std.string
+import examples.calculator.policy
+
+exports(approve)
+
+// Host-only terminal detection. Piped script/input must never answer its own
+// permission question. Both the answer and the prompt need terminal descriptors.
+extern isatty(fd: int) -> int
+
+approve(source: string, endpoint: string, program: string, preapproved: string) -> bool {
+    prompt, err = policy.approval_prompt(source, endpoint, program)
+    if err != "" { io.stderr_write("${err}\n"); return false }
+    if preapproved != "" {
+        if preapproved == endpoint { return true }
+        io.stderr_write("advance approval must match the exact requested endpoint\n")
+        return false
+    }
+    if isatty(0) != 1 || isatty(2) != 1 {
+        io.stderr_write("capability not approved: interactive approval requires terminal stdin and stderr; automation must set CALC_APPROVE_ENDPOINT to the exact endpoint\n")
+        return false
+    }
+    io.stderr_write(prompt)
+    line, eof, input_error = io.fd_read_line_status(0)
+    io.stderr_write("\n")
+    if input_error != "" || eof { return false }
+    answer = string.to_lower(string.trim(line))
+    return answer == "y" || answer == "yes"
+}

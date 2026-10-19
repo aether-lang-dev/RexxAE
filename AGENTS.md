@@ -24,6 +24,12 @@ language and builtins in `.ae` files.
   `tools/test_calculator_tls.py` performs required live TLS checks and records
   failure when sockets are unavailable. Never count those checks as passed
   from successful compilation or offline tests alone.
+- Calculator permission prompts must precede script execution. CALC_ENDPOINT
+  bounds the endpoint; only explicit terminal consent or an exact trusted
+  CALC_APPROVE_ENDPOINT preapproval grants it for the session. Keep piped-input
+  denial, pseudoterminal tests, escaped untrusted metadata, self-claimed purpose
+  labelling, and exact subdomain/port/path/scheme matching. Never inherit trust
+  from parent or sibling domains or let consent widen an enclosing sandbox.
 - Preserve RexxJS compatibility where tested. Record unsupported features,
   semantic restrictions and proposed omissions explicitly. npm dependence
   alone does not decide whether a feature belongs in RexxAE.

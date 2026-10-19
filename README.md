@@ -77,6 +77,11 @@ an exactly approved `CALC` host function, and a TinyWeb HTTPS endpoint using
 pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
 `7b48889a` (the development compiler reports 0.830.0).
 
+`CALC` is registered by the calculator console's Aether host after it approves
+the script's endpoint declaration. It is not a Rexx builtin or a function
+defined by `@seeks`; these scripts need that host binding. See
+[where CALC comes from](docs/calculator.md#where-calc-comes-from).
+
 ### Local integration checks
 
 ```sh

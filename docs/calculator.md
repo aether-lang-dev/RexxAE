@@ -116,6 +116,26 @@ startup instruction. A second declaration, a different port or a missing
 declaration refuses the program. Endpoint and CA configuration stay in the host
 and cannot be changed by script variables or later console comments.
 
+## Where CALC comes from
+
+`CALC` is supplied by this demo's embedding application. It is neither a Rexx
+builtin nor a routine defined in `client.rexx`. The `@seeks` comment requests
+permission for an endpoint; it does not import a function or create a binding.
+
+After approving the declaration, [console.ae](../examples/calculator/console.ae)
+calls `rexxae_register_function(ctx, "CALC", 3, 3)` before executing the script.
+When Rexx calls `CALC`, the engine suspends with a FUNCTION request. The console
+dispatches that request to [service.ae](../examples/calculator/service.ae),
+which sends the calculator JSON request to the approved URL and returns its
+result through `rexxae_reply_value`. The engine then resumes the script.
+
+The host owns both the name and its implementation. The plain REPL does not
+register `CALC`; running this script there produces an unavailable-function
+error. The example therefore requires the calculator console or another host
+mounting the same function. A reusable HTTP host function with a Rexx-defined
+`CALC` wrapper would be a separate, more general adapter; this demo currently
+keeps the calculator protocol in its Aether host service.
+
 ## Wire contract and containment
 
 `POST /calculate` accepts exactly three JSON string fields:

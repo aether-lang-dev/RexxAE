@@ -61,7 +61,8 @@ main() {
     program = os.getenv("CALC_PROGRAM")
     source = ""
     if endpoint != "" {
-        if program == null || program == "" || ca == "" { io.stderr_write("CALC_PROGRAM and CALC_CA required to mount CALC\n"); return 1 }
+        if program == null || program == "" { io.stderr_write("CALC_PROGRAM required to mount CALC\n"); return 1 }
+        if string.starts_with(endpoint, "https://") == 1 && ca == "" { io.stderr_write("CALC_CA required for HTTPS\n"); return 1 }
         text, err = io.read_file(program)
         if err != "" { io.stderr_write("cannot read CALC_PROGRAM\n"); return 1 }
         denial = policy.preflight(text, endpoint)

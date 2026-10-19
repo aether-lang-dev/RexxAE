@@ -90,6 +90,24 @@ native EOF/session behavior and TLS keypair validation. Live TLS checks require
 socket permission; this workspace cannot perform them. Deployment templates
 under `deploy/calculator` are not installed or provisioned automatically.
 
+For local testing without SSL, start the Aether server in one terminal:
+
+```sh
+make calculator CALC_AE=/home/paul/scm/aether/build/ae
+CALC_HTTP=1 ./build/calculator/server
+```
+
+In a second terminal, run the native REPL and the local test script:
+
+```sh
+CALC_ENDPOINT=http://localhost:8080/calculate \
+CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
+```
+
+The script prints `0.3`; then try `SAY CALC('mul', '6', '7')`. No certificates,
+CA file or Python are needed. Plain HTTP is restricted to `localhost` and
+`127.0.0.1`; HTTPS remains required for remote endpoints.
+
 ### Always-on GCP calculator through the native REPL
 
 **Public GCP URL: to be announced.** In this mode the TinyWeb calculator runs

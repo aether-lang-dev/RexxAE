@@ -1,4 +1,4 @@
-// TinyWeb terminates TLS itself: force Aether's TLS 1.3 backend, no proxy.
+// TinyWeb terminates HTTPS with Aether TLS 1.3; explicit loopback HTTP is optional.
 import contrib.tinyweb
 import std.cryptography.tls13_server
 import std.io
@@ -6,30 +6,44 @@ import std.os
 import std.string
 import examples.calculator.protocol
 import examples.calculator.tls_config
+import examples.calculator.policy
 
 main() {
     cert = os.getenv("CALC_CERT")
     key = os.getenv("CALC_KEY")
-    if cert == null || key == null || cert == "" || key == "" {
-        io.stderr_write("CALC_CERT and CALC_KEY are required (ECDSA P-256 PEM)\n")
-        return 1
-    }
-    cert_text, ce = io.read_file(cert)
-    key_text, ke = io.read_file(key)
-    if ce != "" || ke != "" { io.stderr_write("cannot read TLS certificate/key\n"); return 1 }
-    config_error = tls_config.validate(cert_text, key_text)
-    if config_error != "" { io.stderr_write("${config_error}\n"); return 1 }
-    if os.getenv("CALC_CHECK_CONFIG") == "1" { println("TLS keypair valid"); return 0 }
+    plain = os.getenv("CALC_HTTP") == "1"
     host = os.getenv("CALC_HOST")
     if host == null || host == "" { host = "127.0.0.1" }
+    if plain && !policy.loopback(host) { io.stderr_write("plain HTTP requires a loopback CALC_HOST\n"); return 1 }
+    if plain && host == "localhost" { host = "127.0.0.1" }
     port_text = os.getenv("CALC_PORT")
-    if port_text == null || port_text == "" { port_text = "8443" }
+    if port_text == null || port_text == "" {
+        port_text = "8443"
+        if plain { port_text = "8080" }
+    }
     port, pe = string.to_int(port_text)
     if pe != "" || port < 1 || port > 65535 { io.stderr_write("invalid CALC_PORT\n"); return 1 }
+    if !plain {
+        if cert == null || key == null || cert == "" || key == "" {
+            io.stderr_write("CALC_CERT and CALC_KEY are required (ECDSA P-256 PEM)\n")
+            return 1
+        }
+        cert_text, ce = io.read_file(cert)
+        key_text, ke = io.read_file(key)
+        if ce != "" || ke != "" { io.stderr_write("cannot read TLS certificate/key\n"); return 1 }
+        config_error = tls_config.validate(cert_text, key_text)
+        if config_error != "" { io.stderr_write("${config_error}\n"); return 1 }
+    }
+    if os.getenv("CALC_CHECK_CONFIG") == "1" {
+        if plain { println("local HTTP configuration valid") } else { println("TLS keypair valid") }
+        return 0
+    }
     if os.setenv("AETHER_PURE_TLS", "1") != "" { return 1 }
     server = tinyweb.web_server_host(host, port) {
         tinyweb.end_point(tinyweb.GET, "/health") |req: ptr, res: ptr, ctx: ptr| {
-            tinyweb.response_json(res, "{\"status\":\"ok\",\"tls\":\"aether-tls13\"}")
+            transport = "aether-tls13"
+            if plain { transport = "none" }
+            tinyweb.response_json(res, "{\"status\":\"ok\",\"tls\":\"${transport}\"}")
         }
         tinyweb.end_point(tinyweb.POST, "/calculate") |req: ptr, res: ptr, ctx: ptr| {
             text, status = protocol.handle(tinyweb.request_get_body(req))
@@ -38,10 +52,11 @@ main() {
             tinyweb.response_write_status(res, text, status)
         }
     }
-    tinyweb.with_tls(server, cert, key)
+    if !plain { tinyweb.with_tls(server, cert, key) }
     tinyweb.with_timeout(server, 5000)
     tinyweb.with_keep_alive(server, 0)
-    println("calculator: https://${host}:${port}/calculate (pure Aether TLS 1.3)")
+    if plain { println("calculator: http://${host}:${port}/calculate (loopback test mode)") }
+    else { println("calculator: https://${host}:${port}/calculate (pure Aether TLS 1.3)") }
     err = tinyweb.tw_start(server)
     if err != "" { io.stderr_write("${err}\n"); return 1 }
     return 0

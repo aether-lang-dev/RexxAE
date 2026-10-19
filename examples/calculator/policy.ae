@@ -1,14 +1,20 @@
 // Deliberately restricted endpoint grammar until std.url exports whole-URL parsing.
-// Canonical HTTPS, explicit port, DNS/IPv4 host, exact /calculate path only.
+// HTTPS remotely; explicit plain HTTP only for localhost/127.0.0.1 testing.
 import std.string
 
-exports(endpoint, preflight)
+exports(endpoint, preflight, loopback)
+
+loopback(host: string) -> bool { return host == "localhost" || host == "127.0.0.1" }
 
 endpoint(url: string) -> (string, int, string) {
-    if string.length(url) > 300 || string.starts_with(url, "https://") != 1 || string.ends_with(url, "/calculate") != 1 {
-        return "", 0, "endpoint must be https://host:port/calculate"
+    secure = string.starts_with(url, "https://") == 1
+    local_http = string.starts_with(url, "http://") == 1
+    if string.length(url) > 300 || (!secure && !local_http) || string.ends_with(url, "/calculate") != 1 {
+        return "", 0, "endpoint must be https://host:port/calculate (or http://localhost:port/calculate for local testing)"
     }
-    authority = string.substring(url, 8, string.length(url) - 10)
+    start = 8
+    if local_http { start = 7 }
+    authority = string.substring(url, start, string.length(url) - 10)
     colon = string.index_of(authority, ":")
     if colon <= 0 { return "", 0, "explicit endpoint port required" }
     host = string.substring(authority, 0, colon)
@@ -32,6 +38,7 @@ endpoint(url: string) -> (string, int, string) {
         i = i + 1
     }
     if label == 0 || last == 45 { return "", 0, "invalid host label" }
+    if local_http && !loopback(host) { return "", 0, "plain HTTP is restricted to localhost or 127.0.0.1" }
     port_text = string.substring(authority, colon + 1, string.length(authority))
     if string.length(port_text) == 0 || string.length(port_text) > 5 || string.char_at(port_text, 0) == 48 {
         return "", 0, "invalid port"

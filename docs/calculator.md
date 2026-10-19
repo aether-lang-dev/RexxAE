@@ -2,8 +2,9 @@
 
 This demo uses a TinyWeb HTTPS server and an Aether console importing the actual
 compiled RexxAE library. Both endpoints explicitly import Aether's TLS backend
-and force `AETHER_PURE_TLS=1`. TLS terminates in the application. OpenSSL is used
-only to generate disposable test certificates.
+and force `AETHER_PURE_TLS=1` for HTTPS. TLS terminates in the application.
+An explicit loopback HTTP mode also supports local testing without certificates.
+OpenSSL is used only to generate disposable test certificates.
 
 The core engine still targets installed Aether 0.829.0. This optional demo needs
 `std.io.fd_read_line_status`, added by Aether commit
@@ -20,21 +21,52 @@ python3 tools/test_calculator_tls.py --ae /home/paul/scm/aether/build/ae
 cat /home/paul/scm/rexxae/RexxAE/build/calculator/tls-report.json
 ```
 
-Send back `tls-report.json` and, on failure, the `.build.log` and `.server.log`
-beside it. No GitHub Actions, cloud account or public listener is needed. The
+Send back `tls-report.json` and, on failure, the `.build.log`, `.http-server.log`
+and `.server.log` beside it when present. No GitHub Actions, cloud account or public listener is needed. The
 runner requires Python 3, make, OpenSSL for certificate generation and the
 development Aether compiler. It rebuilds everything, runs offline tests, generates
 temporary P-256 certificates, starts the server on an unused loopback port and
 cleans up its processes and private keys. Unavailable sockets fail the run.
 
-Checks include independent HTTPS arithmetic; malformed and oversized requests;
+Checks include the native client reaching a loopback HTTP server without a CA;
+independent HTTPS arithmetic; malformed and oversized requests;
 TLS 1.3 negotiation and TLS 1.2 refusal; untrusted CA and wrong hostname refusal;
 the native Rexx host calling the real service while ignoring ambient proxies;
 native rejection of an untrusted CA and a redirect; and server health after bad
 handshakes. Each check is recorded separately. A build or startup failure stops
 dependent checks, leaving an overall failed report.
 
-## Offline and manual use
+## Local HTTP without SSL
+
+Build the native server and console, then start the server in one terminal:
+
+```sh
+make calculator CALC_AE=/home/paul/scm/aether/build/ae
+CALC_HTTP=1 ./build/calculator/server
+```
+
+In another terminal, from the repository root:
+
+```sh
+CALC_ENDPOINT=http://localhost:8080/calculate \
+CALC_PROGRAM=examples/calculator/local.rexx ./build/calculator/console
+```
+
+No Python, certificates or `CALC_CA` are needed. The checked-in script declares
+`http://localhost:8080/calculate` and calls `CALC('add', '0.1', '0.2')`.
+It should print `0.3`; continue with `SAY CALC('mul', '6', '7')`, then `:quit`.
+`CALC_HTTP=1` explicitly selects HTTP, defaulting to `127.0.0.1:8080`.
+`CALC_HOST=localhost` also binds literal `127.0.0.1`. Nonloopback bindings are
+refused in this mode. `CALC_PORT` changes the port; update both the script
+declaration and `CALC_ENDPOINT` to match.
+
+HTTP client endpoints accept only the exact names `localhost` or `127.0.0.1`
+and always dial literal `127.0.0.1`, avoiding hostname resolution in this mode.
+The service mounts only its exact TCP grant, with no CA-file read grant. Proxy
+and redirect refusal, request deadlines and result limits apply to both modes.
+There is no automatic downgrade from HTTPS. The GCP workflow below uses HTTPS.
+
+## Offline console and manual HTTPS use
 
 ```sh
 make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
@@ -58,7 +90,8 @@ CALC_CERT=/absolute/path/fullchain.pem CALC_KEY=/absolute/path/key.pem \
 
 Defaults are `127.0.0.1:8443`. `CALC_HOST` and `CALC_PORT` change the binding.
 Startup parses the leaf and key and checks that the public key matches before
-binding. Certificate chain trust, name and validity are enforced by clients;
+binding. These are the defaults when `CALC_HTTP=1` is absent. Certificate chain
+trust, name and validity are enforced by clients;
 config validation is not a certificate issuance or renewal service.
 
 For a localhost certificate trusted by the CA file you supply:
@@ -95,15 +128,16 @@ bodies over 512 bytes return 413. `/health` returns a small JSON status.
 
 Guests see only `CALC(operation, left, right)`, requiring three strings. They
 cannot supply URLs, methods, headers, CA paths, proxies or redirect policy.
-ADDRESS remains vetoed. The client requires canonical HTTPS with an explicit
-port and exactly `/calculate`; this deliberately restricted grammar accepts
+ADDRESS remains vetoed. Remote endpoints require canonical HTTPS; local testing
+also accepts HTTP on the two loopback names above. Every URL requires an explicit
+port and exactly `/calculate`. This deliberately restricted grammar accepts
 lowercase DNS names and IPv4, and refuses userinfo, wildcard hosts, IPv6, queries,
 fragments and encoded authorities. It does not pretend to implement general URL
 normalization. Redirects and proxies are disabled, certificate verification stays
 enabled, each request has a five-second deadline and streamed responses are
 limited to 512 bytes. Results remain data, never Rexx source.
 
-The adapter adds an exact TCP grant and one literal CA-file read grant inside
+For HTTPS, the adapter adds an exact TCP grant and one literal CA-file read grant inside
 `sandbox.enforce`. The source audit found that `std.http.client`'s C dial path
 lacks the sandbox gate in `std.net.tcp_connect_raw`. Until Aether supplies that
 gate, the adapter explicitly calls the runtime's `aether_sandbox_check_slow`

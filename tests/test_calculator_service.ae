@@ -54,6 +54,17 @@ main() {
             _value, err = service.call("https://localhost:8443/calculate/other", "/tmp/ca.pem", "add", "1", "2")
             spec.assert_true(err != "", "fixed calculator path")
         }
+        spec.it("keeps local HTTP inside the enclosing TCP grants without requiring a CA") callback {
+            result = map.map_new()
+            defer map.map_free(result)
+            outer = sandbox.new("no local TCP") {}
+            defer sandbox.free(outer)
+            sandbox.enforce(outer) callback {
+                _value, err = service.call("http://localhost:8080/calculate", "", "add", "1", "2")
+                map.map_put_string_owned(result, "error", err)
+            }
+            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "calculator denied by enclosing sandbox", "no CA requested and no socket attempted")
+        }
     }
     return spec.run_summary(fw)
 }

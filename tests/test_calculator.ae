@@ -85,7 +85,7 @@ main() {
             spec.assert_eq(p, 443, "explicit 443")
         }
         spec.it("rejects URL authority and path escape tricks") callback {
-            denied("http://localhost:8443/calculate")
+            denied("http://example.com:8080/calculate")
             denied("https://user@localhost:8443/calculate")
             denied("https://localhost:8443@evil/calculate")
             denied("https://localhost:8443/calculate?next=evil")
@@ -113,6 +113,24 @@ main() {
             spec.assert_true(policy.preflight("SAY 'side effect'\n${source}", url) != "", "late declaration")
             spec.assert_true(policy.preflight("${source}\n/* @seeks http.post https://evil:443/calculate */", url) != "", "second grant")
             spec.assert_true(policy.preflight("/* @seeks http.post https://localhost:8443/calculate.evil */", url) != "", "prefix mismatch")
+        }
+        spec.it("allows explicitly declared HTTP only on loopback") callback {
+            host, port, err = policy.endpoint("http://localhost:8080/calculate")
+            spec.assert_str_eq(err, "", "local HTTP")
+            spec.assert_str_eq(host, "localhost", "exact host")
+            spec.assert_eq(port, 8080, "exact port")
+            _ip, _port, ie = policy.endpoint("http://127.0.0.1:8080/calculate")
+            spec.assert_str_eq(ie, "", "literal loopback")
+            source = "/* @seeks http.post http://localhost:8080/calculate */\nSAY 1"
+            spec.assert_str_eq(policy.preflight(source, "http://localhost:8080/calculate"), "", "approval")
+            spec.assert_true(policy.preflight(source, "https://localhost:8080/calculate") != "", "scheme cannot change")
+            denied("http://localhost.evil:8080/calculate")
+            denied("http://localhost@evil:8080/calculate")
+            denied("http://127.0.0.1.evil:8080/calculate")
+            denied("http://0.0.0.0:8080/calculate")
+            denied("http://127.1:8080/calculate")
+            denied("http://2130706433:8080/calculate")
+            denied("http://localhost:8080/calculate/../calculate")
         }
     }
     return spec.run_summary(fw)

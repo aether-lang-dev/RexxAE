@@ -71,7 +71,7 @@ def main():
     args.report = args.report.resolve()
     args.report.parent.mkdir(parents=True, exist_ok=True)
     report = {'passed': False, 'compiler': args.ae, 'checks': [],
-              'note': 'OpenSSL creates test certificates; the Aether server and client select pure TLS 1.3.'}
+              'note': 'Checks explicit loopback HTTP and HTTPS. OpenSSL creates test certificates; HTTPS selects pure Aether TLS 1.3.'}
 
     def check(name, action):
         print(f'CHECK {name}', flush=True)
@@ -116,6 +116,55 @@ def main():
 
         with tempfile.TemporaryDirectory(prefix='rexxae-calc-tls-') as temp:
             directory = Path(temp)
+
+            def local_http():
+                port = sockets()
+                endpoint = f'http://localhost:{port}/calculate'
+                program = directory / 'local.rexx'
+                program.write_text(f"/* @seeks http.post {endpoint} */\nSAY CALC('add','0.1','0.2')\n")
+                log_path = args.report.with_suffix('.http-server.log')
+                report['http_server_log'] = str(log_path)
+                with log_path.open('w') as log:
+                    server = subprocess.Popen([str(ROOT / 'build/calculator/server')], cwd=ROOT,
+                                              env=environment(CALC_HTTP='1', CALC_HOST='localhost', CALC_PORT=str(port)),
+                                              stdout=log, stderr=subprocess.STDOUT)
+                    try:
+                        deadline = time.monotonic() + 10
+                        last = None
+                        while time.monotonic() < deadline:
+                            if server.poll() is not None:
+                                raise AssertionError(f'HTTP server exited {server.returncode}; see {log_path}')
+                            connection = http.client.HTTPConnection('127.0.0.1', port, timeout=2)
+                            try:
+                                connection.request('GET', '/health')
+                                response = connection.getresponse()
+                                body = response.read(1024).decode()
+                                require(response.status == 200 and json.loads(body) == {'status': 'ok', 'tls': 'none'}, body)
+                                break
+                            except (OSError, http.client.HTTPException) as error:
+                                last = error
+                                time.sleep(0.1)
+                            finally:
+                                connection.close()
+                        else:
+                            raise AssertionError(f'HTTP not ready: {last}; see {log_path}')
+                        p = subprocess.run([str(ROOT / 'build/calculator/console')], cwd=ROOT,
+                                           env=environment(CALC_ENDPOINT=endpoint, CALC_PROGRAM=str(program),
+                                                           HTTP_PROXY='http://127.0.0.1:1', http_proxy='http://127.0.0.1:1',
+                                                           NO_PROXY='', no_proxy=''),
+                                           input="\nSAY CALC('mul','6','7')", capture_output=True, text=True, timeout=20)
+                        require(p.returncode == 0 and p.stdout == '0.3\n42\n' and p.stderr == '',
+                                f'code={p.returncode} stdout={p.stdout!r} stderr={p.stderr!r}')
+                        return {'endpoint': endpoint, 'output': p.stdout, 'ca_file': 'not required'}
+                    finally:
+                        server.terminate()
+                        try:
+                            server.wait(timeout=8)
+                        except subprocess.TimeoutExpired:
+                            server.kill()
+                            server.wait(timeout=5)
+
+            check('loopback HTTP server and native Rexx client without certificates or CA', local_http)
             cert, key = certificate(directory, 'localhost')
             untrusted, _ = certificate(directory, 'untrusted')
             port = sockets()

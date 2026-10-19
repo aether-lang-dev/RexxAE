@@ -66,6 +66,56 @@ class ConsoleTests(unittest.TestCase):
         self.assertIn('unknown operation', p.stderr)
         self.assertEqual(p.stdout, 'alive\n')
 
+    def test_local_http_mount_needs_no_ca(self):
+        with tempfile.TemporaryDirectory() as d:
+            program = Path(d) / 'local.rexx'
+            program.write_text('/* @seeks http.post http://localhost:8080/calculate */\n')
+            p = run_console("SAY CALC('exec', '1', '2')\nSAY 'alive'\n",
+                            {'CALC_ENDPOINT': 'http://localhost:8080/calculate',
+                             'CALC_PROGRAM': str(program)})
+        self.assertEqual(p.returncode, 0)
+        self.assertIn('unknown operation', p.stderr)
+        self.assertEqual(p.stdout, 'alive\n')
+
+    def test_remote_http_preflight_runs_no_script(self):
+        with tempfile.TemporaryDirectory() as d:
+            program = Path(d) / 'remote.rexx'
+            program.write_text("/* @seeks http.post http://example.com:8080/calculate */\nSAY 'ran'\n")
+            p = run_console(settings={'CALC_ENDPOINT': 'http://example.com:8080/calculate',
+                                      'CALC_PROGRAM': str(program)})
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(p.stdout, '')
+        self.assertIn('plain HTTP is restricted', p.stderr)
+
+
+class HTTPConfigurationTests(unittest.TestCase):
+    def config(self, **settings):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
+        env.update(CALC_HTTP='1', CALC_CHECK_CONFIG='1', **settings)
+        return subprocess.run([str(ROOT / 'build/calculator/server')], env=env,
+                              capture_output=True, text=True, timeout=10)
+
+    def test_local_http_without_certificates(self):
+        for host in ('localhost', '127.0.0.1'):
+            with self.subTest(host=host):
+                p = self.config(CALC_HOST=host)
+                self.assertEqual((p.returncode, p.stdout, p.stderr),
+                                 (0, 'local HTTP configuration valid\n', ''))
+
+    def test_remote_http_bind_refused(self):
+        for host in ('0.0.0.0', 'example.com', 'localhost.evil'):
+            with self.subTest(host=host):
+                p = self.config(CALC_HOST=host)
+                self.assertEqual(p.returncode, 1)
+                self.assertIn('loopback', p.stderr)
+
+    def test_https_still_requires_certificates_by_default(self):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('CALC_')}
+        p = subprocess.run([str(ROOT / 'build/calculator/server')], env=env,
+                           capture_output=True, text=True, timeout=10)
+        self.assertEqual(p.returncode, 1)
+        self.assertIn('CALC_CERT and CALC_KEY', p.stderr)
+
 
 class TLSConfigurationTests(unittest.TestCase):
     @classmethod

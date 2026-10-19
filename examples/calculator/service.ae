@@ -16,17 +16,23 @@ exports(call)
 extern aether_sandbox_check_slow(category: string, resource: string) -> int
 
 exchange(url: string, ca: string, host: string, port: int, body: string) -> (string, string) {
-    if aether_sandbox_check_slow("tcp", "${host}:${port}") == 0 || aether_sandbox_check_slow("fs_read", ca) == 0 {
+    secure = string.starts_with(url, "https://") == 1
+    if aether_sandbox_check_slow("tcp", "${host}:${port}") == 0 {
         return "", "calculator denied by enclosing sandbox"
     }
-    req = client.request("POST", url)
+    if secure && aether_sandbox_check_slow("fs_read", ca) == 0 { return "", "calculator denied by enclosing sandbox" }
+    destination = url
+    // Pin local HTTP to the literal loopback address, including when the
+    // approved name is localhost. This mode never resolves a remote address.
+    if !secure { destination = "http://127.0.0.1:${port}/calculate" }
+    req = client.request("POST", destination)
     if req == null { return "", "cannot construct calculator request" }
     defer client.request_free(req)
     // No ambient proxy, redirects, insecure TLS or unbounded body buffering.
     err = client.ignore_http_proxy(req)
     if err == "" { err = client.set_follow_redirects(req, 0) }
     if err == "" { err = client.set_timeout(req, 5s) }
-    if err == "" { err = client.set_cafile(req, ca) }
+    if err == "" && secure { err = client.set_cafile(req, ca) }
     if err == "" { err = client.set_body(req, string.bytes(body), "application/json") }
     if err != "" { return "", err }
     resp, se = client.send_stream(req)
@@ -47,7 +53,8 @@ exchange(url: string, ca: string, host: string, port: int, body: string) -> (str
 call(url: string, ca: string, op: string, a: string, b: string) -> (string, string) {
     host, port, err = policy.endpoint(url)
     if err != "" { return "", err }
-    if ca == "" || string.char_at(ca, 0) != 47 || string.contains(ca, "*") == 1 || string.contains(ca, "?") == 1 || string.contains(ca, "[") == 1 {
+    secure = string.starts_with(url, "https://") == 1
+    if secure && (ca == "" || string.char_at(ca, 0) != 47 || string.contains(ca, "*") == 1 || string.contains(ca, "?") == 1 || string.contains(ca, "[") == 1) {
         return "", "an absolute literal CA file path is required"
     }
     if !protocol.operand(a) || !protocol.operand(b) { return "", "invalid calculator operands" }
@@ -58,7 +65,7 @@ call(url: string, ca: string, op: string, a: string, b: string) -> (string, stri
     map.map_put_string_owned(result, "error", "calculator service denied")
     grants = sandbox.new("declared calculator") {
         grant_tcp(host, port)
-        grant_fs_read(ca)
+        if secure { grant_fs_read(ca) }
     }
     defer sandbox.free(grants)
     sandbox.enforce(grants) callback {

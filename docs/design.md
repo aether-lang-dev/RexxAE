@@ -12,10 +12,11 @@ fixtures instead of an embedded JavaScript runtime.
 | src/program.ae | Expression trees and flat control-flow instructions. |
 | src/values.ae | Owned tagged values, containers and JSON boundary conversion. |
 | src/evaluate.ae | Typed evaluation, builtin dispatch, lazy IF, ARG and host/routine requests. |
-| src/builtins.ae | Initial scalar functions and converter profiles. |
+| src/builtins.ae | Scalar functions and converter profiles. |
 | src/engine.ae | Program counter, loop/call frames, lifecycle and embedding API. |
 | src/state.ae | Owned context storage, serialization and diagnostics. |
-| src/variables.ae | Literal dotted lookup and owned object-path replacement. |
+| src/variables.ae | Script tail substitution, literal host paths and owned object-path replacement. |
+| src/scopes.ae | PROCEDURE variable generations and EXPOSE sharing. |
 | src/templates.ae | PARSE word/delimiter cursor rules and input conversion. |
 
 The complete program parses before execution. Instructions have source lines;
@@ -24,9 +25,8 @@ counter. DO headers/tails and stacked loop frames retain range/count state
 and restore preexisting loop variables, including on early termination.
 SELECT uses the same branch/jump instructions: false conditions advance to
 the next WHEN, a matched body jumps past the selection, and fallback jumps
-link OTHERWISE bodies in source order. No additional runtime frame or public
-API is needed. Existing expression caching preserves partial host conditions;
-RETURN/EXIT/LEAVE/ITERATE use the existing call and loop machinery.
+link OTHERWISE bodies in source order. Expression caching preserves partial
+host conditions; RETURN/EXIT/LEAVE/ITERATE use the same call and loop machinery.
 
 Values are tagged JSON trees internally. Numeric text payloads retain
 NaN/Infinity independently of strings. Containers own tagged children.
@@ -54,15 +54,15 @@ of only v: script entries; EXPOSE shares selected roots/names. Its frame saves
 caller variables and argv. Return, EXIT and errors unwind each generation's
 loops before restoring its caller. Host registries, permission data and program
 instructions never enter these snapshots. A plain nested CALL changes argv
-for the current generation too. Explicit RETURN
-sets RESULT when the caller resumes; bare RETURN yields an empty string.
+for the current generation too. Explicit RETURN sets RESULT when the caller resumes; bare RETURN yields an empty string.
 An implicit return uses the global return value captured at call entry (null
 if none). Top-level RETURN stops execution with exit code zero. See
-routines.md for the tested forms and reference parser restrictions.
+[routines.md](routines.md) for syntax and reference parser restrictions.
 
-Serialization and copying favor straightforward ownership, not performance.
-An optimized value arena/IR can replace them behind the opaque context after
-measurement and equivalence tests.
+PARSE expression input also uses the instruction cache: no template variable
+binds until the complete input resolves. Compound writes rebuild owned
+containers and commit the new root only after success. Variables have value
+ownership rather than RexxJS object aliases.
 
 ## Host protocol
 
@@ -85,59 +85,49 @@ application work already performed.
 
 ## Both library consumers
 
-build/librexxae.so is self-contained for C/ctypes. The same source compiled
-with --shared-runtime produces build/aether/librexxae.so, allowing an Aether
+`build/librexxae.so` is self-contained for C/ctypes. The same source compiled
+with `--shared-runtime` produces `build/aether/librexxae.so`, allowing an Aether
 host to share one runtime with other libraries. Both are capability-empty.
 
-Aether hosts use import rexxae. The compiler reads the binary catalog,
+Aether hosts use `import rexxae`. The compiler reads the binary catalog,
 synthesizes declarations and links the artifact. Internal root helpers have
-private suffixes to exclude them from that catalog. test_binary_import.ae
-runs against both variants, covering typed values, commands/functions, error
-locations, nested/recursive routines and pending teardown without importing engine source. Source-import
-specs are complementary, not proof of binary linkage.
+private suffixes to exclude them from that catalog.
+[test_binary_import.ae](../tests/test_binary_import.ae) tests both variants
+without an engine source import.
 
 The pointer/string/scalar public surface avoids a cross-library closure ABI.
 Applications handle callbacks through events from C, Python or Aether.
 
-## Integration and remaining work
+## Sessions and imported code
 
-Sae owns its contexts, registers a specific API and implements authorized
-effects in services. RexxAE uses the same explicit-host model. Discovery,
-credentials, sealed transport and UI scheduling belong to host adapters.
-The library opens no listeners or OS commands by itself.
+`rexxae_create_next` accepts terminal contexts and copies script values, mounted
+function registrations and ADDRESS selection. Each submission has fresh
+instructions and caches. Code definitions, argv, pending requests and private
+call state do not carry forward. Contexts are independently owned; a host can
+discard an interrupted candidate and retain the previous state. See
+[REPL sessions](repl.md) for error and cancellation behavior.
 
-A small Python harness proves these contracts; neither sae nor the
-spreadsheet was changed or recreated.
+REQUIRE emits a function request to an explicitly mounted application resolver.
+It grants no filesystem or network authority. The
+[calculator resolver](calculator.md#importing-the-calculator-api) downloads one
+separately approved Rexx module and executes its CALC export in a child context
+with only an endpoint-bound HTTP_POST function. General module discovery and
+resolution remain application responsibilities.
 
-Next work: expand typed builtins and resolve documented parser differences;
-add full JSON paths, named arguments, Unicode and numeric formatting;
-implement positional PARSE, classic stem semantics if selected, language errors, INTERPRET
-and modules while preserving resumability. PROCEDURE/EXPOSE now follows the
-8317bd1 reference; plain routines retain shared variables. See reference-update.md
-for measured compatibility and embedding requirements. Reusable compiled programs,
-application variable lookup, ABI versioning, static/object packaging,
-cross-platform CI, resource accounting and concurrency remain to establish.
+## Authority and remaining work
 
-Judge compatibility using the actual reference runtime and differential
-fixtures. Keep differences visible in documentation and tests.
+The core library opens no listeners, files or OS commands. Applications own
+effects, credentials, transport and scheduling. Public engine entry points are
+`@pure`; import and builtin snapshots pin the engine boundary. Aether services
+retain narrow runtime fences beneath argument validation. See the
+[containment contract](containment.md) for enforcement and practical limits.
 
-PARSE expression input uses the existing instruction cache; no variables bind
-until the complete input has resolved. Template tokens compile before effects.
-Compound writes rebuild independent containers and commit the new root only
-after success. This avoids mutating parsed JSON interiors on older runtimes;
-variables have value ownership rather than RexxJS object aliases.
+Current language limits are listed in [README coverage](../README.md#coverage-and-limits);
+[compatibility gaps](reference-update.md) describe unresolved reference behavior.
+Recognized named scalar arguments and PROCEDURE/EXPOSE are implemented.
 
-Containment is tested through the compiled artifacts, with the host retaining
-fs/net/os authority and injecting only checked service calls. All 18 engine
-entry points are @pure. Import and guest-function snapshots hold the layer
-boundary; explicit service fences and std.sandbox audit assertions hold runtime
-authority. See containment.md for the sae precedents, compiler findings and
-what remains outside in-process protection.
-
-
-Host console sessions use rexxae_create_next on terminal contexts. Only script
-values, existing mounted-function registrations and ADDRESS selection carry
-forward. New instructions and caches prevent replay; code definitions, argv,
-pending requests and private call state never cross an entry boundary. The
-previous context is independently owned so a host can discard an interrupted
-candidate without rerunning it. See repl.md for the public contract and limits.
+Embedding work still includes reusable compiled programs, application variable
+lookup, discoverable function metadata, structured diagnostics, cancellation
+and complete resource quotas. ABI versioning, static/object packaging,
+cross-platform validation and concurrency guarantees are also open. Application
+algorithms and effect adapters should remain separately selectable.

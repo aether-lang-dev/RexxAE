@@ -1,6 +1,7 @@
 # Console REPL and the calculator demo
 
-Run from the repository root with Aether 0.829 selected:
+Select the [supported compiler](../README.md#build-and-test), then run from the
+repository root:
 
 ```sh
 make repl
@@ -75,12 +76,22 @@ named `h.EXEC`, `permissions.net`, etc. remains data in later entries.
 
 ## Native declared-endpoint calculator
 
-The Python console still mounts no effect services by default. The separate
-[calculator demo](calculator.md) now provides a native Aether console importing
-the compiled library and using the new EOF-aware IO API. Its host mounts only
-`CALC(operation, left, right)` after approving an exact header declaration.
-The TinyWeb server and native client select Aether TLS 1.3. See that guide for
-build requirements, containment limits and the terminal integration runner.
+The separate [calculator demo](calculator.md) uses a native Aether console
+and the compiled RexxAE library. Its startup script explicitly imports the
+function it calls:
 
-Concrete upstream stdlib wishes are recorded in
-[aether-stdlib-wishes.md](aether-stdlib-wishes.md); EOF-aware input is resolved.
+```rexx
+REQUIRE "/static/calculator.rexx"
+SAY CALC('add', '0.1', '0.2')
+```
+
+The complete [startup script](../examples/calculator/calculator.rexx) also
+declares calculator POST and module GET requests. The console asks separately
+for both permissions before executing Rexx or downloading code. The relative
+reference resolves against the configured calculator origin, and the
+[served Rexx source](../examples/calculator/static/calculator.rexx) defines CALC.
+It executes with only the approved calculator POST adapter.
+
+The calculator guide covers local HTTP, HTTPS with Aether TLS 1.3, deployment
+and the terminal integration runner. The Python console above mounts no effect
+services by default and does not provide this network resolver.

@@ -10,7 +10,7 @@ The design references are Aether's
 `/home/paul/scm/aether/docs/containment-sandbox.md` and sae's
 `/home/paul/scm/sae/docs/architecture.md`, `docs/page-services.md`,
 `services/files/module.ae`, `tests/check_layers.sh`, and
-`tests/spec_globals.ae` (reviewed 2026-10-16). The sae precedents carried here
+`tests/spec_globals.ae`. The sae precedents carried here
 are absent ungranted bindings, a service per effect, exact import/surface
 checks, typed boundary validation and a runtime service fence beneath its
 own policy. sae's planned entry-wide runtime enforcement and separate-process
@@ -29,7 +29,7 @@ containment are not assumed to be finished or inherited by RexxAE.
 | Deliberately injected privileged operation | Named trusted Aether service call, with its own narrow runtime fence. |
 | Host lexical state | `seal except`/`hide` around the hosting scope; guest values never expose native state or handles. |
 
-The public embedding API is unchanged. FUNCTION errors use reply_value's
+FUNCTION errors use reply_value's
 error argument. COMMAND vetoes return a nonzero RC/ERRORTEXT through reply.
 Ordinary script assignments, including names such as `policy.fs` or
 `h.READ_CONFIG`, affect only script variables. They cannot change the registry,
@@ -54,12 +54,10 @@ before entering the trusted enforce callback; trusted names may only be called
 inside that callback, not passed around as values.
 
 Each step/event runs in a fresh sealed deny-all enforcement frame, with the
-same host-owned grants and service routing. This originally avoided a trusted
-snapshot lifetime defect reproduced on 0.802 and 0.819. The original standalone
-long-lived-frame reproducer passes on installed 0.823.0 and the current target, 0.829.0.
-The per-event host structure remains valid; independent tests deliberately use
-one long-lived frame so it cannot mask a recurrence. See
-[aether-issues.md](aether-issues.md) for current and historical evidence.
+same host-owned grants and service routing. Independent trusted-service
+regressions also exercise repeated calls within one long-lived frame, checking
+restored authority and refusal by an enclosing sandbox. See
+[toolchain status](aether-issues.md) for resolved defects and retained checks.
 
 The test gate deliberately also mounts broad **probe-only** wrappers for file,
 environment, process and socket access. Those wrappers are not trusted and
@@ -67,7 +65,7 @@ run under deny-all; every attempted acquisition is refused and audited. They
 are test adversaries, not recommended application bindings. Production hosts
 should leave those bindings unregistered.
 
-Twenty std.spec cases per artifact cover:
+The binary containment specs cover:
 
 - Positive host file access and the injected service's successful read.
 - Unmounted functions, native names, loaders and dynamic constructor attempts.
@@ -81,7 +79,7 @@ Twenty std.spec cases per artifact cover:
 - Context registry isolation, inaccessible host lexical state and bounded loops.
 - Host session continuation retaining mounted services while preserving deny-all authority.
 
-Three additional std.spec cases in `tests/test_trusted_service.ae` run without
+[Trusted-service specs](../tests/test_trusted_service.ae) also run without
 the engine. They assert repeated reads in one frame, restoration after success
 and early refusal, and repeated vetoes by an enclosing sandbox. They run in
 `make containment` and under Valgrind in `make memcheck`.
@@ -105,20 +103,19 @@ OS sandbox for arbitrary Python code.
 
 ## Compiler guards and observed gaps
 
-All 18 public engine entry points are @pure. Builds pass no --with grants.
+All public engine entry points are @pure. Builds pass no --with grants.
 The containment checker verifies those tags, the reviewed guest surface and
-engine/service import boundaries. Eleven negative compilation probes check
+engine/service import boundaries. Negative compilation probes check
 fs/net/os gates, direct foreign symbols, direct and transitive @pure violations,
 sealed reads/mutations/nested reads, escaped trusted-function values, and
 trusting an extern C function. A failed probe must contain the expected
 permission diagnostic; unrelated syntax/build failures do not count as denials.
 
-An observed Aether gap matters: on both tested compilers, untagged std.file
-calls compile under --emit=lib without an fs grant. The broad std.fs import
-is rejected. RexxAE therefore does not rely on that gate alone: engine imports
+Untagged std.file calls compiled under --emit=lib without an fs grant on the
+inspected toolchains. The broad std.fs import is rejected. RexxAE therefore does not rely on that gate alone: engine imports
 are pinned without std.file, public entry points are @pure, and runtime
 backstops are tested independently. Both direct and transitive file.read
-calls from @pure probes are rejected. The Aether checkout was not changed.
+calls from @pure probes are rejected.
 
 ## Practical limits
 

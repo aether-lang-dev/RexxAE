@@ -16,10 +16,10 @@ language and builtins in `.ae` files.
 - `/home/paul/scm/aether/` contains the compiler, `std/` and `contrib/`.
   Prefer these facilities to new C code or an npm dependency. The dev-tree
   `build/ae` may differ from the installed `ae`; check the executable version.
-  The current target is installed Aether **0.829.0**.
+  README.md is authoritative for supported toolchain versions and validation totals.
 - Keep reference checkouts unchanged unless the user asks otherwise.
 - The optional calculator host needs Aether commit 7b48889a's EOF-aware IO;
-  development `build/ae` reports 0.830.0. Use `CALC_AE` and the isolated
+  see README.md for the validated development compiler. Use `CALC_AE` and the isolated
   `build/calculator` targets. Run `make calculator-test`; the terminal runner
   `tools/test_calculator_tls.py` performs required live TLS checks and records
   failure when sockets are unavailable. Never count those checks as passed
@@ -59,8 +59,8 @@ Retain the other complementary layers:
 
 Run the relevant specs while developing and `make test parity` before
 finishing a change. Use `make -B test parity memcheck AE=/home/paul/.aether/bin/ae`
-to rebuild and verify against installed 0.829.0. The development-tree executable
-may be older; verify its version before selecting it. Do not hide failing fixtures,
+to rebuild against the supported installed compiler. Check the executable
+version before selecting a development compiler. Do not hide failing fixtures,
 silently skip available tests, or describe untested functionality as parity.
 Do not run builds and tests against a compiler being rebuilt concurrently.
 
@@ -128,9 +128,9 @@ roadmap when citing it as a precedent.
 ## Updated reference audit
 
 RexxJS 8317bd1 is the current target; spreadsheet c19848d vendors b3d5e4e.
-All 61 shared core source files match. docs/reference-update.md and
-reference-audit.json record the measured gaps: 507/507 existing programs match,
-but only 16/28 new update/boundary probes match. The next native task is
+The shared core source files match. docs/reference-update.md records current
+gaps; docs/reference-audit.json retains the dated measurements. README.md
+contains validation totals. The next native task is
 variable-led ADDRESS clauses. Assigned CALL expressions need a reference
 semantics decision; do not copy surprising reference parser output silently.
 `make reference-audit` characterizes both pins using
@@ -153,3 +153,11 @@ The downloaded CALC routine executes in an independent binary-engine context
 with only an endpoint-bound HTTP_POST service. Retain download size/step bounds,
 redirect/proxy refusal, enclosing-sandbox denial and changed-source execution
 proofs. Test both binary consumers and unmounted-loader denial.
+
+## Documentation maintenance
+
+Keep main guides focused on current usage, contracts and limitations. Put dated
+investigations and superseded plans in docs/archive with an explicit historical
+label. README.md owns supported toolchain versions and validation totals;
+other guides link there rather than duplicating counts. Keep generated function
+inventories reproducible through their generator.

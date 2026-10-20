@@ -6,12 +6,11 @@ and force `AETHER_PURE_TLS=1` for HTTPS. TLS terminates in the application.
 An explicit loopback HTTP mode also supports local testing without certificates.
 OpenSSL is used only to generate disposable test certificates.
 
-The core engine still targets installed Aether 0.829.0. This optional demo needs
-`std.io.fd_read_line_status`, added by Aether commit
-`7b48889abddb9575338d32cbf6e44f468978ce93`. The development compiler at
-`/home/paul/scm/aether/build/ae` reports 0.830.0 and includes that commit.
-Its library and host artifacts live separately in `build/calculator`, avoiding
-mixing compilers with the existing C and Aether consumers.
+The optional native console needs `std.io.fd_read_line_status`. See
+[README build requirements](../README.md#build-and-test) and the
+[calculator compiler requirement](../README.md#tinyweb-calculator-demo).
+Set `CALC_AE` to a compiler with that API. Its library and application artifacts
+live in `build/calculator`, separate from the core build.
 
 ## Run the integration suite in a terminal
 

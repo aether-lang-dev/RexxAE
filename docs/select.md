@@ -58,8 +58,8 @@ reply advances to the next WHEN. A true reply prevents later conditions from
 running. Invalid JSON replies leave the request pending; accepted host errors
 terminate at the condition or body line.
 
-SELECT compiles into the existing branch and jump instructions. There is no
-new public C or Aether API, and no selection frame to retain across yields.
+SELECT compiles into branch and jump instructions. It uses the same public
+C/Aether event API and needs no selection frame across yields.
 Branch and jump instructions count toward the existing instruction budget.
 The complete source still parses before any application effect is dispatched.
 Malformed selections and excessive nesting therefore fail during creation.
@@ -79,11 +79,7 @@ WHEN magnitude > 4 THEN SAY 'match'
 END
 ```
 
-The SELECT fixture file contains 27 matching complete programs shared by
-std.spec, ctypes and the actual RexxJS interpreter. Eight additional native
-specs cover host-condition memoization, errors, parse-before-effect behavior,
-EXIT/loop unwinding, nesting limits and suspended teardown. Host differential
-cases compare the exact dispatch order and typed replies. Aether binary
-consumers exercise both self-contained and shared-runtime libraries, including
-pending conditions, errors and teardown. The C counter and Python host harness
-also execute selected branches. Valgrind covers all native test executables.
+[SELECT fixtures](../tests/select_cases.json) compare complete programs and
+host dispatch order against RexxJS. [Native specs](../tests/test_select.ae)
+cover memoization, errors, parse-before-effect behavior, loop unwinding and
+suspended teardown. Binary consumers exercise both library variants.

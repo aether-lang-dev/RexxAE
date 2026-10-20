@@ -11,11 +11,10 @@ values, 71 builtins with limited profiles, registered application functions, lab
 comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
 
 Current references are RexxJS `8317bd1` and spreadsheet `c19848d`
-(vendoring `b3d5e4e`). All **507 existing differential programs** still match
-both reference engines. A separate 28-program update audit matches 16 and
-identifies variable-led ADDRESS clauses as the next native change; assigned
-CALL expressions also need a reference-semantics decision. The audit includes
-unsupported/boundary cases and is not counted as passing parity. See
+(vendoring `b3d5e4e`). Strict differential fixtures match both reference
+engines. The separate update audit identifies variable-led ADDRESS clauses as an implementation gap;
+assigned CALL expressions also need a reference-semantics decision. Its
+unsupported boundary cases are not counted as passing parity. See
 [the reference report](docs/reference-update.md) for the concrete gaps.
 
 ## Build and test
@@ -37,18 +36,15 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Use `AE=/home/paul/.aether/bin/ae` to select the installed 0.829.0 compiler.
-Check `ae --version` before testing; the development-tree executable may be
-older than the installed release. Use `make -B` when switching compilers to
-rebuild libraries and consumers together. Make keeps its Aether cache under
+Use `AE=/home/paul/.aether/bin/ae` to select the installed compiler.
+Check `ae version` before testing; installed and development executables can
+differ. Use `make -B` when switching compilers to rebuild libraries and
+consumers together. Make keeps its Aether cache under
 `build/cache`.
 
-Linux validation targets installed Aether 0.829.0: 405 native specs, 507 RexxJS
-comparisons, both binary-library variants, containment probes and Valgrind.
-The previous compiler/stdlib annotation blocker is resolved. The repeated
-trusted-service lifetime reproducer now passes, with three automated regression
-specs protecting repeated calls and enclosing restrictions. See
-[Aether findings](docs/aether-issues.md).
+[Validation results](#verification-and-references) cover Linux, both library
+variants and containment. [Aether integration status](docs/aether-issues.md)
+records open transport concerns and resolved toolchain regressions.
 The Makefile has a macOS library/rpath branch; macOS and Windows remain
 untested. Static/object packaging is a follow-up.
 
@@ -174,7 +170,8 @@ for the deployment model and endpoint configuration.
 
 Enter, denial or EOF prevents the script from running. Piped input cannot
 approve requests; automation must explicitly set `CALC_APPROVE_ENDPOINT` to
-exactly `CALC_ENDPOINT`. See [permission approval](docs/calculator.md#permission-approval-in-the-native-repl)
+exactly `CALC_ENDPOINT` and `CALC_APPROVE_MODULE_URL` to the complete module URL.
+See [permission approval](docs/calculator.md#permission-approval-in-the-native-repl)
 for the prompt and the host policy contract.
 
 ## Embed through the C interface
@@ -279,12 +276,15 @@ Supported now:
   with nested branches and first-match execution.
 - DO ranges/BY, repeat, WHILE, UNTIL, FOREVER and array/object OVER;
   innermost LEAVE/ITERATE, with existing loop variables restored as in RexxJS.
+- REQUIRE with a quoted reference and optional literal AS prefix, dispatched
+  to an explicitly mounted resolver; the calculator supplies a relative HTTP resolver.
 - SAY, ADDRESS/quoted commands, integer EXIT, clause separators, comments,
   CRLF and doubled quotes. Keywords/functions ignore case; variables retain it.
 
 Still needed: positional PARSE templates, classic stem defaults, interpolation,
-double-quoted escapes, INTERPRET, language error handlers, modules and many
-remaining functions. Missing symbols return their derived uppercase names;
+double-quoted escapes, INTERPRET, language error handlers, general module
+resolution and many remaining functions. Missing symbols return their derived
+uppercase names;
 ARRAY_GET/JSON_GET missing properties still error rather than returning JS
 undefined. Nested writes through arrays are diagnosed as unsupported. JSON_GET supports direct object keys, not full paths.
 Named typed/host arguments are incomplete. Text functions remain ASCII-only
@@ -321,19 +321,24 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-`make test` runs 405 native std.spec cases (including both binary variants),
-ctypes protocol checks, twelve Python session/console tests, the C example
-and Python host harness. `make parity`
+On the supported core compiler, `make test` runs 405 native std.spec cases
+(including both binary variants), ctypes protocol checks, twelve Python
+session/console tests, the C example and Python host harness. `make parity`
 compares 507 programs, including host-call arguments/results, with RexxJS
-`8317bd1` and the spreadsheet vendor. All pass. Seven documented compatibility differences remain
-separately asserted, and are not counted as parity. The same 125
-function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
-the C example and all thirteen native spec executables. Eleven compiler
+`8317bd1`. The dated standalone/vendor audit records the same results; its
+additional 28 boundary probes match 16 and remain separate from strict parity.
+Seven documented compatibility differences remain separately asserted and
+are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
+the C example and the native spec executables. Eleven compiler
 rejection probes and the pinned guest/import surfaces protect the containment
-contract.
+contract. The optional calculator's 29 native specs and 30 Python console tests
+also pass using its development compiler. Module execution passes Valgrind.
+Live HTTP/TLS verification remains pending: this workspace forbids sockets;
+run the terminal integration runner above to collect that evidence.
 
 See [design.md](docs/design.md), [compatibility-baseline.md](docs/compatibility-baseline.md),
 [function-policy.md](docs/function-policy.md) and the generated
 [function inventory](docs/function-inventory.md). The inventory covers 386
 core functions, 119 converter helpers and 42 optional manifests.
-[AGENTS.md](AGENTS.md) records contributor and testing rules.
+[Documentation index](docs/README.md) links the usage guides, contracts and
+archived investigations. [AGENTS.md](AGENTS.md) records contributor and testing rules.

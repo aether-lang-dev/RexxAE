@@ -2,8 +2,8 @@
 
 RexxJS is the behavioral reference. Its npm ecosystem is useful evidence for
 what people can do, not a requirement to bundle every dependency in an
-embedded native interpreter. Decisions below are provisional. No optional
-function family has been permanently removed by this initial implementation.
+embedded native interpreter. Decisions below are provisional; optional families
+remain candidates for native implementations or adapters.
 
 ## Function inventory
 
@@ -29,8 +29,8 @@ manual analysis. Source revisions and live registration remain the baseline.
 
 | Family | Approach |
 |---|---|
-| Scalar strings and deterministic maths | Implement in Aether over std.string/std.math, with parser-level differential fixtures. 60 functions have an initial implementation. |
-| Arrays, JSON, data manipulation and schema | Eleven initial typed/context functions are implemented; extend collection and schema coverage using std.list/std.map/std.json/std.schema with differential fixtures. |
+| Scalar strings and deterministic maths | Implement in Aether over std.string/std.math, with parser-level differential fixtures. 60 functions have native implementations. |
+| Arrays, JSON, data manipulation and schema | Eleven typed/context functions are implemented; extend collection and schema coverage using std.list/std.map/std.json/std.schema with differential fixtures. |
 | Regex and validation | std.regex is a starting point; PCRE and JS RegExp differ in flags, matches, replacements and Unicode behavior. Port with dedicated fixtures. |
 | Time and randomness | Separate deterministic operations from host clock/entropy inputs. Date parsing/time zones and seeded behavior need an explicit profile. |
 | Crypto, encodings and IDs | std.cryptography/std.encoding/std.uuid/std.nanoid provide candidates. Review password/JWT and security-sensitive behavior individually; names alone do not establish equivalence. |
@@ -70,7 +70,7 @@ unimplemented. Exact names and source ownership appear in the inventory.
 
 Eleven additional functions operate on typed values and call context: JSON_PARSE,
 JSON_STRINGIFY, JSON_GET, JSON_KEYS, ARRAY_GET, ARRAY_LENGTH, ARRAY_PUSH,
-JOIN, TYPEOF, lazy IF and ARG. This is an initial profile, not the complete
+JOIN, TYPEOF, lazy IF and ARG. This profile covers part of the
 RexxJS JSON/array API. JOIN joins text; ARRAY_JOIN is a different, relational
 operation and remains unimplemented.
 
@@ -97,7 +97,7 @@ Current restrictions and behavior:
 - Owned values support null, booleans, numbers, strings, arrays and objects.
   Converter defaults distinguish numeric zero from the string `'0'`.
   Undefined, reference identity and general JavaScript coercion remain
-  outside this initial profile. JSON_GET currently accepts a direct key;
+  unsupported. JSON_GET currently accepts a direct key;
   missing keys/indices produce errors rather than undefined.
 - Numeric results use floating point. Finite numeric-prefix parsing matches
   the tested parseFloat cases. Infinity input text, all extreme magnitudes,
@@ -151,22 +151,16 @@ a versioned compatibility policy instead of silently changing the port.
 
 ## Tests
 
-`make test` runs 397 std.spec cases: 125 shared function fixtures, 35
-behavior/lifecycle/typed specs, 80 routine/migration specs, 35 SELECT specs, 38 PARSE and
-compound specs, sixteen binary-import specs per library variant, twenty
-containment specs per variant, nine session specs, and three standalone
-trusted-service lifetime specs. It also runs Python/ctypes checks, a native C
-host and a Python host harness. Actual binary consumers use `import rexxae`.
+`make test` exercises function fixtures, execution/lifecycle behavior, both
+Aether binary consumers, C/ctypes hosts and containment. `make parity` compares
+complete programs and host-call arguments/results against the selected RexxJS
+checkout. Known differences assert both results separately and do not count
+as parity. See the [README](../README.md#verification-and-references) for totals.
 
-`make parity` compares 507 complete programs with RexxJS 8317bd1, including host-call
-arguments/results. All match. See reference-update.md for the vendor comparison.
-Seven known differences have separate native/reference
-assertions and are not counted as matching programs. `make containment` also
-runs eleven compiler rejection probes, checks @pure entry points and pins
-the guest-function/import surfaces. `make memcheck` checks the C example and
-all thirteen native spec executables, including recursive and suspended teardown.
+`make containment` checks runtime denials, compiler guards, `@pure` entry
+points and pinned guest/import surfaces. `make memcheck` covers native tests,
+including recursive calls and suspended teardown.
 
-The engine imports std.json but builds without filesystem/system grants and
-with @pure public entry points. Host service tests deliberately import effect
-modules outside the engine and enforce narrow runtime grants. Only fixture
-runners read golden files. Make places cache files under build/cache.
+The engine imports std.json, builds without filesystem/system grants and
+keeps public entry points `@pure`. Effect-capable test services live outside
+the engine and enforce narrow grants. See [containment](containment.md).

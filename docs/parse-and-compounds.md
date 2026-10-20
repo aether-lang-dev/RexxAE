@@ -116,9 +116,7 @@ integer object keys in ascending order before other keys in insertion order;
 are accepted; empty objects error. String/scalar/array-like OVER remains outside
 this profile.
 
-The fixture file has 29 complete programs shared by std.spec, ctypes and
-RexxJS. Nine additional native specs cover evaluated WITH input, no replay,
-public compound access, rejected writes, depth bounds and pending teardown.
-Actual Aether binary consumers test the typed boundary with both library
-variants. The C and Python host examples also parse replies and use the
-compound values they own.
+[PARSE fixtures](../tests/parse_cases.json) compare complete programs with
+RexxJS. [Native specs](../tests/test_parse.ae) cover evaluated input without
+replay, public compound access, rejected writes, depth limits and pending
+teardown. Binary consumers exercise typed values through both library variants.

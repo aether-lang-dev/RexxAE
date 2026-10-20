@@ -94,13 +94,13 @@ RETURN answer
 
 Positional PARSE templates, omitted positional slots, external script loading,
 internal routines invoked as expression functions and
-SIGNAL/error handlers remain outside this slice. CALL to implemented builtins
-has a tested initial profile; the reference uses a separate, less consistent
+SIGNAL/error handlers remain unsupported. CALL to implemented builtins
+has a tested subset; the reference uses a separate, less consistent
 conversion path there. Broad converter equivalence is not claimed.
 
 ## Execution and verification
 
-The public C/Aether API is unchanged. Each call frame retains the return
+Calls use the same public C/Aether event API. Each call frame retains the return
 instruction, caller's expression cache and loop-stack base. Recursion gets
 separate caches even when the AST node IDs repeat. Returning restores the
 caller cache and records the result of its suspended CALL, so host effects in
@@ -111,10 +111,9 @@ The current call-depth limit is 128. Exceeding it produces a terminal script
 error at the calling line. Destroying an errored, pending or budget-suspended
 context frees all active frames and caches.
 
-`routine_cases.json` contains 44 complete programs shared by std.spec, ctypes
-and RexxJS. Another 24 migration probes run natively and differentially. Native lifecycle specs additionally cover pending requests, error
-locations, recursion limits, early EXIT and teardown. Actual Aether binary
-consumers test both self-contained and shared-runtime libraries. The C counter
-uses a routine; the Python harness uses nested routines to steer typed host
-functions. Valgrind covers every native executable, including both binary
-consumers.
+[Routine fixtures](../tests/routine_cases.json) and
+[migration probes](../tests/reference_migration.json) run natively and against
+RexxJS. [Native specs](../tests/test_routines.ae) additionally exercise
+memoization, recursion limits, source locations, early EXIT and teardown.
+Binary-library consumers cover both library variants; `make memcheck` checks
+recursive and suspended ownership paths.

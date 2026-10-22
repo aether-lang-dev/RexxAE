@@ -1,6 +1,13 @@
-# Validated target: Aether 0.829.0 (check the selected executable version).
-AE ?= ae
-# Requires fd_read_line_status from Aether commit 7b48889a (0.830 development).
+# Validated release; README documents requirements and verification status.
+AETHER_RELEASE := 0.838.0
+AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
+AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
+# A local extracted release must resolve its own compiler and stdlib.
+ifeq ($(abspath $(AE)),$(AETHER_LOCAL)/bin/ae)
+ifeq ($(strip $(AETHER_HOME)),)
+export AETHER_HOME := $(AETHER_LOCAL)
+endif
+endif
 CALC_AE ?= $(AE)
 CC ?= cc
 REXXJS ?= ../RexxJS

@@ -87,7 +87,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
     value, err = service.call(endpoint, ca, op, a, b)
     encoded = json.str(value)
     defer json.json_free(encoded)
-    text, _err = json.stringify(encoded)
+    text, _err = json.encode(encoded)
     rexxae.rexxae_reply_value(ctx, text, err)
 }
 

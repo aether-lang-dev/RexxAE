@@ -196,6 +196,27 @@ def parity_programs():
 
 
 class EngineTests(unittest.TestCase):
+    def test_borrowed_c_strings_include_empty_and_unicode_payloads(self):
+        # Read raw addresses: c_char_p would copy and hide payload ABI mistakes.
+        raw_text = ctypes.CFUNCTYPE(P, P)(('aether_rexxae_text', lib))
+        ctx = create("SAY ''; SAY 'héllo'".encode())
+        self.assertTrue(ctx)
+        try:
+            self.assertEqual(step(ctx, 100), 1)
+            empty = raw_text(ctx)
+            self.assertTrue(empty, 'empty output still has a C string address')
+            self.assertEqual(ctypes.string_at(empty), b'')
+            self.assertEqual(raw_text(ctx), empty, 'getter borrows stable storage')
+            self.assertEqual(step(ctx, 100), 1)
+            payload = raw_text(ctx)
+            self.assertEqual(ctypes.string_at(payload), 'héllo'.encode())
+            self.assertEqual(line(ctx), 1)
+            self.assertEqual(raw_text(ctx), payload, 'inspection retains the payload')
+            self.assertIsNone(get_variable_json(ctx, b'missing'))
+            self.assertEqual(step(ctx, 100), 0)
+        finally:
+            destroy(ctx)
+
     def test_documented_parser_differences(self):
         differences = json.loads(Path(__file__).with_name('known_differences.json').read_text())
         for case in differences:

@@ -65,9 +65,12 @@ def require(condition, detail):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ae', default='/home/paul/scm/aether/build/ae')
+    local_ae = ROOT / 'build/toolchains/aether-0.838.0/bin/ae'
+    parser.add_argument('--ae', default=str(local_ae) if local_ae.exists() else 'ae')
     parser.add_argument('--report', type=Path, default=ROOT / 'build/calculator/tls-report.json')
     args = parser.parse_args()
+    if Path(args.ae).resolve() == local_ae.resolve() and local_ae.exists():
+        os.environ['AETHER_HOME'] = str(local_ae.parent.parent)
     args.report = args.report.resolve()
     args.report.parent.mkdir(parents=True, exist_ok=True)
     report = {'passed': False, 'compiler': args.ae, 'checks': [],
@@ -91,9 +94,8 @@ def main():
     try:
         version = subprocess.run([args.ae, 'version'], text=True, capture_output=True, check=True, timeout=20)
         report['compiler_version'] = version.stdout
-        report['aether_commit'] = subprocess.run(
-            ['git', '-C', '/home/paul/scm/aether', 'rev-parse', 'HEAD'],
-            text=True, capture_output=True, timeout=10).stdout.strip()
+        # The version output identifies both ae and the actual aetherc. A
+        # nearby source checkout does not identify a released toolchain.
 
         def build():
             p = subprocess.run(['make', '-B', 'calculator-test', f'CALC_AE={args.ae}'], cwd=ROOT,

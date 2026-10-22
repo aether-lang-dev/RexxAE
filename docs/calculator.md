@@ -6,24 +6,22 @@ and force `AETHER_PURE_TLS=1` for HTTPS. TLS terminates in the application.
 An explicit loopback HTTP mode also supports local testing without certificates.
 OpenSSL is used only to generate disposable test certificates.
 
-The optional native console needs `std.io.fd_read_line_status`. See
-[README build requirements](../README.md#build-and-test) and the
-[calculator compiler requirement](../README.md#tinyweb-calculator-demo).
-Set `CALC_AE` to a compiler with that API. Its library and application artifacts
-live in `build/calculator`, separate from the core build.
+The console and service use the [supported release](../README.md#build-and-test),
+including `std.io.fd_read_line_status`. `CALC_AE` defaults to the core compiler;
+its library and application artifacts live in `build/calculator`.
 
 ## Run the integration suite in a terminal
 
 ```sh
 cd /home/paul/scm/rexxae/RexxAE
-python3 tools/test_calculator_tls.py --ae /home/paul/scm/aether/build/ae
+python3 tools/test_calculator_tls.py
 cat /home/paul/scm/rexxae/RexxAE/build/calculator/tls-report.json
 ```
 
 Send back `tls-report.json` and, on failure, the `.build.log`, `.http-server.log`
 and `.server.log` beside it when present. No GitHub Actions, cloud account or public listener is needed. The
 runner requires Python 3, make, OpenSSL for certificate generation and the
-development Aether compiler. It rebuilds everything, runs offline tests, generates
+supported Aether compiler. It rebuilds everything, runs offline tests, generates
 temporary P-256 certificates, starts the server on an unused loopback port and
 cleans up its processes and private keys. Unavailable sockets fail the run.
 
@@ -41,7 +39,7 @@ dependent checks, leaving an overall failed report.
 Build the native server and console, then start the calculator service in one terminal:
 
 ```sh
-make calculator CALC_AE=/home/paul/scm/aether/build/ae
+make calculator
 CALC_HTTP=1 ./build/calculator/calculator-service
 ```
 
@@ -72,7 +70,7 @@ There is no automatic downgrade from HTTPS. The GCP workflow below uses HTTPS.
 ## Offline console and manual HTTPS use
 
 ```sh
-make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
+make calculator-test
 printf '\nLET x = 40\n= x + 2' | ./build/calculator/calculator-console
 ```
 

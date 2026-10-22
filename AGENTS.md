@@ -18,8 +18,8 @@ language and builtins in `.ae` files.
   `build/ae` may differ from the installed `ae`; check the executable version.
   README.md is authoritative for supported toolchain versions and validation totals.
 - Keep reference checkouts unchanged unless the user asks otherwise.
-- The optional calculator host needs Aether commit 7b48889a's EOF-aware IO;
-  see README.md for the validated development compiler. Use `CALC_AE` and the isolated
+- The calculator uses the same released compiler as the engine; see README.md.
+  `CALC_AE` defaults to `AE`. Keep the isolated
   `build/calculator` targets. Run `make calculator-test`; the terminal runner
   `tools/test_calculator_tls.py` performs required live TLS checks and records
   failure when sockets are unavailable. Never count those checks as passed
@@ -58,9 +58,9 @@ Retain the other complementary layers:
   both native and reference results. Do not count these cases as parity.
 
 Run the relevant specs while developing and `make test parity` before
-finishing a change. Use `make -B test parity memcheck AE=/home/paul/.aether/bin/ae`
-to rebuild against the supported installed compiler. Check the executable
-version before selecting a development compiler. Do not hide failing fixtures,
+finishing a change. Use `make -B test parity memcheck` to rebuild all consumers
+against the supported compiler listed in `README.md`. When selecting another
+compiler, check both `ae` and `aetherc` versions. Do not hide failing fixtures,
 silently skip available tests, or describe untested functionality as parity.
 Do not run builds and tests against a compiler being rebuilt concurrently.
 

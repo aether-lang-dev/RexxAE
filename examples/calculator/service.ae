@@ -101,7 +101,7 @@ post(endpoint: string, ca: string, path: string, body: string) -> (string, strin
     result = json.obj()
     defer json.json_free(result)
     json.set(result, "result", json.str(value))
-    text, _err = json.stringify(result)
+    text, _err = json.encode(result)
     return text, ""
 }
 

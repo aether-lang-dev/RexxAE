@@ -14,7 +14,7 @@ import examples.services.config
 
 encoded(text: string) -> string {
     value = json.str(text)
-    result, _err = json.stringify(value)
+    result, _err = json.encode(value)
     json.json_free(value)
     return result
 }

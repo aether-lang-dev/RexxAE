@@ -70,7 +70,7 @@ run(source: string, arguments: string, post: fn) -> (string, string) {
             path = string.copy(rexxae.rexxae_argument_text(ctx, 0))
             if path != "/calculate" { return "", "module POST destination is not approved" }
             values, _values_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
-            body, _body_error = json.stringify(json.json_array_get_raw(values, 1))
+            body, _body_error = json.encode(json.json_array_get_raw(values, 1))
             json.json_free(values)
             if string.length(body) > 512 { return "", "module POST body exceeds 512 bytes" }
             request = map.map_new()

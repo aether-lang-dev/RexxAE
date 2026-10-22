@@ -24,7 +24,7 @@ boolean(value: bool) -> ptr {
 }
 null_value() -> ptr { return wrap(0, json.null_value()) }
 clone(value: ptr) -> ptr {
-    encoded, err = json.stringify(value)
+    encoded, err = json.encode(value)
     if err != "" { return null }
     return json.json_parse_raw(encoded)
 }

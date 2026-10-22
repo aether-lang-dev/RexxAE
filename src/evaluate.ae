@@ -80,7 +80,7 @@ typed_call(ctx: ptr, name: string, args: ptr) -> ptr {
         if k == 0 || (k == 1 && values.text(a) == "false") || (k == 2 && values.text(a) == "0") || (k == 3 && values.text(a) == "") { return values.string_value("{}") }
         raw = values.to_json(a, 0)
         if raw == null { state.fail(ctx, "value cannot be represented as JSON"); return null }
-        encoded, err = json.stringify(raw)
+        encoded, err = json.encode(raw)
         json.json_free(raw)
         if err != "" { state.fail(ctx, err); return null }
         return values.string_value(encoded)

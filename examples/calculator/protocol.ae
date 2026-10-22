@@ -60,7 +60,7 @@ request_body(op: string, a: string, b: string) -> string {
     json.set(obj, "op", json.str(op))
     json.set(obj, "a", json.str(a))
     json.set(obj, "b", json.str(b))
-    text, _err = json.stringify(obj)
+    text, _err = json.encode(obj)
     return text
 }
 
@@ -89,7 +89,7 @@ handle(body: string) -> (string, int) {
         json.set(out, "error", json.str(err))
         status = 400
     } else { json.set(out, "result", json.str(value)) }
-    text, _err = json.stringify(out)
+    text, _err = json.encode(out)
     return text, status
 }
 

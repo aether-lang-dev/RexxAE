@@ -24,7 +24,7 @@ load(ctx: ptr, key: string) -> ptr {
     return json.json_parse_raw(encoded)
 }
 save(ctx: ptr, key: string, value: ptr) {
-    encoded, err = json.stringify(value)
+    encoded, err = json.encode(value)
     if err != "" { fail(ctx, err); return }
     write(ctx, key, encoded)
 }

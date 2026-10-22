@@ -1,7 +1,7 @@
 {
   "previous_reference_revision": "e3bd4e975e96d674d85be5deb6b76a7c26f0deef",
   "probe_fixture": "tests/reference_update_20261019.json",
-  "native_source_sha256": "f3f0aa81692755753a13d6259c096ca5c8c597e6f766df9e9e476138e239f189",
+  "native_source_sha256": "c97eef0ad76f8448d17c86ec8c6441fa056bf5dab12e7e0a6f2c89b7235f6d66",
   "spreadsheet_revision": "c19848d9997fb746a077c336d50b86e739a99483",
   "spreadsheet_vendored_revision": "b3d5e4ef7085180e2a9016ec11fb1eefccb2f5a2",
   "references": [

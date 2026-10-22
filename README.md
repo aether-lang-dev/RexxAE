@@ -19,7 +19,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.829.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.838.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -36,7 +36,13 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Use `AE=/home/paul/.aether/bin/ae` to select the installed compiler.
+Install and select the release with `ae version install 0.838.0` and
+`ae version use 0.838.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Alternatively, an official release extracted to
+`build/toolchains/aether-0.838.0` is selected automatically by Make; it sets
+`AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
+overrides the executable; an extracted installation also needs its matching
+`AETHER_HOME=/path/to/release`.
 Check `ae version` before testing; installed and development executables can
 differ. Use `make -B` when switching compilers to rebuild libraries and
 consumers together. Make keeps its Aether cache under
@@ -70,8 +76,8 @@ cancellation and session behavior.
 
 The optional [calculator demo](docs/calculator.md) adds a native Aether console,
 an explicitly imported Rexx `CALC` function, and a TinyWeb HTTPS endpoint using
-pure-Aether TLS 1.3. It needs the development stdlib containing Aether commit
-`7b48889a` (the development compiler reports 0.830.0).
+pure-Aether TLS 1.3. It uses the same released compiler and stdlib as the core
+engine, including EOF-aware terminal input.
 
 The [calculator script](examples/calculator/calculator.rexx) explicitly imports
 its API before calling it:
@@ -93,8 +99,8 @@ The function is defined in the [served Rexx module](examples/calculator/static/c
 ### Local integration checks
 
 ```sh
-make calculator-test CALC_AE=/home/paul/scm/aether/build/ae
-python3 tools/test_calculator_tls.py --ae /home/paul/scm/aether/build/ae
+make calculator-test
+python3 tools/test_calculator_tls.py
 ```
 
 The terminal runner writes `build/calculator/tls-report.json` and logs. Offline
@@ -106,7 +112,7 @@ under `deploy/calculator` are not installed or provisioned automatically.
 For local testing without SSL, start the Aether server in one terminal:
 
 ```sh
-make calculator CALC_AE=/home/paul/scm/aether/build/ae
+make calculator
 CALC_HTTP=1 ./build/calculator/calculator-service
 ```
 
@@ -135,7 +141,7 @@ its hostname and explicit port. The CA file shown is the usual Debian/Ubuntu
 trust bundle; use an absolute path to the appropriate CA bundle on your OS.
 
 ```sh
-make build/calculator/calculator-console CALC_AE=/home/paul/scm/aether/build/ae
+make build/calculator/calculator-console
 calc_endpoint='https://calculator.example.com:8443/calculate'
 
 # Give the test script the exact endpoint the host will approve.
@@ -332,7 +338,7 @@ are not counted as parity. The same 125 function fixtures run natively, through 
 the C example and the native spec executables. Eleven compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract. The optional calculator's 29 native specs and 30 Python console tests
-also pass using its development compiler. Module execution passes Valgrind.
+also pass using the same release. Module execution passes Valgrind.
 Live HTTP/TLS verification remains pending: this workspace forbids sockets;
 run the terminal integration runner above to collect that evidence.
 

@@ -19,6 +19,16 @@ exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_r
     rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
     rexxae_argument_text, rexxae_argument_type)
 
+// Borrow the map-owned payload for the C ABI through public stdlib APIs.
+// string.bytes has no view for an empty string; provide a pinned NUL byte.
+borrow_text_(ctx: ptr, key: string) -> ptr {
+    if map.map_get_raw(ctx, key) == null { return null }
+    value, error = map.get_string(ctx, key)
+    if error != "" { return null }
+    if string.length(value) == 0 { return string.bytes("\0") as ptr }
+    return string.bytes(value) as ptr
+}
+
 frame_key_(depth: int) -> string { return string.concat("loop:", string.from_int(depth)) }
 variable_key_(name: string) -> string { return string.concat("v:", name) }
 
@@ -501,7 +511,7 @@ rexxae_get_variable_json(ctx: ptr, name: string) -> ptr {
     if raw == null { return null }
     state.save(ctx, "inspect", raw)
     json.json_free(raw)
-    return string.aether_string_raw_ptr(map.map_get_raw(ctx, "inspect"))
+    return borrow_text_(ctx, "inspect")
 }
 @pure
 rexxae_argument_type(ctx: ptr, index: int) -> int {
@@ -521,18 +531,18 @@ rexxae_argument_text(ctx: ptr, index: int) -> ptr {
     if value == null { return null }
     state.write(ctx, "argument_text", values.text(value))
     json.json_free(value)
-    return string.aether_string_raw_ptr(map.map_get_raw(ctx, "argument_text"))
+    return borrow_text_(ctx, "argument_text")
 }
 @pure
-rexxae_text(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "text")) }
+rexxae_text(ctx: ptr) -> ptr { return borrow_text_(ctx, "text") }
 @pure
-rexxae_address(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "address")) }
+rexxae_address(ctx: ptr) -> ptr { return borrow_text_(ctx, "address") }
 @pure
-rexxae_error(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "error")) }
+rexxae_error(ctx: ptr) -> ptr { return borrow_text_(ctx, "error") }
 @pure
-rexxae_function(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "function")) }
+rexxae_function(ctx: ptr) -> ptr { return borrow_text_(ctx, "function") }
 @pure
-rexxae_arguments_json(ctx: ptr) -> ptr { return string.aether_string_raw_ptr(map.map_get_raw(ctx, "arguments")) }
+rexxae_arguments_json(ctx: ptr) -> ptr { return borrow_text_(ctx, "arguments") }
 @pure
 rexxae_exit_code(ctx: ptr) -> int { return state.integer(ctx, "exit") }
 @pure

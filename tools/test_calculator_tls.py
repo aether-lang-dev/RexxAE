@@ -65,7 +65,7 @@ def require(condition, detail):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    local_ae = ROOT / 'build/toolchains/aether-0.838.0/bin/ae'
+    local_ae = ROOT / 'build/toolchains/aether-0.841.0/bin/ae'
     parser.add_argument('--ae', default=str(local_ae) if local_ae.exists() else 'ae')
     parser.add_argument('--report', type=Path, default=ROOT / 'build/calculator/tls-report.json')
     args = parser.parse_args()

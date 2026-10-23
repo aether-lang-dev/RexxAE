@@ -1,5 +1,5 @@
 # Validated release; README documents requirements and verification status.
-AETHER_RELEASE := 0.838.0
+AETHER_RELEASE := 0.841.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.

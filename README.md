@@ -19,7 +19,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.838.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.841.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -36,10 +36,10 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Install and select the release with `ae version install 0.838.0` and
-`ae version use 0.838.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Install and select the release with `ae version install 0.841.0` and
+`ae version use 0.841.0`, then confirm both `ae` and `aetherc` in `ae version`.
 Alternatively, an official release extracted to
-`build/toolchains/aether-0.838.0` is selected automatically by Make; it sets
+`build/toolchains/aether-0.841.0` is selected automatically by Make; it sets
 `AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
 overrides the executable; an extracted installation also needs its matching
 `AETHER_HOME=/path/to/release`.

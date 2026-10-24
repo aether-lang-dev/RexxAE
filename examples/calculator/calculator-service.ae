@@ -67,8 +67,11 @@ main() {
     if !plain { tinyweb.with_tls(server, cert, key) }
     tinyweb.with_timeout(server, 5000)
     tinyweb.with_keep_alive(server, 0)
-    if plain { println("calculator: http://${host}:${port}/calculate (loopback test mode)") }
-    else { println("calculator: https://${host}:${port}/calculate (pure Aether TLS 1.3)") }
+    // Bracket IPv6 binds such as "::" or "::1" in the URL banner.
+    shown = host
+    if string.contains(host, ":") == 1 { shown = "[${host}]" }
+    if plain { println("calculator: http://${shown}:${port}/calculate (loopback test mode)") }
+    else { println("calculator: https://${shown}:${port}/calculate (pure Aether TLS 1.3)") }
     err = tinyweb.tw_start(server)
     if err != "" { io.stderr_write("${err}\n"); return 1 }
     return 0

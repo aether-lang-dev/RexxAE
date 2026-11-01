@@ -134,7 +134,52 @@
     "assigned_call",
     "LET x = CALL routine 2\nSAY JSON_STRINGIFY(x)\nEXIT\nroutine:\nARG n\nRETURN n + 3",
     [
-      "{\"terminated\":false,\"returnValue\":5}"
+      "5"
+    ]
+  ],
+  [
+    "assigned_call_string",
+    "LET x = CALL routine\nSAY x\nSAY LENGTH(x)\nEXIT\nroutine:\nRETURN 'hello'",
+    [
+      "hello",
+      "5"
+    ]
+  ],
+  [
+    "assigned_call_typed",
+    "LET x = CALL routine\nSAY JSON_STRINGIFY(x)\nEXIT\nroutine:\nLET o = JSON_PARSE('{\"a\":[1,true]}')\nRETURN o",
+    [
+      "{\"a\":[1,true]}"
+    ]
+  ],
+  [
+    "assigned_call_bare_return",
+    "x = 'before'\nLET x = CALL routine\nSAY '[' || x || ']'\nEXIT\nroutine:\nRETURN",
+    [
+      "[]"
+    ]
+  ],
+  [
+    "assigned_call_no_return",
+    "x = 'before'\nLET x = CALL routine\nSAY x\nEXIT\nroutine:\ny = 1",
+    [
+      "null"
+    ]
+  ],
+  [
+    "assigned_call_nested",
+    "LET x = CALL outer 2\nSAY x\nEXIT\nouter:\nARG n\nLET y = CALL inner n\nRETURN y + 1\ninner:\nARG m\nRETURN m * 10",
+    [
+      "21"
+    ]
+  ],
+  [
+    "assigned_call_loop",
+    "DO i = 1 TO 3\nLET x = CALL square i\nSAY x\nEND\nEXIT\nsquare:\nARG n\nRETURN n * n",
+    [
+      "1",
+      "4",
+      "9"
     ]
   ],
   [

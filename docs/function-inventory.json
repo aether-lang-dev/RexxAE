@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "referenceRevision": "8317bd1c2adeb966ea0eb9a91331f80c45bb79a1",
+  "referenceRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
   "methodology": "Live core registration, loaded source export identity, literal imports and extras manifests/static candidates. No extra modules loaded or functions invoked. Dispositions are provisional.",
   "counts": {
     "registeredNames": 505,
@@ -4551,6 +4551,15 @@
     },
     {
       "source": "extras/addresses/system/src/system-address.js",
+      "disposition": "host-adapter",
+      "rationale": "application/remote-service adapter supplied explicitly by host",
+      "staticFunctionCandidates": [],
+      "externalImports": [
+        "child_process"
+      ]
+    },
+    {
+      "source": "extras/addresses/system/test-support/bash-version.js",
       "disposition": "host-adapter",
       "rationale": "application/remote-service adapter supplied explicitly by host",
       "staticFunctionCandidates": [],

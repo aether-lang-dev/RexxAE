@@ -1,6 +1,6 @@
 # Labeled routines and resumable CALL
 
-RexxAE follows RexxJS `8317bd1`: plain routines share variables and argv;
+RexxAE follows RexxJS `30fce5c`: plain routines share variables and argv;
 PROCEDURE routines create a fresh script-variable generation and restore
 caller arguments when they return. EXPOSE selects variables to share.
 
@@ -74,8 +74,11 @@ This unusual default is covered by shared fixtures. RETURN from inside a loop
 unwinds that routine's loop frames and restores preexisting loop variables,
 while retaining the caller's active loops.
 
-`LET x = CALL routine 2` preserves another reference quirk: x receives
-`{"terminated":false,"returnValue":...}`, rather than the returned value alone.
+`LET x = CALL routine 2` gives x the routine's RETURN value, the value RESULT
+holds after a plain `CALL routine 2` (RexxJS `5d96050`; until then x received
+the `{"terminated":false,"returnValue":...}` bookkeeping object). The
+assignment does not itself set RESULT. A bare RETURN gives the empty string;
+a routine with no RETURN gives the default return value described above.
 This form supports internal and registered host routines with simple
 blank-separated arguments. Commas/standalone expression operators and assigned
 CALLs to builtins are diagnosed as unsupported; use an ordinary CALL followed

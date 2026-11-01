@@ -10,10 +10,11 @@ This is a working implementation slice, not a complete port. It has typed
 values, 71 builtins with limited profiles, registered application functions, labeled routines with CALL/RETURN,
 comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
 
-Current references are RexxJS `8317bd1` and spreadsheet `c19848d`
-(vendoring `b3d5e4e`). Strict differential fixtures match both reference
-engines. The separate update audit identifies variable-led ADDRESS clauses as an implementation gap;
-assigned CALL expressions also need a reference-semantics decision. Its
+Current references are RexxJS `30fce5c` and spreadsheet `9358453`
+(vendoring `30fce5c`). Strict differential fixtures match both reference
+engines. The separate update audit identifies variable-led ADDRESS clauses as an implementation gap.
+`LET x = CALL f ...` gives f's RETURN value, as RexxJS has since `5d96050`;
+assigned CALL with comma or expression arguments remains unsupported. Its
 unsupported boundary cases are not counted as passing parity. See
 [the reference report](docs/reference-update.md) for the concrete gaps.
 
@@ -327,11 +328,11 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-On the supported core compiler, `make test` runs 405 native std.spec cases
+On the supported core compiler, `make test` runs 411 native std.spec cases
 (including both binary variants), ctypes protocol checks, twelve Python
 session/console tests, the C example and Python host harness. `make parity`
-compares 507 programs, including host-call arguments/results, with RexxJS
-`8317bd1`. The dated standalone/vendor audit records the same results; its
+compares 513 programs, including host-call arguments/results, with RexxJS
+`30fce5c`. The dated standalone/vendor audit records the same results; its
 additional 28 boundary probes match 16 and remain separate from strict parity.
 Seven documented compatibility differences remain separately asserted and
 are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers

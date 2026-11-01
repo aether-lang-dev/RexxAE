@@ -37,8 +37,9 @@ RETURN p || q
 ```
 
 RexxAE supports assigned CALL only with simple blank-separated arguments.
-For the equivalent `LET result = CALL pair 'a', 'b'`, the audited reference
-returns a wrapper whose returnValue is `'a',b` rather than `ab`. Nested calls
+With those, `LET x = CALL f ...` gives f's RETURN value on both engines
+(RexxJS `5d96050`). For the equivalent `LET result = CALL pair 'a', 'b'`, the
+audited reference returns `'a',b` rather than `ab`. Nested calls
 and arithmetic expose further parser differences. Extending this form needs
 an explicit reference-semantics decision; the audit records these outputs
 without treating them as desired behavior.

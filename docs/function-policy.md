@@ -12,7 +12,7 @@ remain candidates for native implementations or adapters.
 generator instantiates the reference interpreter to inspect registration;
 it does not call registered functions, execute scripts or load extras.
 
-At current reference `8317bd1`, registration still contains 505 entries: **386 callable
+At current reference `30fce5c`, registration still contains 505 entries: **386 callable
 language functions and 119 argument-converter helpers**. Counting converters
 as functions would overstate the porting task. Source ownership is inferred
 from loaded export identities and function-name matches for wrappers.

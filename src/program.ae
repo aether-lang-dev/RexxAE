@@ -646,11 +646,11 @@ statement(ctx: ptr, depth: int, loop: int) {
             json.set(inst, "name", json.str(token))
             lex.next(ctx)
             lex.next(ctx)
-            if lex.keyword(ctx, "CALL") {
-                wrapper = node(ctx, "call_result")
-                json.set(wrapper, "value", call_statement(ctx, true))
-                json.set(inst, "value", wrapper)
-            } else { json.set(inst, "value", expression(ctx, 1, 0, " ELSE ")) }
+            // LET r = CALL f ...: r is f's RETURN value, as RESULT is after a
+            // plain CALL (RexxJS 5d96050), not a {terminated, returnValue}
+            // bookkeeping object.
+            if lex.keyword(ctx, "CALL") { json.set(inst, "value", call_statement(ctx, true)) }
+            else { json.set(inst, "value", expression(ctx, 1, 0, " ELSE ")) }
             emit(ctx, inst)
         } else if state.integer(ctx, "kind") == 1 && following(ctx) == "(" {
             inst = instruction(ctx, "call")

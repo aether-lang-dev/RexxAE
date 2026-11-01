@@ -64,7 +64,7 @@
   },
   {
     "name": "assigned_call_commas",
-    "source": "LET result = CALL pair 'a', 'b'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "source": "LET result = CALL pair 'a', 'b'\nSAY result\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
     "latest_output": [
       "'a',b"
     ],
@@ -72,7 +72,7 @@
   },
   {
     "name": "assigned_call_concatenation",
-    "source": "LET result = CALL pair 'a' || 'b', 'c'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "source": "LET result = CALL pair 'a' || 'b', 'c'\nSAY result\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
     "latest_output": [
       "a"
     ],
@@ -80,7 +80,7 @@
   },
   {
     "name": "assigned_call_arithmetic",
-    "source": "LET n = 5\nLET result = CALL pair n - 1, n * 2\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "source": "LET n = 5\nLET result = CALL pair n - 1, n * 2\nSAY result\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
     "latest_output": [
       "5-"
     ],
@@ -88,7 +88,7 @@
   },
   {
     "name": "assigned_call_nested_functions",
-    "source": "LET result = CALL pair UPPER('q'), LENGTH('xy')\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "source": "LET result = CALL pair UPPER('q'), LENGTH('xy')\nSAY result\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
     "latest_output": [
       "('Q')2"
     ],
@@ -96,7 +96,7 @@
   },
   {
     "name": "assigned_call_blank_abuttal",
-    "source": "LET a = 'v'\nLET result = CALL pair a 'w', a'x'\nSAY result.returnValue\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
+    "source": "LET a = 'v'\nLET result = CALL pair a 'w', a'x'\nSAY result\nEXIT\npair: PROCEDURE\nARG p,q\nRETURN p || q",
     "latest_output": [
       "v'w',"
     ],

@@ -349,14 +349,6 @@ run_uncached(ctx: ptr, expr: ptr, depth: int) -> ptr {
         if result == null { return values.string_value(variables.unset(ctx, name)) }
         return result
     }
-    if op == "call_result" {
-        value = run(ctx, state.field(expr, "value"), depth + 1)
-        if value == null { return null }
-        fields = json.obj()
-        json.set(fields, "terminated", values.boolean(false))
-        json.set(fields, "returnValue", value)
-        return values.wrap(5, fields)
-    }
     if op == "call" { return call(ctx, expr, depth) }
     if op == "binary" { return binary(ctx, expr, depth) }
     if op == "unary" {

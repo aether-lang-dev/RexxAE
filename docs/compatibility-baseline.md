@@ -9,9 +9,9 @@ support for every registered RexxJS function.
 
 | Source | Revision | Role |
 |---|---|---|
-| RexxJS | `8317bd1c2adeb966ea0eb9a91331f80c45bb79a1` | Grammar, runtime behavior and differential oracle. |
-| spraedsheet | `c19848d9997fb746a077c336d50b86e739a99483` | Formula and application-control integration reference. |
-| Vendored RexxJS | `b3d5e4ef7085180e2a9016ec11fb1eefccb2f5a2` | Spreadsheet's interpreter; shared core files match standalone. |
+| RexxJS | `30fce5c60b9d6000e4a1b0892bc9bb1d25517f69` | Grammar, runtime behavior and differential oracle. |
+| spraedsheet | `9358453d19b3916d39e103850710fb01e938cd08` | Formula and application-control integration reference. |
+| Vendored RexxJS | `30fce5c60b9d6000e4a1b0892bc9bb1d25517f69` | Spreadsheet's interpreter; shared core files match standalone. |
 
 Toolchain requirements and validation totals live in the
 [README](../README.md#build-and-test). The

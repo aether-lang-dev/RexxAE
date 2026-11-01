@@ -34,14 +34,14 @@ if service_imports != {'std.file', 'std.sandbox', 'std.map', 'std.string'}:
 print(f'{len(functions)} guest functions and engine/service import boundaries match the reviewed surface')
 cases = [
     ('filesystem', 'import std.fs\nexports(probe)\nprobe() { fs.read("/etc/passwd") }', ['--emit=lib'], ('--emit=lib rejects',)),
-    ('pure_file_wrapper', 'import std.file\nexports(probe)\n@pure\nprobe() { file.read("/etc/passwd") }', ['--emit=lib'], ('but reaches a',)),
+    ('pure_file_wrapper', 'import std.file\nexports(probe)\n@pure\nprobe() { file.read("/etc/passwd") }', ['--emit=lib', '--with=fs'], ('but reaches a',)),
     ('network', 'import std.tcp\nexports(probe)\nprobe() { tcp.connect("127.0.0.1", 1) }', ['--emit=lib'], ('--emit=lib rejects',)),
     ('process', 'import std.os\nexports(probe)\nprobe() { os.system("true") }', ['--emit=lib'], ('--emit=lib rejects',)),
     ('foreign_symbol', 'exports(probe)\nextern system(cmd: string) -> int\nprobe() -> int { return system("true") }', ['--emit=lib'], ('without --with=extern',)),
     ('sealed_read', 'main() {\n secret = "private"\n if true {\n seal except println\n println(secret)\n }\n}', [], ('is hidden in this scope',)),
     ('sealed_write', 'main() {\n secret = "private"\n if true {\n seal except println\n secret += "new"\n }\n}', [], ('is hidden in this scope',)),
     ('sealed_nested_read', 'main() {\n secret = "private"\n if true {\n seal except println\n if true { println(secret) }\n }\n}', [], ('is hidden in this scope',)),
-    ('pure_transitive_file', 'import std.file\nhelper() { file.read("/etc/passwd") }\nexports(probe)\n@pure\nprobe() { helper() }', ['--emit=lib'], ('but reaches a',)),
+    ('pure_transitive_file', 'import std.file\nhelper() { file.read("/etc/passwd") }\nexports(probe)\n@pure\nprobe() { helper() }', ['--emit=lib', '--with=fs'], ('but reaches a',)),
     ('trusted_value_escape', 'import std.sandbox\nservice() {}\nmain() {\n w = sandbox.new("none") {}\n sandbox.enforce(w, service) callback {\n escaped = service\n call(escaped)\n }\n sandbox.free(w)\n}', [], ('only be called, not used as a value',)),
     ('trusted_extern', 'import std.sandbox\nextern system(cmd: string) -> int\nmain() {\n w = sandbox.new("none") {}\n sandbox.enforce(w, system) callback { system("true") }\n sandbox.free(w)\n}', [], ('it is a c extern',)),
 ]

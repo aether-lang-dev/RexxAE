@@ -111,11 +111,13 @@ sealed reads/mutations/nested reads, escaped trusted-function values, and
 trusting an extern C function. A failed probe must contain the expected
 permission diagnostic; unrelated syntax/build failures do not count as denials.
 
-Untagged std.file calls compiled under --emit=lib without an fs grant on the
-inspected toolchains. The broad std.fs import is rejected. RexxAE therefore does not rely on that gate alone: engine imports
-are pinned without std.file, public entry points are @pure, and runtime
-backstops are tested independently. Both direct and transitive file.read
-calls from @pure probes are rejected.
+Before Aether 0.859.0, untagged std.file calls compiled under --emit=lib
+without an fs grant; only the broad std.fs import was rejected. Since 0.859.0
+the library gate also refuses std.file and std.dir without --with=fs, and the
+file_module probe holds it. RexxAE still does not rely on that gate alone:
+engine imports are pinned without std.file, public entry points are @pure, and
+runtime backstops are tested independently. The direct and transitive
+file.read probes grant --with=fs, so @pure is what rejects them.
 
 ## Practical limits
 

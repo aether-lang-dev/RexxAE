@@ -322,7 +322,7 @@ arguments and veto unmounted ADDRESS environments. The Aether host example
 combines seal except, sandbox.enforce, trusted service injection and a
 service-specific file grant. Its escape probes run against both compiled
 library variants. See [containment.md](docs/containment.md), including the
-observed std.file library-gate gap and the distinction between this boundary
+std.file library-gate gap closed in Aether 0.859.0 and the distinction between this boundary
 and OS containment of a memory-safety failure.
 
 ## Verification and references
@@ -335,7 +335,7 @@ compares 507 programs, including host-call arguments/results, with RexxJS
 additional 28 boundary probes match 16 and remain separate from strict parity.
 Seven documented compatibility differences remain separately asserted and
 are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
-the C example and the native spec executables. Eleven compiler
+the C example and the native spec executables. Twelve compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract. The optional calculator's 29 native specs and 30 Python console tests
 also pass using the same release. Module execution passes Valgrind.

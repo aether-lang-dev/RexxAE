@@ -34,6 +34,10 @@ if service_imports != {'std.file', 'std.sandbox', 'std.map', 'std.string'}:
 print(f'{len(functions)} guest functions and engine/service import boundaries match the reviewed surface')
 cases = [
     ('filesystem', 'import std.fs\nexports(probe)\nprobe() { fs.read("/etc/passwd") }', ['--emit=lib'], ('--emit=lib rejects',)),
+    # Since Aether 0.859.0 --emit=lib refuses std.file (and std.dir) itself;
+    # this probe holds that gate. The two @pure probes grant fs with
+    # --with=fs so that @pure, not the import gate, is what refuses them.
+    ('file_module', 'import std.file\nexports(probe)\nprobe() { file.read("/etc/passwd") }', ['--emit=lib'], ('--emit=lib rejects',)),
     ('pure_file_wrapper', 'import std.file\nexports(probe)\n@pure\nprobe() { file.read("/etc/passwd") }', ['--emit=lib', '--with=fs'], ('but reaches a',)),
     ('network', 'import std.tcp\nexports(probe)\nprobe() { tcp.connect("127.0.0.1", 1) }', ['--emit=lib'], ('--emit=lib rejects',)),
     ('process', 'import std.os\nexports(probe)\nprobe() { os.system("true") }', ['--emit=lib'], ('--emit=lib rejects',)),

@@ -47,8 +47,8 @@
 //   }
 
 exports(Worker, Event, launch, launch_uncontained, mount, probe, start, next,
-        answer, fail, grant_file, deny, cancel, close, audit, json_string,
-        printable, MAX_FRAME, DEADLINE_MS, GRACE_MS)
+    answer, fail, grant_file, deny, cancel, close, audit, json_string,
+    printable, MAX_FRAME, DEADLINE_MS, GRACE_MS)
 
 import std.io
 import std.ipc
@@ -197,10 +197,11 @@ cancel(w: *Worker, reason: string) -> string {
 next(w: *Worker) -> Event {
     if w.over == 1 { return event("ERROR", "", "the worker has finished", -1) }
     while true {
-        ready, werr = ipc.wait_readable(w.ch, w.deadline_ms)
-        if werr != "" { return hang_up(w, "waiting: ${werr}") }
-        if ready == 0 { return deadline_passed(w) }
         data, rerr = ipc.read_frame_timeout(w.ch, w.max_frame, w.deadline_ms)
+        // Nothing of a frame arrived: the stream is still in step, so CANCEL
+        // can go down it. Any other error (a frame that stalled part way
+        // included) leaves it out of step.
+        if rerr == ipc.TIMED_OUT_BETWEEN_FRAMES { return deadline_passed(w) }
         if rerr != "" { return hang_up(w, "frame refused: ${rerr}") }
         verb, rest = split_verb(data)
         if verb == "AUDIT" {
@@ -233,11 +234,10 @@ fn deadline_passed(w: *Worker) -> Event {
     serr = ipc.write_frame(w.ch, "CANCEL deadline of ${w.deadline_ms} ms passed")
     if serr != "" { return hang_up(w, "CANCEL not delivered: ${serr}") }
     while true {
-        ready, werr = ipc.wait_readable(w.ch, w.grace_ms)
-        if werr != "" || ready == 0 {
+        data, rerr = ipc.read_frame_timeout(w.ch, w.max_frame, w.grace_ms)
+        if rerr == ipc.TIMED_OUT_BETWEEN_FRAMES {
             return hang_up(w, "no answer to CANCEL within ${w.grace_ms} ms")
         }
-        data, rerr = ipc.read_frame_timeout(w.ch, w.max_frame, w.grace_ms)
         if rerr != "" { return hang_up(w, "after CANCEL: ${rerr}") }
         verb, rest = split_verb(data)
         if verb == "ERROR" {

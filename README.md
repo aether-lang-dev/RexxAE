@@ -20,7 +20,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.870.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.873.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -37,10 +37,10 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Install and select the release with `ae version install 0.870.0` and
-`ae version use 0.870.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Install and select the release with `ae version install 0.873.0` and
+`ae version use 0.873.0`, then confirm both `ae` and `aetherc` in `ae version`.
 Alternatively, an official release extracted to
-`build/toolchains/aether-0.870.0` is selected automatically by Make; it sets
+`build/toolchains/aether-0.873.0` is selected automatically by Make; it sets
 `AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
 overrides the executable; an extracted installation also needs its matching
 `AETHER_HOME=/path/to/release`.
@@ -337,9 +337,9 @@ to the one audit log, with what the worker reported.
 `make worker-test` runs `tests/test_worker.ae`: a normal exchange, a file
 granted and one denied, the lockdown probes, a loop cancelled by the
 deadline, a script waiting on a reply cancelled, a silent guest killed, and
-an oversize frame refused. It needs an Aether newer than the pinned release
-(std.ipc frames, `sandbox.spawn_socket`): `make worker-test AE=/path/to/ae
-AETHER_HOME=/path/to/aether`. On Linux the specs run contained; elsewhere
+an oversize frame refused. It needs Aether 0.873.0 or later, the first release with std.ipc's
+frames and `sandbox.spawn_socket`
+([aether#3510](https://github.com/aether-lang-dev/aether/pull/3510)). On Linux the specs run contained; elsewhere
 they check that `launch` refuses and run the rest uncontained.
 
 ## Coverage and limits

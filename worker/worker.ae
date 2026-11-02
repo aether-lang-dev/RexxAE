@@ -1,0 +1,265 @@
+// rexxae-worker: runs one Rexx script for a host in another process.
+//
+// The host starts this program with sandbox.spawn_socket (worker/rexxworker
+// is its side) and talks to it over the socket std.ipc finds, in frames
+// (the protocol is at the top of worker/rexxworker/module.ae and in the
+// README, "Worker process"). The engine is compiled in from source, so the
+// worker is one binary: under the process sandbox it needs no grants at all.
+//
+// Three walls. The engine's own: it has no system API, every effect is an
+// event this worker answers, and it mounts no ADDRESS environment. This
+// worker's: once it has its script it enters sandbox.enforce with no grants,
+// before the script's first step, so even a bug in the engine is held to
+// nothing (a file comes only as a descriptor the host hands over). And the
+// process's, the sandbox the host spawned it in, which also holds code that
+// goes round std and libc.
+//
+// It answers a CANCEL at any point after SCRIPT with rexxae_cancel, between
+// steps of BUDGET instructions or while it waits for a reply, so a script
+// that loops forever or waits forever on the host stops within one step.
+
+import std.audit
+import std.fs
+import std.io
+import std.ipc
+import std.list
+import std.sandbox
+import std.string
+import std.tcp
+import src.engine
+
+// The largest frame either side accepts (rexxworker.MAX_FRAME), and the
+// largest file a FILE reply is read up to.
+const MAX_FRAME = 65536
+const MAX_FILE = 65536
+// Instructions per step: how often a running script looks for a CANCEL.
+const BUDGET = 1000
+
+main() {
+    ch = ipc.parent_channel()
+    if ch < 0 {
+        println("rexxae-worker: no parent channel; a host starts this with rexxworker.launch")
+        exit(2)
+    }
+
+    // Before the script: the functions to mount, whether to self-check, and
+    // the script itself. Everything the worker needs arrives here.
+    mounts = list.new()
+    defer list.free(mounts)
+    probe = 0
+    source = ""
+    while true {
+        data, err = ipc.read_frame(ch, MAX_FRAME)
+        if err != "" { exit(1) }
+        verb, rest = split_verb(data)
+        if verb == "SCRIPT" {
+            source = rest
+            break
+        }
+        if verb == "MOUNT" {
+            list.add(mounts, rest)
+        } else if verb == "PROBE" {
+            probe = 1
+        } else {
+            tell(ch, "ERROR protocol: expected MOUNT, PROBE or SCRIPT, got '${verb}'")
+            exit(1)
+        }
+    }
+
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    n = list.size(mounts)
+    i = 0
+    while i < n {
+        item, _ = list.get_string(mounts, i)
+        merr = mount(ctx, item)
+        if merr != "" {
+            tell(ch, "ERROR ${merr}")
+            exit(1)
+        }
+        i = i + 1
+    }
+
+    // From here on it grants itself nothing: no files, no network, no
+    // processes, with no platform path anywhere. `audit_log` is a trusted
+    // name: it runs with main's authority.
+    worker = sandbox.new("rexxae-worker") {
+    }
+    defer sandbox.free(worker)
+    audit.clear()
+    sandbox.enforce(worker, audit_log) callback {
+        audit_log("rexxae-worker locked itself down before the first step: no grants")
+        if probe == 1 { self_probe(ch) }
+        run(ctx, ch)
+    }
+    exit(0)
+}
+
+// Registers "NAME min max".
+mount(ctx: ptr, spec: string) -> string {
+    parts = string.split(spec, " ")
+    defer string.array_free(parts)
+    if string.array_size(parts) != 3 { return "protocol: MOUNT wants NAME min max" }
+    name = string.array_get(parts, 0)
+    lo, lerr = string.to_int(string.array_get(parts, 1))
+    hi, herr = string.to_int(string.array_get(parts, 2))
+    if lerr != "" || herr != "" { return "protocol: MOUNT ${name}: arity is not a number" }
+    if engine.rexxae_register_function(ctx, name, lo, hi) != 0 {
+        return "cannot mount ${name} (a builtin, or a bad arity)"
+    }
+    return ""
+}
+
+// One line for the host's audit log.
+audit_log(event: string) {
+    tell(ipc.parent_channel(), "AUDIT ${event}")
+}
+
+// Sends one frame; a host that has gone away ends the worker.
+tell(ch: int, msg: string) {
+    if ipc.write_frame(ch, msg) != "" { exit(1) }
+}
+
+// What this worker's own sandbox refused since the last report.
+report_refusals(ch: int) {
+    n = audit.count()
+    if n == 0 { return }
+    i = 0
+    while i < n {
+        cat, res, allowed = audit.entry(i)
+        if allowed == 0 { tell(ch, "AUDIT rexxae-worker sandbox refused ${cat} ${res}") }
+        i = i + 1
+    }
+    audit.clear()
+}
+
+// PROBE: what a bug in the engine could try, from inside the lockdown.
+self_probe(ch: int) {
+    _, ferr = fs.read("/etc/passwd")
+    got = if ferr == "" { "ALLOWED" } else { "refused (${ferr})" }
+    tell(ch, "AUDIT probe worker fs.read('/etc/passwd'): ${got}")
+    conn, cerr = tcp.connect("1.1.1.1", 443)
+    if cerr == "" {
+        tcp.close(conn)
+        tell(ch, "AUDIT probe worker tcp.connect 1.1.1.1:443: ALLOWED")
+    } else {
+        tell(ch, "AUDIT probe worker tcp.connect 1.1.1.1:443: refused (${cerr})")
+    }
+    report_refusals(ch)
+}
+
+// The script, BUDGET instructions at a time, answering each event.
+run(ctx: ptr, ch: int) {
+    while true {
+        status = engine.rexxae_step(ctx, BUDGET)
+        report_refusals(ch)
+        if status == 0 {
+            tell(ch, "DONE ${engine.rexxae_exit_code(ctx)}")
+            return
+        }
+        if status == -1 {
+            tell(ch, "ERROR ${string.copy(engine.rexxae_error(ctx))}")
+            return
+        }
+        if status == 1 {
+            tell(ch, "SAY ${string.copy(engine.rexxae_text(ctx))}")
+        } else if status == 2 {
+            // No ADDRESS environment is mounted: every command is vetoed.
+            address = string.copy(engine.rexxae_address(ctx))
+            tell(ch, "AUDIT rexxae-worker refused ADDRESS ${address}: no environment is mounted")
+            engine.rexxae_reply(ctx, 1, "", "ADDRESS ${address} is not mounted")
+        } else if status == 4 {
+            name = string.copy(engine.rexxae_function(ctx))
+            tell(ch, "CALL ${name} ${string.copy(engine.rexxae_arguments_json(ctx))}")
+            await_reply(ctx, ch)
+        }
+        if status != 4 { poll_cancel(ctx, ch) }
+    }
+}
+
+// Between steps: a CANCEL from the host, if one has come, without waiting.
+poll_cancel(ctx: ptr, ch: int) {
+    ready, werr = ipc.wait_readable(ch, 0)
+    if werr != "" { exit(1) }
+    if ready == 0 { return }
+    data, rerr = ipc.read_frame(ch, MAX_FRAME)
+    if rerr != "" { exit(1) }
+    verb, rest = split_verb(data)
+    if verb == "CANCEL" {
+        engine.rexxae_cancel(ctx, rest)
+    } else {
+        engine.rexxae_cancel(ctx, "protocol: unexpected '${verb}' while the script runs")
+    }
+}
+
+// The host's answer to a CALL: REPLY, FAIL, FILE and a descriptor, or a
+// CANCEL instead, which the next step reports.
+await_reply(ctx: ptr, ch: int) {
+    data, err = ipc.read_frame(ch, MAX_FRAME)
+    if err != "" { exit(1) }
+    verb, rest = split_verb(data)
+    if verb == "REPLY" {
+        if engine.rexxae_reply_value(ctx, rest, "") != 0 {
+            engine.rexxae_reply_value(ctx, "null", "the host's reply is not valid JSON")
+        }
+    } else if verb == "FAIL" {
+        why = if rest == "" { "host function failed" } else { rest }
+        engine.rexxae_reply_value(ctx, "null", why)
+    } else if verb == "FILE" {
+        engine.rexxae_reply_value(ctx, take_file(ch), "")
+    } else if verb == "CANCEL" {
+        engine.rexxae_cancel(ctx, rest)
+    } else {
+        engine.rexxae_cancel(ctx, "protocol: unexpected '${verb}' for a reply")
+    }
+}
+
+// FILE: the descriptor rides on the next byte; read it, close it, and give
+// the script {"granted":true,"text":...}.
+take_file(ch: int) -> string {
+    _, fd, rerr = ipc.recv(ch, 1)
+    if rerr != "" { return "{\"granted\":false,\"why\":${json_string(rerr)}}" }
+    if fd < 0 { return "{\"granted\":false,\"why\":\"no descriptor came with FILE\"}" }
+    text, count, ferr = io.fd_read_n(fd, MAX_FILE + 1)
+    io.fd_close(fd)
+    if ferr != "" { return "{\"granted\":false,\"why\":${json_string(ferr)}}" }
+    if count > MAX_FILE { return "{\"granted\":false,\"why\":\"file larger than ${MAX_FILE} bytes\"}" }
+    return "{\"granted\":true,\"text\":${json_string(text)}}"
+}
+
+// `s` as a JSON string literal.
+json_string(s: string) -> string {
+    hex = "0123456789abcdef"
+    out = "\""
+    seg = 0
+    i = 0
+    n = string.length(s)
+    while i < n {
+        c = string.char_at(s, i)
+        if c == 34 || c == 92 || (c >= 0 && c < 32) {
+            out = string.concat(out, string.substring(s, seg, i))
+            if c == 34 {
+                out = string.concat(out, "\\\"")
+            } else if c == 92 {
+                out = string.concat(out, "\\\\")
+            } else if c == 10 {
+                out = string.concat(out, "\\n")
+            } else {
+                hi = c / 16
+                lo = c % 16
+                out = string.concat(out, "\\u00${string.substring(hex, hi, hi + 1)}${string.substring(hex, lo, lo + 1)}")
+            }
+            seg = i + 1
+        }
+        i = i + 1
+    }
+    out = string.concat(out, string.substring(s, seg, n))
+    return string.concat(out, "\"")
+}
+
+// "VERB the rest" -> ("VERB", "the rest").
+split_verb(line: string) -> (string, string) {
+    at = string.index_of(line, " ")
+    if at < 0 { return line, "" }
+    return string.substring(line, 0, at), string.substring(line, at + 1, string.length(line))
+}

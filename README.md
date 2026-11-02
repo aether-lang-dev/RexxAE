@@ -286,6 +286,62 @@ engine and API. Aether's importer supplies native link/rpath wiring.
 `import rexxae`, with no engine source import. Source-import std.spec tests
 are a separate layer.
 
+## Worker process
+
+`worker/` runs a script in a **separate, sandboxed child process** for an
+Aether host, so that a script, or a bug in the engine, is held by the
+operating system as well as by the engine. It answers the review of
+[aether#3503](https://github.com/aether-lang-dev/aether/issues/3503) by Adil
+Alperen Çiftci: the worker locks itself down, and the host bounds every
+exchange.
+
+- `worker/worker.ae` builds `build/worker/rexxae-worker`, one binary with the
+  engine compiled in, so the process sandbox needs to grant it nothing. It
+  reads its script from the host, then enters `sandbox.enforce` with no
+  grants before the first `rexxae_step` (no platform paths). It mounts no
+  `ADDRESS` environment: commands get RC 1. What its own sandbox refuses is
+  reported to the host for the audit log.
+- `worker/rexxworker` is the host's side (`ae build host.ae --lib
+  path/to/RexxAE/worker`). `rexxworker.launch(perms, prog, name, audit_log)`
+  spawns with `sandbox.spawn_socket` and fails closed where the child cannot
+  be contained (macOS, Windows; Linux without Landlock).
+  `launch_uncontained` is the explicit, by-name alternative for development.
+
+The protocol is `std.ipc` frames (a 4-byte big-endian length, then the
+bytes; at most 64 KiB), each a verb and its text:
+
+| Host to worker | | Worker to host | |
+|---|---|---|---|
+| `MOUNT NAME min max` | a host function, before `SCRIPT` | `SAY text` | |
+| `PROBE` | self-check of the lockdown, before `SCRIPT` | `CALL NAME [json args]` | a mounted function |
+| `SCRIPT source` | lock down and run | `AUDIT text` | for the audit log |
+| `REPLY json` / `FAIL message` | answer the pending `CALL` | `DONE code` | then it exits |
+| `FILE`, then a descriptor | the `CALL`'s value is `{"granted":true,"text":...}` | `ERROR message` | then it exits |
+| `CANCEL reason` | stop the script (`rexxae_cancel`) | | |
+
+A granted file crosses as an open descriptor (`ipc.send_fd` after the
+`FILE` frame, taken with `ipc.recv`), never a path. `rexxworker.deny` answers
+`{"granted":false,"why":...}`.
+
+**Deadlines.** `rexxworker.next(&w)` waits at most `w.deadline_ms` (5 s by
+default) for the worker's next frame. When that passes the host sends
+`CANCEL`; the worker, which looks for one between steps of 1000
+instructions and while it waits for a reply, calls `rexxae_cancel`, so a
+script that loops forever or waits forever on the host ends with
+`ERROR cancelled by host: deadline of N ms passed`. A worker that does not
+answer within `w.grace_ms` (1 s) is hung up on and killed (`KILLED`). A
+frame over the maximum, a malformed one or one that stalls part way is
+refused the same way. Every spawn, GRANT, DENY, timeout, cancel and kill goes
+to the one audit log, with what the worker reported.
+
+`make worker-test` runs `tests/test_worker.ae`: a normal exchange, a file
+granted and one denied, the lockdown probes, a loop cancelled by the
+deadline, a script waiting on a reply cancelled, a silent guest killed, and
+an oversize frame refused. It needs an Aether newer than the pinned release
+(std.ipc frames, `sandbox.spawn_socket`): `make worker-test AE=/path/to/ae
+AETHER_HOME=/path/to/aether`. On Linux the specs run contained; elsewhere
+they check that `launch` refuses and run the rest uncontained.
+
 ## Coverage and limits
 
 Supported now:

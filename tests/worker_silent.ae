@@ -1,0 +1,14 @@
+// A stand-in for a worker that has stopped answering (a bug, or a builtin
+// that never returns): it reads every frame the host sends, CANCEL
+// included, and never replies. tests/test_worker.ae expects the host to
+// kill it once the CANCEL's grace has passed.
+import std.ipc
+
+main() {
+    ch = ipc.parent_channel()
+    if ch < 0 { exit(2) }
+    while true {
+        _, err = ipc.read_frame(ch, 65536)
+        if err != "" { exit(0) }
+    }
+}

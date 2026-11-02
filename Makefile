@@ -170,3 +170,26 @@ build/test_require: examples/calculator/modules.ae
 
 build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/calculator/downloaded.ae examples/calculator/policy.ae examples/calculator/service.ae examples/calculator/protocol.ae build/calculator/librexxae.$(LIBEXT)
 	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
+
+# The worker process (worker/, README "Worker process"): a separate
+# component with its own build directory. It needs std.ipc frames and
+# sandbox.spawn_socket, which are newer than the release pinned above, so it
+# is not part of `make test`: build it with AE (and AETHER_HOME) pointing at
+# an Aether that has them.
+.PHONY: worker worker-test
+worker: build/worker/rexxae-worker
+
+build/worker:
+	mkdir -p $@
+
+build/worker/rexxae-worker: worker/worker.ae $(wildcard src/*.ae) | build/worker
+	$(AE) build $< -o $@
+
+build/worker/silent: tests/worker_silent.ae | build/worker
+	$(AE) build $< -o $@
+
+build/worker/test_worker: tests/test_worker.ae worker/rexxworker/module.ae | build/worker
+	$(AE) build $< --lib worker -o $@
+
+worker-test: build/worker/rexxae-worker build/worker/silent build/worker/test_worker
+	./build/worker/test_worker

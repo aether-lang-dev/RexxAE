@@ -106,6 +106,21 @@ pending COMMAND/FUNCTION. Internal engine functions are `core_*`; the public
 `rexxae_*` exports are thin wrappers. `std.sync`, `std.mem` and `std.bytes` are
 in the reviewed import list for this alone. See README "Cancellation".
 
+## Worker process
+
+`worker/worker.ae` (the child) and `worker/rexxworker` (the host's side) run
+a script in a sandboxed child process; README "Worker process" has the
+protocol. Keep it small: every verb is in that table. The worker compiles the
+engine in from source, so it needs no grants, and enters `sandbox.enforce`
+with no grants before its first step; `tools/check_containment.py` holds that
+and the worker's own import allowance, which is separate from the engine's
+and must not widen it. The host spawns with `sandbox.spawn_socket` (fail
+closed); `launch_uncontained` stays the only uncontained path, by name. Every
+exchange has a host deadline, then CANCEL (the worker uses `rexxae_cancel`),
+then a kill after the grace. `make worker-test` needs an Aether newer than
+the pinned release; do not move the pin for it. Containment can only be
+exercised on Linux; macOS proves the fail-closed refusal and the protocol.
+
 ## Containment is a required contract
 
 Read `/home/paul/scm/aether/docs/containment-sandbox.md`; sae's

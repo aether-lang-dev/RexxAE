@@ -8,6 +8,12 @@ ifeq ($(strip $(AETHER_HOME)),)
 export AETHER_HOME := $(AETHER_LOCAL)
 endif
 endif
+# Otherwise the toolchain AE comes from (<prefix>/bin/ae, or a source tree's
+# build/ae). The worker tests' sandboxed spawn finds libaether_sandbox.so
+# under AETHER_HOME, which `ae run` sets but a program run from here would not.
+ifeq ($(strip $(AETHER_HOME)),)
+export AETHER_HOME := $(abspath $(dir $(shell command -v $(AE)))/..)
+endif
 CALC_AE ?= $(AE)
 CC ?= cc
 REXXJS ?= ../RexxJS
@@ -173,9 +179,8 @@ build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/c
 
 # The worker process (worker/, README "Worker process"): a separate
 # component with its own build directory. It needs std.ipc frames and
-# sandbox.spawn_socket, which are newer than the release pinned above, so it
-# is not part of `make test`: build it with AE (and AETHER_HOME) pointing at
-# an Aether that has them.
+# sandbox.spawn_socket (Aether 0.873.0 or later). It is not part of
+# `make test`; run it with `make worker-test`.
 .PHONY: worker worker-test
 worker: build/worker/rexxae-worker
 

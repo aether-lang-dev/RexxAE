@@ -4,6 +4,8 @@ import ctypes
 import json
 from pathlib import Path
 import subprocess
+import threading
+import time
 import unittest
 
 parser = argparse.ArgumentParser()
@@ -23,6 +25,7 @@ for name, parameters, result in [
     ('arguments_json', [P], S), ('reply_value', [P, S, S], I),
     ('get_variable_json', [P, S], S), ('set_variable_json', [P, S, S], I),
     ('argument_text', [P, I], S), ('argument_type', [P, I], I),
+    ('cancel', [P, S], I),
 ]:
     fn = getattr(lib, 'aether_rexxae_' + name)
     fn.argtypes, fn.restype = parameters, result
@@ -337,6 +340,50 @@ class EngineTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertEqual(run(source), expected)
         print(f'Compared {len(programs)} programs against RexxJS')
+
+
+class CancelTests(unittest.TestCase):
+    def test_cancel_from_another_thread_interrupts_one_long_step(self):
+        ctx = create(b'DO i = 1 TO 2000000000\nx = i\nEND\nSAY "done"')
+        self.addCleanup(destroy, ctx)
+        timer = threading.Timer(0.3, lambda: self.assertEqual(cancel(ctx, b'wall-clock deadline'), 0))
+        started = time.monotonic()
+        timer.start()
+        # ctypes drops the GIL, so the timer fires while this one step runs.
+        self.assertEqual(step(ctx, 2000000000), -1)
+        timer.join()
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertEqual(error(ctx), b'cancelled by host: wall-clock deadline')
+        self.assertEqual(step(ctx, 10), -1)
+        self.assertEqual(error(ctx), b'cancelled by host: wall-clock deadline')
+
+    def test_cancel_from_another_thread_while_suspended_on_function(self):
+        ctx = create(b'LET v = HOSTWAIT(1)\nSAY v')
+        self.addCleanup(destroy, ctx)
+        self.assertEqual(register_function(ctx, b'HOSTWAIT', 1, 1), 0)
+        self.assertEqual(step(ctx, 100), 4)
+        worker = threading.Thread(target=lambda: cancel(ctx, b'abandon wait'))
+        worker.start()
+        worker.join()
+        self.assertEqual(step(ctx, 100), -1)
+        self.assertIn(b'abandon wait', error(ctx))
+        self.assertEqual(reply_value(ctx, b'1', b''), -1)
+        self.assertEqual(step(ctx, 100), -1)
+
+    def test_many_concurrent_cancels_keep_one_reason_and_free_cleanly(self):
+        ctx = create(b'DO i = 1 TO 2000000000\nEND')
+        threads = [threading.Thread(target=lambda n=n: cancel(ctx, b'r%d' % n)) for n in range(16)]
+        for t in threads: t.start()
+        for t in threads: t.join()
+        self.assertEqual(step(ctx, 100), -1)
+        self.assertTrue(error(ctx).startswith(b'cancelled by host: r'))
+        destroy(ctx)
+
+    def test_destroy_after_cancel_with_pending_command(self):
+        ctx = create(b'ADDRESS APP\n"go"')
+        self.assertEqual(step(ctx, 100), 2)
+        self.assertEqual(cancel(ctx, b'x'), 0)
+        destroy(ctx)
 
 
 if __name__ == '__main__':

@@ -18,7 +18,8 @@ print(f'{len(public)} public engine entry points retain @pure guards')
 # This is a reviewed guest API snapshot, like sae/tests/spec_globals.ae.
 expected_functions = set(json.loads(Path('tests/guest_functions.json').read_text()))
 functions = set()
-allowed_std = {'std.string', 'std.map', 'std.json', 'std.math', 'std.strbuilder', 'std.list'}
+allowed_std = {'std.string', 'std.map', 'std.json', 'std.math', 'std.strbuilder', 'std.list',
+                'std.sync', 'std.mem', 'std.bytes'}  # last three: cancel flag only, no authority
 for path in Path('src').glob('*.ae'):
     source = path.read_text()
     for names in re.findall(r'const (?:TEXT|MATH|VALUE)_FUNCTIONS = "([^"]+)"', source):

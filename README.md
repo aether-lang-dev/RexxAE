@@ -225,9 +225,32 @@ effect. Malformed JSON replies leave the call pending for correction; an
 accepted application error terminates the script. Registry/variable mutation
 is rejected while a request is pending.
 
+### Cancellation
+
+`aether_rexxae_cancel(ctx, reason)` (Aether: `rexxae.rexxae_cancel(ctx, reason)`)
+is the one call that is safe from any thread, while another thread is inside
+`aether_rexxae_step` or while the context is suspended on a COMMAND/FUNCTION
+reply. A host deadline (for example around a guest blocked in a mounted
+function such as a HEAR) can therefore abort the engine rather than hang it.
+It returns 0 when recorded, 1 if already cancelled (the first reason is kept)
+and -1 for NULL. The reason is copied and truncated to 1024 bytes.
+
+The call only publishes the reason through one atomic cell; it never touches
+engine state. `aether_rexxae_step` loads that cell before every instruction
+and before honouring a pending request, so the next (or current) step returns
+`REXXAE_ERROR` within one instruction (a single long builtin is not
+interrupted mid-call). `aether_rexxae_error` then reads
+`cancelled by host: <reason>`. Loop and routine frames are unwound, a pending
+request is discarded (a late reply returns -1) and further steps keep
+returning the error. A context that is already DONE or in ERROR is unchanged.
+Cancellation is not catchable by the script: RexxJS has no `SIGNAL ON HALT`
+equivalent, so none is offered. Do not race `aether_rexxae_destroy` against
+`cancel`; destroy after a cancel frees everything. Tests: the cancel specs in
+`tests/test_binary_import.ae` and `CancelTests` in `tests/test_engine.py`.
+
 Inputs are copied. Getter payloads are borrowed; copy them before retaining
-across another context call. A context belongs to one host thread; concurrent
-use is not established. Destruction releases pending expressions and loop
+across another context call. A context belongs to one host thread, apart from
+`aether_rexxae_cancel`; other concurrent use is not established. Destruction releases pending expressions and loop
 state. This ABI is experimental.
 
 ## Link from Aether

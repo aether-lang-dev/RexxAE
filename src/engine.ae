@@ -12,12 +12,15 @@ import src.variables
 import src.templates
 import src.evaluate
 import src.builtins
+import std.sync
+import std.mem
+import std.bytes
 
 exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_reply,
     rexxae_text, rexxae_address, rexxae_error, rexxae_line, rexxae_exit_code,
     rexxae_register_function, rexxae_function, rexxae_arguments_json,
     rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
-    rexxae_argument_text, rexxae_argument_type)
+    rexxae_argument_text, rexxae_argument_type, rexxae_cancel)
 
 // Borrow the map-owned payload for the C ABI through public stdlib APIs.
 // string.bytes has no view for an empty string; provide a pinned NUL byte.
@@ -364,8 +367,28 @@ execute_(ctx: ptr, inst: ptr, pc: int) -> int {
     return pc + 1
 }
 
+// Cancellation. The host's rexxae_cancel may run on any thread, so it never
+// touches the engine map; it publishes a heap copy of the reason through one
+// atomic cell (0 = none, otherwise the address of a bytes object) that the
+// stepping thread polls with an atomic load before every instruction and
+// before honouring a pending COMMAND/FUNCTION.
+cancelled_(ctx: ptr) -> bool {
+    cell = map.map_get_raw(ctx, "cancel_cell")
+    if cell == null { return false }
+    return sync.atomic_load(cell) != 0
+}
+abort_cancelled_(ctx: ptr) -> int {
+    cell = map.map_get_raw(ctx, "cancel_cell")
+    reason = mem.long_to_ptr(sync.atomic_load(cell))
+    detail = bytes.string_from_ptr(bytes.data(reason), bytes.length(reason))
+    if string.length(detail) == 0 { state.fail(ctx, "cancelled by host") }
+    else { state.fail(ctx, string.concat("cancelled by host: ", detail)) }
+    unwind_(ctx)
+    state.number(ctx, "status", -1)
+    return -1
+}
 @pure
-rexxae_create(source: string) -> ptr {
+core_create(source: string) -> ptr {
     ctx = lex.new(source)
     if ctx == null { return null }
     cache = map.map_new()
@@ -379,11 +402,11 @@ rexxae_create(source: string) -> ptr {
 // service registry into a newly parsed program, never private execution state.
 // The previous terminal context remains valid and independently owned.
 @pure
-rexxae_create_next(previous: ptr, source: string) -> ptr {
+core_create_next(previous: ptr, source: string) -> ptr {
     if previous == null { return null }
     status = state.integer(previous, "status")
     if status != 0 && status != -1 { return null }
-    ctx = rexxae_create(source)
+    ctx = core_create(source)
     if ctx == null { return null }
     keys = map.map_keys_raw(previous)
     defer map.map_keys_free(keys)
@@ -399,7 +422,7 @@ rexxae_create_next(previous: ptr, source: string) -> ptr {
     return ctx
 }
 @pure
-rexxae_destroy(ctx: ptr) {
+core_destroy(ctx: ptr) {
     if ctx == null { return }
     map.map_free(map.map_get_raw(ctx, "cache"))
     depth = state.integer(ctx, "call_depth")
@@ -408,13 +431,16 @@ rexxae_destroy(ctx: ptr) {
     map.map_free(ctx)
 }
 @pure
-rexxae_step(ctx: ptr, budget: int) -> int {
+core_step(ctx: ptr, budget: int) -> int {
     if ctx == null { return -1 }
     status = state.integer(ctx, "status")
-    if status == 0 || status == -1 || status == 2 || status == 4 { return status }
+    if status == 0 || status == -1 { return status }
+    if cancelled_(ctx) { return abort_cancelled_(ctx) }
+    if status == 2 || status == 4 { return status }
     state.number(ctx, "status", 3)
     used = 0
     while used < budget {
+        if cancelled_(ctx) { return abort_cancelled_(ctx) }
         pc = state.integer(ctx, "pc")
         if pc >= state.integer(ctx, "program_size") { state.number(ctx, "status", 0); return 0 }
         inst = state.load(ctx, string.concat("p:", string.from_int(pc)))
@@ -439,7 +465,7 @@ rexxae_step(ctx: ptr, budget: int) -> int {
     return 3
 }
 @pure
-rexxae_reply(ctx: ptr, rc: int, result: string, error_text: string) -> int {
+core_reply(ctx: ptr, rc: int, result: string, error_text: string) -> int {
     if ctx == null || state.integer(ctx, "status") != 2 { return -1 }
     number = values.numeric(string.from_int(rc))
     state.save(ctx, "v:RC", number)
@@ -454,7 +480,7 @@ rexxae_reply(ctx: ptr, rc: int, result: string, error_text: string) -> int {
     return 0
 }
 @pure
-rexxae_register_function(ctx: ptr, name: string, minimum: int, maximum: int) -> int {
+core_register_function(ctx: ptr, name: string, minimum: int, maximum: int) -> int {
     if ctx == null || minimum < 0 || maximum < minimum || maximum > 256 { return -1 }
     status = state.integer(ctx, "status")
     if status != 1 && status != 3 { return -1 }
@@ -468,7 +494,7 @@ rexxae_register_function(ctx: ptr, name: string, minimum: int, maximum: int) -> 
     return 0
 }
 @pure
-rexxae_reply_value(ctx: ptr, encoded: string, error_text: string) -> int {
+core_reply_value(ctx: ptr, encoded: string, error_text: string) -> int {
     if ctx == null || state.integer(ctx, "status") != 4 { return -1 }
     if error_text != "" {
         state.fail(ctx, error_text)
@@ -487,7 +513,7 @@ rexxae_reply_value(ctx: ptr, encoded: string, error_text: string) -> int {
     return 0
 }
 @pure
-rexxae_set_variable_json(ctx: ptr, name: string, encoded: string) -> int {
+core_set_variable_json(ctx: ptr, name: string, encoded: string) -> int {
     if ctx == null || name == "" { return -1 }
     status = state.integer(ctx, "status")
     if status != 1 && status != 3 { return -1 }
@@ -502,7 +528,7 @@ rexxae_set_variable_json(ctx: ptr, name: string, encoded: string) -> int {
     return 0
 }
 @pure
-rexxae_get_variable_json(ctx: ptr, name: string) -> ptr {
+core_get_variable_json(ctx: ptr, name: string) -> ptr {
     if ctx == null { return null }
     value = variables.get(ctx, name)
     if value == null { return null }
@@ -514,7 +540,7 @@ rexxae_get_variable_json(ctx: ptr, name: string) -> ptr {
     return borrow_text_(ctx, "inspect")
 }
 @pure
-rexxae_argument_type(ctx: ptr, index: int) -> int {
+core_argument_type(ctx: ptr, index: int) -> int {
     if ctx == null || state.integer(ctx, "status") != 4 { return -1 }
     args = state.load(ctx, "arguments")
     defer json.json_free(args)
@@ -522,7 +548,7 @@ rexxae_argument_type(ctx: ptr, index: int) -> int {
     return json.json_type(json.json_array_get_raw(args, index))
 }
 @pure
-rexxae_argument_text(ctx: ptr, index: int) -> ptr {
+core_argument_text(ctx: ptr, index: int) -> ptr {
     if ctx == null || state.integer(ctx, "status") != 4 { return null }
     args = state.load(ctx, "arguments")
     defer json.json_free(args)
@@ -534,19 +560,95 @@ rexxae_argument_text(ctx: ptr, index: int) -> ptr {
     return borrow_text_(ctx, "argument_text")
 }
 @pure
-rexxae_text(ctx: ptr) -> ptr { return borrow_text_(ctx, "text") }
+core_text(ctx: ptr) -> ptr { return borrow_text_(ctx, "text") }
 @pure
-rexxae_address(ctx: ptr) -> ptr { return borrow_text_(ctx, "address") }
+core_address(ctx: ptr) -> ptr { return borrow_text_(ctx, "address") }
 @pure
-rexxae_error(ctx: ptr) -> ptr { return borrow_text_(ctx, "error") }
+core_error(ctx: ptr) -> ptr { return borrow_text_(ctx, "error") }
 @pure
-rexxae_function(ctx: ptr) -> ptr { return borrow_text_(ctx, "function") }
+core_function(ctx: ptr) -> ptr { return borrow_text_(ctx, "function") }
 @pure
-rexxae_arguments_json(ctx: ptr) -> ptr { return borrow_text_(ctx, "arguments") }
+core_arguments_json(ctx: ptr) -> ptr { return borrow_text_(ctx, "arguments") }
 @pure
-rexxae_exit_code(ctx: ptr) -> int { return state.integer(ctx, "exit") }
+core_exit_code(ctx: ptr) -> int { return state.integer(ctx, "exit") }
 @pure
-rexxae_line(ctx: ptr) -> int {
+core_line(ctx: ptr) -> int {
     if state.integer(ctx, "status") == -1 { return state.integer(ctx, "error_line") }
     return state.integer(ctx, "line")
 }
+
+// Public handle: an immutable map built once at creation (so another thread
+// may read it while the engine runs) holding the engine map and cancel cell.
+inner_(handle: ptr) -> ptr {
+    if handle == null { return null }
+    return map.map_get_raw(handle, "ctx")
+}
+wrap_(ctx: @keep ptr) -> ptr {
+    if ctx == null { return null }
+    cell = sync.atomic_new(0)
+    map.map_put_raw(ctx, "cancel_cell", cell)
+    handle = map.map_new()
+    map.map_put_raw(handle, "ctx", ctx)
+    map.map_put_raw(handle, "cancel", cell)
+    return handle
+}
+@pure
+rexxae_create(source: string) -> ptr { return wrap_(core_create(source)) }
+@pure
+rexxae_create_next(previous: ptr, source: string) -> ptr { return wrap_(core_create_next(inner_(previous), source)) }
+@pure
+rexxae_destroy(handle: ptr) {
+    ctx = inner_(handle)
+    if ctx == null { return }
+    cell = map.map_get_raw(handle, "cancel")
+    pending = sync.atomic_load(cell)
+    if pending != 0 { bytes.free(mem.long_to_ptr(pending)) }
+    sync.atomic_free(cell)
+    core_destroy(ctx)
+    map.map_free(handle)
+}
+// Safe from any thread while another thread steps or the engine is suspended.
+// Returns 0 when recorded, 1 if already cancelled (first reason is kept), -1 for NULL.
+@pure
+rexxae_cancel(handle: ptr, reason: string) -> int {
+    if handle == null { return -1 }
+    cell = map.map_get_raw(handle, "cancel")
+    length = string.length(reason)
+    if length > 1024 { length = 1024 }
+    source = string.bytes("\0") as ptr
+    if length > 0 { source = string.bytes(reason) as ptr }
+    copy = bytes.from_ptr(source, length)
+    if sync.atomic_cas(cell, 0, mem.ptr_to_long(copy)) == 1 { return 0 }
+    bytes.free(copy)
+    return 1
+}
+@pure
+rexxae_step(handle: ptr, budget: int) -> int { return core_step(inner_(handle), budget) }
+@pure
+rexxae_reply(handle: ptr, rc: int, result: string, error_text: string) -> int { return core_reply(inner_(handle), rc, result, error_text) }
+@pure
+rexxae_register_function(handle: ptr, name: string, minimum: int, maximum: int) -> int { return core_register_function(inner_(handle), name, minimum, maximum) }
+@pure
+rexxae_reply_value(handle: ptr, encoded: string, error_text: string) -> int { return core_reply_value(inner_(handle), encoded, error_text) }
+@pure
+rexxae_set_variable_json(handle: ptr, name: string, encoded: string) -> int { return core_set_variable_json(inner_(handle), name, encoded) }
+@pure
+rexxae_get_variable_json(handle: ptr, name: string) -> ptr { return core_get_variable_json(inner_(handle), name) }
+@pure
+rexxae_argument_type(handle: ptr, index: int) -> int { return core_argument_type(inner_(handle), index) }
+@pure
+rexxae_argument_text(handle: ptr, index: int) -> ptr { return core_argument_text(inner_(handle), index) }
+@pure
+rexxae_text(handle: ptr) -> ptr { return core_text(inner_(handle)) }
+@pure
+rexxae_address(handle: ptr) -> ptr { return core_address(inner_(handle)) }
+@pure
+rexxae_error(handle: ptr) -> ptr { return core_error(inner_(handle)) }
+@pure
+rexxae_function(handle: ptr) -> ptr { return core_function(inner_(handle)) }
+@pure
+rexxae_arguments_json(handle: ptr) -> ptr { return core_arguments_json(inner_(handle)) }
+@pure
+rexxae_exit_code(handle: ptr) -> int { return core_exit_code(inner_(handle)) }
+@pure
+rexxae_line(handle: ptr) -> int { return core_line(inner_(handle)) }

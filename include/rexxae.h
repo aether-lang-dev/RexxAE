@@ -7,7 +7,8 @@
 extern "C" {
 #endif
 
-/* Experimental ABI v0. Each context is confined to one host thread.
+/* Experimental ABI v0. Each context is confined to one host thread, except
+ * aether_rexxae_cancel, which any thread may call (see below).
  * Inputs are copied. Pass non-NULL NUL-terminated UTF-8 strings.
  * Destroy every context. No Aether runtime types cross this interface. */
 typedef void *RexxAE;
@@ -42,6 +43,22 @@ void aether_rexxae_destroy(RexxAE ctx);
 int32_t aether_rexxae_step(RexxAE ctx, int32_t budget);
 int32_t aether_rexxae_reply(RexxAE ctx, int32_t rc,
                            const char *result, const char *error_text);
+/* Cancel a running or suspended context from ANY thread, including while
+ * another thread is inside aether_rexxae_step or the context awaits a
+ * COMMAND/FUNCTION reply. The reason (copied, truncated to 1024 bytes, may be
+ * empty, non-NULL) is recorded. Returns 0 when recorded, 1 if the context was
+ * already cancelled (the first reason is kept), -1 for a NULL context.
+ * The engine polls an atomic flag before every instruction and before
+ * honouring a pending request, so the next (or current) step returns
+ * REXXAE_ERROR within one instruction; a long builtin is not interrupted
+ * mid-call. aether_rexxae_error then reads "cancelled by host: <reason>".
+ * A pending request is discarded (a later reply returns -1), routine and loop
+ * frames are unwound, and every later step keeps returning REXXAE_ERROR.
+ * A context already DONE or in ERROR is unchanged. Rexx code cannot catch
+ * cancellation: RexxJS has no SIGNAL ON HALT equivalent, so none is offered.
+ * The caller must not race aether_rexxae_destroy against cancel; destroy
+ * still frees everything after a cancel. */
+int32_t aether_rexxae_cancel(RexxAE ctx, const char *reason);
 /* Borrowed strings, valid until the next step/reply/destroy. Read text on
  * SAY/COMMAND, address on COMMAND, error on ERROR. Copy to retain them. */
 const char *aether_rexxae_text(RexxAE ctx);

@@ -218,6 +218,62 @@ main() {
             spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "output")
             spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "3", "result")
         }
+        spec.it("cancels a long DO loop between steps and keeps failing") callback {
+            ctx = rexxae.rexxae_create("DO i = 1 TO 1000000\nx = i\nEND\nSAY 'finished'")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_step(ctx, 50), 3, "loop still running")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, "deadline 5s"), 0, "cancel recorded")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, "second"), 1, "first reason wins")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100000), -1, "step fails promptly")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "cancelled by host: deadline 5s", "message")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "stays failed")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "stays failed again")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "cancelled by host: deadline 5s", "message kept")
+        }
+        spec.it("cancels while suspended on a FUNCTION and discards the reply") callback {
+            ctx = rexxae.rexxae_create("LET v = WAITFOR(1)\nSAY v")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "WAITFOR", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "suspended")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, "host deadline"), 0, "cancel")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "step reports cancel")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "cancelled by host: host deadline", "message")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "5", ""), -1, "late reply discarded")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "no SAY after cancel")
+        }
+        spec.it("cancels while suspended on a COMMAND and inside a routine") callback {
+            ctx = rexxae.rexxae_create("CALL work\nSAY 'after'\nEXIT 0\nwork:\nADDRESS APP\n'go'\nRETURN 1")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 2, "command pending")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, ""), 0, "cancel with empty reason")
+            spec.assert_eq(rexxae.rexxae_reply(ctx, 0, "late", ""), 0, "reply accepted before the next step")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "cancel wins")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "cancelled by host", "bare message")
+        }
+        spec.it("cancel before the first step and on a finished context") callback {
+            early = rexxae.rexxae_create("SAY 'x'")
+            defer rexxae.rexxae_destroy(early)
+            spec.assert_eq(rexxae.rexxae_cancel(early, "early"), 0, "cancel")
+            spec.assert_eq(rexxae.rexxae_step(early, 100), -1, "never runs")
+            spec.assert_eq(rexxae.rexxae_cancel(null, "x"), -1, "null handle")
+            done = rexxae.rexxae_create("SAY 'x'")
+            defer rexxae.rexxae_destroy(done)
+            spec.assert_eq(rexxae.rexxae_step(done, 100), 1, "say")
+            spec.assert_eq(rexxae.rexxae_step(done, 100), 0, "done")
+            spec.assert_eq(rexxae.rexxae_cancel(done, "late"), 0, "recorded")
+            spec.assert_eq(rexxae.rexxae_step(done, 100), 0, "completed script stays done")
+        }
+        spec.it("destroys a cancelled context mid-DO inside a routine and its successor") callback {
+            ctx = rexxae.rexxae_create("DO i = 1 TO 10\nCALL f i\nEND\nf:\nLET q = P(1)\nRETURN")
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "P", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "inside call inside loop")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, "bye"), 0, "cancel")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "error")
+            next = rexxae.rexxae_create_next(ctx, "SAY 'again'")
+            spec.assert_eq(rexxae.rexxae_step(next, 100), 1, "successor is not cancelled")
+            rexxae.rexxae_destroy(next)
+            rexxae.rexxae_destroy(ctx)
+        }
         spec.it("does not load relative references without a mounted resolver") callback {
             ctx = rexxae.rexxae_create("REQUIRE '/static/calculator.rexx' AS remote")
             defer rexxae.rexxae_destroy(ctx)

@@ -96,6 +96,16 @@ Use a small host harness to prove embedding contracts. Python/ctypes is a
 valid host; recreating the spreadsheet is unnecessary. Existing applications
 are integration references, not required implementation work.
 
+## Cancellation
+
+`rexxae_cancel(ctx, reason)` is the only thread-safe entry point. The public
+handle is an immutable map holding the engine map and an `std.sync` atomic cell;
+cancel publishes a heap copy of the reason there and never touches the engine
+map. `core_step` polls the cell before each instruction and before returning a
+pending COMMAND/FUNCTION. Internal engine functions are `core_*`; the public
+`rexxae_*` exports are thin wrappers. `std.sync`, `std.mem` and `std.bytes` are
+in the reviewed import list for this alone. See README "Cancellation".
+
 ## Containment is a required contract
 
 Read `/home/paul/scm/aether/docs/containment-sandbox.md`; sae's

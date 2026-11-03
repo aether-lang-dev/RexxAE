@@ -47,6 +47,7 @@ main() {
     mounts = list.new()
     defer list.free(mounts)
     probe = 0
+    log_level = -1
     source = ""
     while true {
         data, err = ipc.read_frame(ch, MAX_FRAME)
@@ -60,14 +61,22 @@ main() {
             list.add(mounts, rest)
         } else if verb == "PROBE" {
             probe = 1
+        } else if verb == "LOGLEVEL" {
+            level, lerr = string.to_int(rest)
+            if lerr != "" || level < -1 || level > 5 {
+                tell(ch, "ERROR protocol: LOGLEVEL wants -1 (off) or 0..5, got '${rest}'")
+                exit(1)
+            }
+            log_level = level
         } else {
-            tell(ch, "ERROR protocol: expected MOUNT, PROBE or SCRIPT, got '${verb}'")
+            tell(ch, "ERROR protocol: expected MOUNT, PROBE, LOGLEVEL or SCRIPT, got '${verb}'")
             exit(1)
         }
     }
 
     ctx = engine.rexxae_create(source)
     defer engine.rexxae_destroy(ctx)
+    engine.rexxae_set_log_level(ctx, log_level)
     n = list.size(mounts)
     i = 0
     while i < n {
@@ -168,6 +177,10 @@ run(ctx: ptr, ch: int) {
             address = string.copy(engine.rexxae_address(ctx))
             tell(ch, "AUDIT rexxae-worker refused ADDRESS ${address}: no environment is mounted")
             engine.rexxae_reply(ctx, 1, "", "ADDRESS ${address} is not mounted")
+        } else if status == 5 {
+            // A LOG event: "LOG <level> <tags length> <tags JSON> <message>".
+            tags = string.copy(engine.rexxae_log_tags_json(ctx))
+            tell(ch, "LOG ${engine.rexxae_log_level(ctx)} ${string.length(tags)} ${tags} ${string.copy(engine.rexxae_text(ctx))}")
         } else if status == 4 {
             name = string.copy(engine.rexxae_function(ctx))
             tell(ch, "CALL ${name} ${string.copy(engine.rexxae_arguments_json(ctx))}")
@@ -187,8 +200,18 @@ poll_cancel(ctx: ptr, ch: int) {
     verb, rest = split_verb(data)
     if verb == "CANCEL" {
         engine.rexxae_cancel(ctx, rest)
+    } else if verb == "LOGLEVEL" {
+        set_level(ctx, rest)
     } else {
         engine.rexxae_cancel(ctx, "protocol: unexpected '${verb}' while the script runs")
+    }
+}
+
+// LOGLEVEL while the script runs: the threshold from the next step on.
+set_level(ctx: ptr, rest: string) {
+    level, lerr = string.to_int(rest)
+    if lerr != "" || engine.rexxae_set_log_level(ctx, level) != 0 {
+        engine.rexxae_cancel(ctx, "protocol: LOGLEVEL wants -1 (off) or 0..5, got '${rest}'")
     }
 }
 
@@ -198,6 +221,13 @@ await_reply(ctx: ptr, ch: int) {
     data, err = ipc.read_frame(ch, MAX_FRAME)
     if err != "" { exit(1) }
     verb, rest = split_verb(data)
+    // A LOGLEVEL sent while the CALL was on its way: apply it, keep waiting.
+    while verb == "LOGLEVEL" {
+        set_level(ctx, rest)
+        data, err = ipc.read_frame(ch, MAX_FRAME)
+        if err != "" { exit(1) }
+        verb, rest = split_verb(data)
+    }
     if verb == "REPLY" {
         if engine.rexxae_reply_value(ctx, rest, "") != 0 {
             engine.rexxae_reply_value(ctx, "null", "the host's reply is not valid JSON")

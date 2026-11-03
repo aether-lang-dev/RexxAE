@@ -13,6 +13,9 @@
 //
 //   host -> worker   MOUNT <NAME> <min> <max>   before SCRIPT, one a function
 //                    PROBE                      before SCRIPT: self-check
+//                    LOGLEVEL <n>               the log threshold: -1 off (the
+//                                               default), 0 trace .. 5 fatal;
+//                                               before SCRIPT or at any time
 //                    SCRIPT <source>            lock down and start
 //                    REPLY <json>               the pending CALL's value
 //                    FAIL <message>             the pending CALL fails
@@ -20,6 +23,10 @@
 //                                               {"granted":true,"text":...}
 //                    CANCEL <reason>            stop the script (rexxae_cancel)
 //   worker -> host   SAY <text>
+//                    LOG <level> <n> <tags> <message>
+//                                               a LOG_* call at or above the
+//                                               threshold; <tags> is n bytes
+//                                               of JSON object; no answer
 //                    CALL <NAME> <json array of arguments>
 //                    AUDIT <text>               for the host's audit log
 //                    DONE <exit code>           then the worker exits
@@ -42,13 +49,14 @@
 //   while true {
 //       e = rexxworker.next(&w)
 //       if e.kind == "SAY" { println(e.text) }
+//       else if e.kind == "LOG" { println("${e.name} ${e.text} ${e.tags}") }  // after log_level
 //       else if e.kind == "CALL" { rexxworker.answer(&w, rexxworker.json_string("hi")) }
 //       else { break }                        // DONE, ERROR or KILLED
 //   }
 
 exports(Worker, Event, launch, launch_uncontained, mount, probe, start, next,
     answer, fail, grant_file, deny, cancel, close, audit, json_string,
-    printable, MAX_FRAME, DEADLINE_MS, GRACE_MS)
+    printable, log_level, level_name, MAX_FRAME, DEADLINE_MS, GRACE_MS)
 
 import std.io
 import std.ipc
@@ -76,7 +84,9 @@ struct Worker {
     over: int
 }
 
-// One thing the worker did. kind is SAY (text), CALL (name, text = the
+// One thing the worker did. kind is SAY (text), LOG (code = the level 0..5,
+// name = TRACE .. FATAL, text = the message, tags = a JSON object; nothing
+// to answer), CALL (name, text = the
 // arguments as a JSON array; answer it with answer, fail, grant_file or deny
 // before the next call to next), DONE (code), ERROR (text: the worker's
 // message, "cancelled by host: ..." after a deadline) or KILLED (text: why
@@ -86,10 +96,41 @@ struct Event {
     name: string
     text: string
     code: int
+    tags: string
 }
 
 fn event(kind: string, name: string, text: string, code: int) -> Event {
-    return Event { kind: kind, name: name, text: text, code: code }
+    return Event { kind: kind, name: name, text: text, code: code, tags: "" }
+}
+
+// TRACE, DEBUG, INFO, WARN, ERROR or FATAL for a level 0..5.
+level_name(level: int) -> string {
+    if level == 0 { return "TRACE" }
+    if level == 1 { return "DEBUG" }
+    if level == 2 { return "INFO" }
+    if level == 3 { return "WARN" }
+    if level == 4 { return "ERROR" }
+    if level == 5 { return "FATAL" }
+    return "?"
+}
+
+// "<level> <n> <tags> <message>" from a LOG frame, or a KILLED-worthy reason.
+fn log_event(rest: string) -> (Event, string) {
+    level_text, after_level = split_verb(rest)
+    count_text, after_count = split_verb(after_level)
+    level, lerr = string.to_int(level_text)
+    count, cerr = string.to_int(count_text)
+    if lerr != "" || cerr != "" || level < 0 || level > 5 || count < 2 || count > string.length(after_count) {
+        return event("LOG", "", "", -1), "protocol: malformed LOG"
+    }
+    tags = string.substring(after_count, 0, count)
+    msg = ""
+    if string.length(after_count) > count + 1 {
+        msg = string.substring(after_count, count + 1, string.length(after_count))
+    }
+    e = event("LOG", level_name(level), msg, level)
+    e.tags = tags
+    return e, ""
 }
 
 fn worker(ch: int, pid: int, name: string, audit_path: string) -> Worker {
@@ -151,6 +192,15 @@ probe(w: *Worker) -> string {
     return ipc.write_frame(w.ch, "PROBE")
 }
 
+// Sets the worker's log threshold: -1 off (the default), 0 trace, 1 debug,
+// 2 info, 3 warn, 4 error, 5 fatal. Before start it holds from the first
+// step; after, from the worker's next step. LOG_* calls below it send
+// nothing. Out of range: the error, and nothing is sent.
+log_level(w: *Worker, level: int) -> string {
+    if level < -1 || level > 5 { return "log_level: -1 (off) or 0..5, not ${level}" }
+    return ipc.write_frame(w.ch, "LOGLEVEL ${level}")
+}
+
 // Sends the script; the worker locks itself down and runs it.
 start(w: *Worker, source: string) -> string {
     return ipc.write_frame(w.ch, "SCRIPT ${source}")
@@ -208,6 +258,10 @@ next(w: *Worker) -> Event {
             audit(w, "reports: ${printable(rest)}")
         } else if verb == "SAY" {
             return event("SAY", "", rest, 0)
+        } else if verb == "LOG" {
+            e, lerr = log_event(rest)
+            if lerr != "" { return hang_up(w, lerr) }
+            return e
         } else if verb == "CALL" {
             name, args = split_verb(rest)
             return event("CALL", name, args, 0)

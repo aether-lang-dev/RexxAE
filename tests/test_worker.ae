@@ -7,6 +7,7 @@
 // Build: make worker-test (it builds the worker and the silent stand-in).
 import std.spec
 import std.fs
+import std.ipc
 import std.os
 import std.sandbox
 import std.string
@@ -89,6 +90,42 @@ main() {
             spec.assert_str_eq(e.kind, "DONE", "done")
             spec.assert_eq(e.code, 3, "exit code")
             spec.assert_contains(log_text(), "normal reports: rexxae-worker locked itself down before the first step: no grants", "lockdown audited")
+        }
+        spec.it("carries LOG events at the host's threshold, with tags, and off by default") callback {
+            script = "LET t.user = 'ann'\nLET t.n = 2\nCALL LOG_DEBUG 'quiet'\nCALL LOG_WARN 'careful: a b', t\nLET x = LOG_INFO('')\nSAY 'end'"
+            off = begin(WORKER, "log-off")
+            rexxworker.start(&off, script)
+            spec.assert_str_eq(transcript(&off), "SAY end\nDONE 0\n", "no LOG frames when off")
+            w = begin(WORKER, "log")
+            spec.assert_str_eq(rexxworker.log_level(&w, 7), "log_level: -1 (off) or 0..5, not 7", "out of range is refused here")
+            spec.assert_str_eq(rexxworker.log_level(&w, 2), "", "info")
+            rexxworker.start(&w, script)
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.code} ${e.name}", "LOG 3 WARN", "warn, debug skipped")
+            spec.assert_str_eq(e.text, "careful: a b", "message with spaces")
+            spec.assert_str_eq(e.tags, "{\"user\":\"ann\",\"n\":2}", "tags")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.name} [${e.text}] ${e.tags}", "LOG INFO [] {}", "empty message, no tags")
+            spec.assert_str_eq(transcript(&w), "SAY end\nDONE 0\n", "then the rest")
+        }
+        spec.it("changes the log threshold while the script waits on the host") callback {
+            w = begin(WORKER, "log-live")
+            rexxworker.mount(&w, "HOST_WAIT", 0, 0)
+            rexxworker.start(&w, "CALL LOG_ERROR 'not yet'\nLET v = HOST_WAIT()\nLET y = LOG_ERROR('now' v)\nSAY 'end'")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.name}", "CALL HOST_WAIT", "off: no LOG before the call")
+            rexxworker.log_level(&w, 0)
+            rexxworker.answer(&w, "\"x\"")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.name} ${e.text}", "LOG ERROR now x", "on from the next step")
+            spec.assert_str_eq(transcript(&w), "SAY end\nDONE 0\n", "done")
+        }
+        spec.it("refuses a malformed LOGLEVEL before the script") callback {
+            w = begin(WORKER, "log-bad")
+            // Straight down the socket: log_level checks the range itself.
+            spec.assert_str_eq(ipc.write_frame(w.ch, "LOGLEVEL loud"), "", "sent")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.text}", "ERROR protocol: LOGLEVEL wants -1 (off) or 0..5, got 'loud'", "refused")
         }
         spec.it("hands over a granted file as a descriptor and audits GRANT and DENY") callback {
             fs.write("build/worker/granted.txt", "greeting=from the host's disk")

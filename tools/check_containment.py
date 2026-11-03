@@ -16,14 +16,19 @@ if not public or any(not re.search(r'@pure\s+' + name + r'\(', engine_source) fo
     raise SystemExit('Every public engine entry point must retain its @pure effect guard')
 print(f'{len(public)} public engine entry points retain @pure guards')
 # This is a reviewed guest API snapshot, like sae/tests/spec_globals.ae.
-expected_functions = set(json.loads(Path('tests/guest_functions.json').read_text()))
+surface = json.loads(Path('tests/guest_functions.json').read_text())
+expected_functions = set(surface['rexxjs'])
+expected_extensions = set(surface['rexxae_extensions'])
 functions = set()
+extensions = set()
 allowed_std = {'std.string', 'std.map', 'std.json', 'std.math', 'std.strbuilder', 'std.list',
                 'std.sync', 'std.mem', 'std.bytes'}  # last three: cancel flag only, no authority
 for path in Path('src').glob('*.ae'):
     source = path.read_text()
     for names in re.findall(r'const (?:TEXT|MATH|VALUE)_FUNCTIONS = "([^"]+)"', source):
         functions.update(names.split())
+    for names in re.findall(r'const EXTENSION_FUNCTIONS = "([^"]+)"', source):
+        extensions.update(names.split())
     for module in re.findall(r'^import\s+(\S+)', source, re.MULTILINE):
         if not module.startswith('src.') and module not in allowed_std:
             raise SystemExit(f'{path}: unreviewed engine import {module}')
@@ -32,7 +37,11 @@ if functions != expected_functions:
 service_imports = set(re.findall(r'^import\s+(\S+)', Path('examples/services/config.ae').read_text(), re.MULTILINE))
 if service_imports != {'std.file', 'std.sandbox', 'std.map', 'std.string'}:
     raise SystemExit('Configuration service imports widened or changed; review its effect boundary')
-print(f'{len(functions)} guest functions and engine/service import boundaries match the reviewed surface')
+if extensions != expected_extensions:
+    raise SystemExit(f'RexxAE extension surface changed: added={extensions - expected_extensions}, removed={expected_extensions - extensions}')
+if functions & extensions:
+    raise SystemExit(f'Names listed both as RexxJS functions and as extensions: {functions & extensions}')
+print(f'{len(functions)} guest functions, {len(extensions)} RexxAE extensions and engine/service import boundaries match the reviewed surface')
 # The worker process (worker/) is a separate component with its own reviewed
 # allowance; it never widens the engine's list above. The worker may touch
 # fs and tcp only for its PROBE self-check, inside its own no-grant enforce.

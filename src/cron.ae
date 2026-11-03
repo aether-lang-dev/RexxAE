@@ -1,0 +1,440 @@
+// Cron schedules in UTC: CRON_VALID and CRON_NEXT (RexxAE extensions; RexxJS
+// has neither). No clock: the instant to search from always comes from the
+// script, which gets "now" from a host-mounted function. No time zones and no
+// daylight saving: every calendar field is UTC.
+//
+// Ported and adapted from Toit's lib/cron/cron.toit (toitlang/toit commit
+// ec8860aa25d35e54f5cb3bcd437133054eccae8c), which itself implements
+// robfig/cron's spec.go (MIT). See docs/provenance-toit.md for the
+// adaptations. The original carries this notice:
+//
+//   Copyright (C) 2019 Toitware ApS. All rights reserved.
+//   Use of this source code is governed by an MIT-style license that can be
+//   found in the lib/LICENSE file.
+//
+// and lib/LICENSE reads:
+//
+//   MIT License
+//
+//   Copyright (c) 2021 Toit contributors
+//
+//   Permission is hereby granted, free of charge, to any person obtaining a copy
+//   of this software and associated documentation files (the "Software"), to deal
+//   in the Software without restriction, including without limitation the rights
+//   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//   copies of the Software, and to permit persons to whom the Software is
+//   furnished to do so, subject to the following conditions:
+//
+//   The above copyright notice and this permission notice shall be included in all
+//   copies or substantial portions of the Software.
+//
+//   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//   SOFTWARE.
+//
+// Expressions: six fields "seconds minutes hours day-of-month month
+// day-of-week" or the standard five (seconds = 0), separated by spaces or
+// tabs; each field is `*` or a comma list of N, N-M, N/S, N-M/S or */S
+// (N/S runs from N to the field's maximum). Day-of-week is 0-6, 0 = Sunday.
+// @yearly @annually @monthly @weekly @daily @hourly are the usual shorthands.
+// Day-of-month and day-of-week: when both are restricted, a day matches if
+// EITHER does (the usual cron rule); when either is `*` (or `*/1`, or a list
+// containing `*`), both must match, which in practice means the other one.
+// A stepped star such as `*/2` counts as restricted, as in robfig/cron.
+import std.string
+
+exports(check, next_after, MAX_YEARS)
+
+// No activation within this many years of the search start: "".
+const MAX_YEARS = 5
+
+// A parsed field: a 64-character mask of '0'/'1' (index = value), then '*'
+// or '-' for whether the field was a star. A schedule is six of these joined
+// with '|'.
+const ZEROS = "0000000000000000000000000000000000000000000000000000000000000000"
+
+field_name_(i: int) -> string {
+    if i == 0 { return "seconds" }
+    if i == 1 { return "minutes" }
+    if i == 2 { return "hours" }
+    if i == 3 { return "day-of-month" }
+    if i == 4 { return "month" }
+    return "day-of-week"
+}
+field_min_(i: int) -> int {
+    if i == 3 || i == 4 { return 1 }
+    return 0
+}
+field_max_(i: int) -> int {
+    if i <= 1 { return 59 }
+    if i == 2 { return 23 }
+    if i == 3 { return 31 }
+    if i == 4 { return 12 }
+    return 6
+}
+
+predefined_(keyword: string) -> string {
+    k = string.to_lower(keyword)
+    if k == "@yearly" || k == "@annually" { return "0 0 0 1 1 *" }
+    if k == "@monthly" { return "0 0 0 1 * *" }
+    if k == "@weekly" { return "0 0 0 * * 0" }
+    if k == "@daily" { return "0 0 0 * * *" }
+    if k == "@hourly" { return "0 0 * * * *" }
+    return ""
+}
+
+// A non-negative decimal integer: digits only, at most nine.
+cardinal_(text: string, name: string) -> (int, string) {
+    n = string.length(text)
+    if n == 0 { return 0, "${name}: missing number" }
+    if n > 9 { return 0, "${name}: number too large: ${text}" }
+    i = 0
+    while i < n {
+        c = string.char_at(text, i)
+        if c < 48 || c > 57 { return 0, "${name}: not a number: ${text}" }
+        i = i + 1
+    }
+    return string.string_get_int(text), ""
+}
+
+set_bits_(mask: string, start: int, end: int, step: int) -> string {
+    result = mask
+    i = start
+    while i <= end {
+        result = string.concat(string.concat(string.substring(result, 0, i), "1"), string.substring(result, i + 1, 64))
+        i = i + step
+    }
+    return result
+}
+
+// One comma item: `*`, N, N-M, with an optional /S.
+range_(item: string, field: int, mask: string) -> (string, bool, string) {
+    name = field_name_(field)
+    lo = field_min_(field)
+    hi = field_max_(field)
+    if item == "" { return mask, false, "${name}: empty list item" }
+    slash = string.split(item, "/")
+    slashes = string.array_size(slash)
+    if slashes > 2 { string.array_free(slash); return mask, false, "${name}: too many slashes: ${item}" }
+    head = string.copy(string.array_get(slash, 0))
+    step_text = ""
+    if slashes == 2 { step_text = string.copy(string.array_get(slash, 1)) }
+    string.array_free(slash)
+    star = false
+    start = 0
+    end = 0
+    if head == "*" {
+        start = lo
+        end = hi
+        star = true
+    } else {
+        if string.starts_with(head, "*") != 0 { return mask, false, "${name}: * cannot start a range: ${item}" }
+        dash = string.split(head, "-")
+        dashes = string.array_size(dash)
+        if dashes > 2 { string.array_free(dash); return mask, false, "${name}: too many hyphens: ${item}" }
+        first = string.copy(string.array_get(dash, 0))
+        second = ""
+        if dashes == 2 { second = string.copy(string.array_get(dash, 1)) }
+        string.array_free(dash)
+        a, aerr = cardinal_(first, name)
+        if aerr != "" { return mask, false, aerr }
+        start = a
+        end = a
+        if dashes == 2 {
+            b, berr = cardinal_(second, name)
+            if berr != "" { return mask, false, berr }
+            end = b
+        } else if slashes == 2 {
+            // N/S: from N to the field's maximum.
+            end = hi
+        }
+    }
+    step = 1
+    if slashes == 2 {
+        s, serr = cardinal_(step_text, name)
+        if serr != "" { return mask, false, serr }
+        if s == 0 { return mask, false, "${name}: step must be a positive number: ${item}" }
+        step = s
+        if step > 1 { star = false }
+    }
+    if start < lo { return mask, false, "${name}: ${start} is below the minimum ${lo}" }
+    if end > hi { return mask, false, "${name}: ${end} is above the maximum ${hi}" }
+    if start > end { return mask, false, "${name}: range ${start}-${end} runs backwards" }
+    return set_bits_(mask, start, end, step), star, ""
+}
+
+field_(text: string, field: int) -> (string, string) {
+    mask = ZEROS
+    star = false
+    items = string.split(text, ",")
+    count = string.array_size(items)
+    i = 0
+    while i < count {
+        item = string.copy(string.array_get(items, i))
+        next_mask, item_star, err = range_(item, field, mask)
+        if err != "" { string.array_free(items); return "", err }
+        mask = next_mask
+        if item_star { star = true }
+        i = i + 1
+    }
+    string.array_free(items)
+    if star { return string.concat(mask, "*"), "" }
+    return string.concat(mask, "-"), ""
+}
+
+// Splits on runs of spaces and tabs.
+words_(text: string) -> string {
+    out = ""
+    n = string.length(text)
+    i = 0
+    pending = false
+    while i < n {
+        c = string.char_at(text, i)
+        if c == 32 || c == 9 {
+            pending = string.length(out) > 0
+        } else {
+            if pending { out = string.concat(out, " "); pending = false }
+            out = string.concat(out, string.substring(text, i, i + 1))
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// Parses `expr` into a schedule, or returns why it is not one.
+parse_(expr: string) -> (string, string) {
+    text = words_(expr)
+    if text == "" { return "", "empty expression" }
+    if string.starts_with(text, "@") != 0 {
+        expanded = predefined_(text)
+        if expanded == "" { return "", "unknown shorthand ${text}" }
+        text = expanded
+    }
+    parts = string.split(text, " ")
+    count = string.array_size(parts)
+    if count != 5 && count != 6 {
+        string.array_free(parts)
+        return "", "expected 5 or 6 fields, got ${count}"
+    }
+    offset = 0
+    schedule = ""
+    if count == 5 {
+        schedule = string.concat(set_bits_(ZEROS, 0, 0, 1), "-")
+        offset = 1
+    }
+    i = 0
+    while i < count {
+        mask, err = field_(string.copy(string.array_get(parts, i)), i + offset)
+        if err != "" { string.array_free(parts); return "", err }
+        if schedule == "" { schedule = mask }
+        else { schedule = string.concat(string.concat(schedule, "|"), mask) }
+        i = i + 1
+    }
+    string.array_free(parts)
+    return schedule, ""
+}
+
+// "" when `expr` is a valid cron expression, otherwise why not.
+check(expr: string) -> string {
+    _schedule, err = parse_(expr)
+    return err
+}
+
+// Field `field` (0-5) of `schedule`, value `v`: 1 when set.
+bit_(schedule: string, field: int, v: int) -> bool {
+    return string.char_at(schedule, field * 66 + v) == 49
+}
+star_(schedule: string, field: int) -> bool {
+    return string.char_at(schedule, field * 66 + 64) == 42
+}
+
+// The proleptic Gregorian calendar, after Howard Hinnant's public-domain
+// days_from_civil / civil_from_days. Day 0 is 1970-01-01.
+floor_div_(a: int, b: int) -> int {
+    q = a / b
+    if (a % b != 0) && ((a < 0) != (b < 0)) { q = q - 1 }
+    return q
+}
+days_from_civil_(year: int, month: int, day: int) -> int {
+    y = year
+    if month <= 2 { y = y - 1 }
+    era = floor_div_(y, 400)
+    yoe = y - era * 400
+    mp = month - 3
+    if month <= 2 { mp = month + 9 }
+    doy = (153 * mp + 2) / 5 + day - 1
+    doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+    return era * 146097 + doe - 719468
+}
+civil_from_days_(days: int) -> (int, int, int) {
+    z = days + 719468
+    era = floor_div_(z, 146097)
+    doe = z - era * 146097
+    yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365
+    doy = doe - (365 * yoe + yoe / 4 - yoe / 100)
+    mp = (5 * doy + 2) / 153
+    day = doy - (153 * mp + 2) / 5 + 1
+    month = mp + 3
+    if mp >= 10 { month = mp - 9 }
+    year = yoe + era * 400
+    if month <= 2 { year = year + 1 }
+    return year, month, day
+}
+leap_(year: int) -> bool {
+    return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
+days_in_month_(year: int, month: int) -> int {
+    if month == 2 {
+        if leap_(year) { return 29 }
+        return 28
+    }
+    if month == 4 || month == 6 || month == 9 || month == 11 { return 30 }
+    return 31
+}
+
+// Instants this module accepts: 0000-01-01T00:00:00Z to 9999-12-31T23:59:59Z.
+const FIRST_DAY = -719528
+const LAST_DAY = 2932896
+
+digits_(text: string, from: int, count: int) -> int {
+    i = from
+    while i < from + count {
+        c = string.char_at(text, i)
+        if c < 48 || c > 57 { return -1 }
+        i = i + 1
+    }
+    return string.string_get_int(string.substring(text, from, from + count))
+}
+
+// "YYYY-MM-DDTHH:MM:SSZ" or "YYYY-MM-DDTHH:MM:SS.mmmZ" -> (day, second of day).
+parse_iso_(text: string) -> (int, int, bool) {
+    n = string.length(text)
+    if n != 20 && n != 24 { return 0, 0, false }
+    if string.char_at(text, 4) != 45 || string.char_at(text, 7) != 45 || string.char_at(text, 10) != 84 { return 0, 0, false }
+    if string.char_at(text, 13) != 58 || string.char_at(text, 16) != 58 || string.char_at(text, n - 1) != 90 { return 0, 0, false }
+    if n == 24 {
+        if string.char_at(text, 19) != 46 || digits_(text, 20, 3) < 0 { return 0, 0, false }
+    }
+    year = digits_(text, 0, 4)
+    month = digits_(text, 5, 2)
+    day = digits_(text, 8, 2)
+    hour = digits_(text, 11, 2)
+    minute = digits_(text, 14, 2)
+    second = digits_(text, 17, 2)
+    if year < 0 || month < 1 || month > 12 || day < 1 { return 0, 0, false }
+    if day > days_in_month_(year, month) { return 0, 0, false }
+    if hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 { return 0, 0, false }
+    return days_from_civil_(year, month, day), hour * 3600 + minute * 60 + second, true
+}
+
+// Epoch milliseconds (an integer, optionally negative) -> (day, second of day).
+parse_epoch_(text: string) -> (int, int, bool) {
+    n = string.length(text)
+    if n == 0 || n > 16 { return 0, 0, false }
+    i = 0
+    if string.char_at(text, 0) == 45 { i = 1 }
+    if i == n { return 0, 0, false }
+    while i < n {
+        c = string.char_at(text, i)
+        if c < 48 || c > 57 { return 0, 0, false }
+        i = i + 1
+    }
+    ms = string.string_get_long(text)
+    secs = ms / 1000
+    if ms % 1000 != 0 && ms < 0 { secs = secs - 1 }
+    days = secs / 86400
+    if secs % 86400 != 0 && secs < 0 { days = days - 1 }
+    if days < FIRST_DAY || days > LAST_DAY { return 0, 0, false }
+    day = days as int
+    sod = (secs - days * 86400) as int
+    return day, sod, true
+}
+
+pad_(value: int, width: int) -> string {
+    text = string.from_int(value)
+    while string.length(text) < width { text = string.concat("0", text) }
+    return text
+}
+
+format_iso_(day: int, sod: int) -> string {
+    year, month, mday = civil_from_days_(day)
+    return "${pad_(year, 4)}-${pad_(month, 2)}-${pad_(mday, 2)}T${pad_(sod / 3600, 2)}:${pad_((sod / 60) % 60, 2)}:${pad_(sod % 60, 2)}.000Z"
+}
+
+format_epoch_(day: int, sod: int) -> string {
+    secs = (day as long) * 86400 + (sod as long)
+    return string.from_long(secs * 1000)
+}
+
+// The first activation of `expr` strictly after `after`, an ISO 8601 UTC
+// instant (`epoch` false) or epoch milliseconds as decimal text (`epoch`
+// true), in the same form; "" when there is none within MAX_YEARS years
+// (or before the end of year 9999). The second value is an error: an
+// invalid expression or instant.
+next_after(expr: string, after: string, epoch: bool) -> (string, string) {
+    schedule, perr = parse_(expr)
+    if perr != "" { return "", "invalid cron expression '${expr}': ${perr}" }
+    day = 0
+    sod = 0
+    ok = false
+    if epoch { day, sod, ok = parse_epoch_(after) }
+    else { day, sod, ok = parse_iso_(after) }
+    if !ok {
+        return "", "invalid instant '${after}': expected an ISO 8601 UTC time such as 2026-11-03T16:49:32.123Z or epoch milliseconds"
+    }
+    // Drop the fraction (already gone) and start one second later.
+    sod = sod + 1
+    if sod == 86400 { sod = 0; day = day + 1 }
+    y0, m0, d0 = civil_from_days_(day)
+    // Five years on, Feb 29 included (it runs on to Mar 1).
+    limit_day = days_from_civil_(y0 + MAX_YEARS, m0, d0)
+    limit_sod = sod
+    dom_star = star_(schedule, 3)
+    dow_star = star_(schedule, 5)
+    while day < limit_day || (day == limit_day && sod < limit_sod) {
+        if day > LAST_DAY { return "", "" }
+        year, month, mday = civil_from_days_(day)
+        if !bit_(schedule, 4, month) {
+            // No activation in the rest of this month.
+            if month == 12 { day = days_from_civil_(year + 1, 1, 1) }
+            else { day = days_from_civil_(year, month + 1, 1) }
+            sod = 0
+            continue
+        }
+        dom_match = bit_(schedule, 3, mday)
+        weekday = floor_div_(day + 4, 7)
+        weekday = day + 4 - weekday * 7
+        dow_match = bit_(schedule, 5, weekday)
+        day_match = dom_match || dow_match
+        if dom_star || dow_star { day_match = dom_match && dow_match }
+        if !day_match {
+            day = day + 1
+            sod = 0
+            continue
+        }
+        hour = sod / 3600
+        if !bit_(schedule, 2, hour) {
+            sod = (hour + 1) * 3600
+            if sod >= 86400 { sod = 0; day = day + 1 }
+            continue
+        }
+        minute = (sod / 60) % 60
+        if !bit_(schedule, 1, minute) {
+            sod = (sod / 60 + 1) * 60
+            if sod >= 86400 { sod = 0; day = day + 1 }
+            continue
+        }
+        if !bit_(schedule, 0, sod % 60) {
+            sod = sod + 1
+            if sod >= 86400 { sod = 0; day = day + 1 }
+            continue
+        }
+        if epoch { return format_epoch_(day, sod), "" }
+        return format_iso_(day, sod), ""
+    }
+    return "", ""
+}

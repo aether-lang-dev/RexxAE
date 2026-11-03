@@ -1,0 +1,270 @@
+// CRON_VALID and CRON_NEXT (RexxAE extensions; RexxJS has neither) through
+// the Rexx parser. Expected instants are worked out by hand from the
+// calendar (2026-11-03 is a Tuesday), not by a second implementation.
+import std.spec
+import std.string
+import src.engine
+
+const AFTER = "2026-11-03T16:49:32.123Z"
+
+said(source: string) -> string {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    status = engine.rexxae_step(ctx, 1000)
+    if status == -1 { return string.concat("ERROR ", string.copy(engine.rexxae_error(ctx))) }
+    if status != 1 { return "no SAY: status ${status}" }
+    text = string.copy(engine.rexxae_text(ctx))
+    if engine.rexxae_step(ctx, 1000) != 0 { return "did not finish" }
+    return text
+}
+
+next_(expr: string, after: string, expected: string) {
+    spec.assert_str_eq(said("SAY '[' || CRON_NEXT('${expr}', '${after}') || ']'"), "[${expected}]", "${expr} after ${after}")
+}
+valid_(expr: string, expected: string) {
+    spec.assert_str_eq(said("SAY CRON_VALID('${expr}')"), expected, "CRON_VALID('${expr}')")
+}
+error_(source: string, fragment: string) {
+    got = said(source)
+    spec.assert_contains(got, "ERROR ", "script error: ${source}")
+    spec.assert_contains(got, fragment, "message: ${source}")
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "CRON_VALID: parsing") {
+        spec.it("accepts five and six fields, shorthands and runs of blanks") callback {
+            valid_("* * * * *", "1")
+            valid_("* * * * * *", "1")
+            valid_("0 0 1 1 *", "1")
+            valid_("  0  0\t* * *  ", "1")
+            valid_("0,15,30,45 0-59/5 1-23/2 1,15 */3 0-6", "1")
+            valid_("59 59 23 31 12 6", "1")
+            valid_("05 07 * * *", "1")
+            valid_("@yearly", "1")
+            valid_("@annually", "1")
+            valid_("@monthly", "1")
+            valid_("@weekly", "1")
+            valid_("@daily", "1")
+            valid_("@hourly", "1")
+            valid_("@Daily", "1")
+        }
+        spec.it("rejects the wrong number of fields and unknown shorthands") callback {
+            valid_("", "0")
+            valid_("   ", "0")
+            valid_("* * * *", "0")
+            valid_("* * * * * * *", "0")
+            valid_("@never", "0")
+            valid_("@daily *", "0")
+            valid_("@", "0")
+        }
+        spec.it("rejects values outside each field") callback {
+            // Six fields: seconds minutes hours day-of-month month day-of-week.
+            valid_("60 * * * * *", "0")
+            valid_("* 60 * * * *", "0")
+            valid_("* * 24 * * *", "0")
+            valid_("* * * 0 * *", "0")
+            valid_("* * * 32 * *", "0")
+            valid_("* * * * 0 *", "0")
+            valid_("* * * * 13 *", "0")
+            valid_("* * * * * 7", "0")
+            // Five fields: minutes hours day-of-month month day-of-week.
+            valid_("60 * * * *", "0")
+            valid_("* 24 * * *", "0")
+            valid_("* * 0 * *", "0")
+            valid_("* * 32 * *", "0")
+            valid_("* * * 0 *", "0")
+            valid_("* * * 13 *", "0")
+            valid_("* * * * 7", "0")
+            valid_("59 23 31 12 6", "1")
+        }
+        spec.it("rejects malformed ranges, steps and lists") callback {
+            valid_("5-1 * * * *", "0")
+            valid_("*/0 * * * *", "0")
+            valid_("1/2/3 * * * *", "0")
+            valid_("1-2-3 * * * *", "0")
+            valid_("*-5 * * * *", "0")
+            valid_("-1 * * * *", "0")
+            valid_("1- * * * *", "0")
+            valid_("/5 * * * *", "0")
+            valid_(",1 * * * *", "0")
+            valid_("1, * * * *", "0")
+            valid_("a * * * *", "0")
+            valid_("+5 * * * *", "0")
+            valid_("1.5 * * * *", "0")
+            valid_("* * * JAN *", "0")
+            valid_("* * * * MON", "0")
+            valid_("? * * * *", "0")
+            valid_("1234567890 * * * *", "0")
+        }
+        spec.it("takes exactly one argument") callback {
+            error_("SAY CRON_VALID()", "CRON_VALID takes one argument")
+            error_("SAY CRON_VALID('* * * * *', 1)", "CRON_VALID takes one argument")
+        }
+    }
+    spec.describe(fw, "CRON_NEXT: each field") {
+        spec.it("seconds: values, lists, ranges and steps") callback {
+            next_("15,45 * * * * *", AFTER, "2026-11-03T16:49:45.000Z")
+            next_("*/20 * * * * *", AFTER, "2026-11-03T16:49:40.000Z")
+            next_("50-55 * * * * *", AFTER, "2026-11-03T16:49:50.000Z")
+            next_("10 * * * * *", AFTER, "2026-11-03T16:50:10.000Z")
+            next_("33/10 * * * * *", AFTER, "2026-11-03T16:49:33.000Z")
+            next_("* * * * * *", AFTER, "2026-11-03T16:49:33.000Z")
+        }
+        spec.it("minutes") callback {
+            next_("0 50 * * * *", AFTER, "2026-11-03T16:50:00.000Z")
+            next_("0 */15 * * * *", AFTER, "2026-11-03T17:00:00.000Z")
+            next_("0 10-20/5 * * * *", AFTER, "2026-11-03T17:10:00.000Z")
+            next_("0 49 * * * *", AFTER, "2026-11-03T17:49:00.000Z")
+            next_("*/5 * * * *", AFTER, "2026-11-03T16:50:00.000Z")
+        }
+        spec.it("hours") callback {
+            next_("0 0 9-17/4 * * *", AFTER, "2026-11-03T17:00:00.000Z")
+            next_("0 0 3 * * *", AFTER, "2026-11-04T03:00:00.000Z")
+            next_("30 8 * * *", AFTER, "2026-11-04T08:30:00.000Z")
+            next_("0 16 * * *", AFTER, "2026-11-04T16:00:00.000Z")
+        }
+        spec.it("day of month, including month ends") callback {
+            next_("0 0 0 15 * *", AFTER, "2026-11-15T00:00:00.000Z")
+            next_("0 0 0 1 * *", AFTER, "2026-12-01T00:00:00.000Z")
+            next_("0 0 0 31 * *", AFTER, "2026-12-31T00:00:00.000Z")
+            next_("0 0 0 31 * *", "2027-01-31T00:00:00Z", "2027-03-31T00:00:00.000Z")
+            next_("0 0 0 30 * *", "2027-01-30T12:00:00Z", "2027-03-30T00:00:00.000Z")
+            next_("0 0 0 30 * *", "2028-01-30T12:00:00Z", "2028-03-30T00:00:00.000Z")
+        }
+        spec.it("month, with year rollover") callback {
+            next_("0 0 0 1 1 *", AFTER, "2027-01-01T00:00:00.000Z")
+            next_("0 0 0 * 2 *", AFTER, "2027-02-01T00:00:00.000Z")
+            next_("0 0 0 1 */4 *", AFTER, "2027-01-01T00:00:00.000Z")
+            next_("0 0 0 3 11 *", AFTER, "2027-11-03T00:00:00.000Z")
+            next_("0 0 0 1 1 *", "2026-12-31T23:59:59Z", "2027-01-01T00:00:00.000Z")
+            next_("* * * * * *", "2026-12-31T23:59:59.999Z", "2027-01-01T00:00:00.000Z")
+            next_("59 59 23 31 12 *", "2026-12-31T23:59:59Z", "2027-12-31T23:59:59.000Z")
+        }
+        spec.it("day of week, 0 = Sunday") callback {
+            next_("0 0 0 * * 0", AFTER, "2026-11-08T00:00:00.000Z")
+            next_("0 0 0 * * 6", AFTER, "2026-11-07T00:00:00.000Z")
+            next_("0 0 12 * * 1-5", AFTER, "2026-11-04T12:00:00.000Z")
+            next_("0 0 18 * * 2", AFTER, "2026-11-03T18:00:00.000Z")
+            next_("0 0 0 * 2 1", AFTER, "2027-02-01T00:00:00.000Z")
+        }
+        spec.it("shorthands") callback {
+            next_("@hourly", AFTER, "2026-11-03T17:00:00.000Z")
+            next_("@daily", AFTER, "2026-11-04T00:00:00.000Z")
+            next_("@weekly", AFTER, "2026-11-08T00:00:00.000Z")
+            next_("@monthly", AFTER, "2026-12-01T00:00:00.000Z")
+            next_("@yearly", AFTER, "2027-01-01T00:00:00.000Z")
+            next_("@annually", AFTER, "2027-01-01T00:00:00.000Z")
+        }
+    }
+    spec.describe(fw, "CRON_NEXT: day-of-month and day-of-week together") {
+        spec.it("either matches when both are restricted") callback {
+            // Friday the 6th comes before the 13th.
+            next_("0 0 0 13 * 5", AFTER, "2026-11-06T00:00:00.000Z")
+            // The 4th (a Wednesday) comes before Sunday the 8th.
+            next_("0 0 0 4 * 0", AFTER, "2026-11-04T00:00:00.000Z")
+            // 1-31 is a restriction, not a star: every day matches.
+            next_("0 0 0 1-31 * 5", AFTER, "2026-11-04T00:00:00.000Z")
+            // A stepped star is a restriction too (robfig/cron): odd days or Fridays.
+            next_("0 0 0 */2 * 5", AFTER, "2026-11-05T00:00:00.000Z")
+        }
+        spec.it("only the restricted one counts when the other is a star") callback {
+            next_("0 0 0 * * 5", AFTER, "2026-11-06T00:00:00.000Z")
+            next_("0 0 0 13 * *", AFTER, "2026-11-13T00:00:00.000Z")
+            next_("0 0 0 */1 * 5", AFTER, "2026-11-06T00:00:00.000Z")
+            next_("0 0 0 *,13 * 5", AFTER, "2026-11-06T00:00:00.000Z")
+        }
+    }
+    spec.describe(fw, "CRON_NEXT: leap years and the five-year bound") {
+        spec.it("finds Feb 29 in leap years only, 2000 yes and 2100 no") callback {
+            next_("0 0 0 29 2 *", "2026-03-01T00:00:00Z", "2028-02-29T00:00:00.000Z")
+            next_("0 0 0 29 2 *", "2028-02-29T00:00:00Z", "2032-02-29T00:00:00.000Z")
+            next_("0 0 0 29 2 *", "1999-03-01T00:00:00Z", "2000-02-29T00:00:00.000Z")
+            next_("0 0 0 29 2 *", "2099-03-01T00:00:00Z", "2104-02-29T00:00:00.000Z")
+            next_("0 0 0 * 2 *", "2100-02-28T12:00:00Z", "2101-02-01T00:00:00.000Z")
+            next_("0 0 0 1 3 *", "2100-02-28T00:00:00Z", "2100-03-01T00:00:00.000Z")
+        }
+        spec.it("returns empty when nothing falls within five years") callback {
+            // 2100 is not a leap year, and 2104-02-29 is more than five years on.
+            next_("0 0 0 29 2 *", "2096-03-01T00:00:00Z", "")
+            next_("0 0 0 30 2 *", AFTER, "")
+            next_("0 0 0 31 4 *", AFTER, "")
+            next_("0 0 0 31 11 *", AFTER, "")
+            // Both restricted, so Feb 29 or any Friday in February: Friday the 5th.
+            next_("0 0 0 29 2 5", "2026-03-01T00:00:00Z", "2027-02-05T00:00:00.000Z")
+        }
+        spec.it("returns empty past the end of year 9999") callback {
+            next_("* * * * * *", "9999-12-31T23:59:59Z", "")
+            next_("0 0 0 1 1 *", "9999-06-01T00:00:00Z", "")
+            next_("* * * * * *", "9999-12-31T23:59:58Z", "9999-12-31T23:59:59.000Z")
+        }
+        spec.it("is strictly after the given instant") callback {
+            next_("0 0 17 * * *", "2026-11-03T17:00:00Z", "2026-11-04T17:00:00.000Z")
+            next_("0 0 17 * * *", "2026-11-03T16:59:59.999Z", "2026-11-03T17:00:00.000Z")
+            next_("0 0 17 * * *", "2026-11-03T17:00:00.000Z", "2026-11-04T17:00:00.000Z")
+            next_("0 0 0 1 1 *", "0000-01-01T00:00:00Z", "0001-01-01T00:00:00.000Z")
+        }
+    }
+    spec.describe(fw, "CRON_NEXT: instants in and out") {
+        spec.it("gives ISO with .000Z for ISO, with or without milliseconds") callback {
+            next_("@hourly", "2026-11-03T16:49:32Z", "2026-11-03T17:00:00.000Z")
+            next_("@hourly", "2026-11-03T16:49:32.999Z", "2026-11-03T17:00:00.000Z")
+        }
+        spec.it("gives epoch milliseconds, a number, for epoch milliseconds") callback {
+            spec.assert_str_eq(said("LET t = 1793724572123\nSAY CRON_NEXT('*/15 * * * *', t)"), "1793725200000", "number in, number out")
+            spec.assert_str_eq(said("LET t = 1793724572123\nSAY TYPEOF(CRON_NEXT('@daily', t))"), "number", "typed number")
+            spec.assert_str_eq(said("SAY CRON_NEXT('@daily', '1793724572123')"), "1793750400000", "digits as text are epoch ms")
+            spec.assert_str_eq(said("SAY TYPEOF(CRON_NEXT('@daily', '1793724572123'))"), "number", "returned as a number")
+            spec.assert_str_eq(said("SAY CRON_NEXT('@hourly', 0)"), "3600000", "the epoch")
+            spec.assert_str_eq(said("SAY CRON_NEXT('@daily', -1)"), "0", "one millisecond before the epoch")
+            spec.assert_str_eq(said("SAY CRON_NEXT('@daily', -86400001)"), "-86400000", "a day and a millisecond before")
+            spec.assert_str_eq(said("LET t = JSON_PARSE('1793724572000')\nSAY CRON_NEXT('* * * * * *', t)"), "1793724573000", "a host-style JSON number")
+            spec.assert_str_eq(said("SAY '[' || CRON_NEXT('0 0 0 30 2 *', 0) || ']'"), "[]", "none within five years")
+        }
+        spec.it("refuses invalid instants with a clear error") callback {
+            error_("SAY CRON_NEXT('@daily', '2026-11-03')", "CRON_NEXT: invalid instant '2026-11-03'")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T16:49:32')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T16:49:32+00:00')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03 16:49:32Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-13-01T00:00:00Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-02-29T00:00:00Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-04-31T00:00:00Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T24:00:00Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T16:60:00Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T16:49:60Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03T16:49:32.12Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '2026-11-03t16:49:32Z')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', 'soon')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', '1.5')", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', 1.5)", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', 253402300800000)", "invalid instant")
+            error_("SAY CRON_NEXT('@daily', JSON_PARSE('true'))", "got a boolean value")
+            error_("LET t = [1]\nSAY CRON_NEXT('@daily', t)", "got a array value")
+        }
+        spec.it("refuses an invalid expression as a script error, saying why") callback {
+            error_("SAY CRON_NEXT('61 * * * *', '${AFTER}')", "CRON_NEXT: invalid cron expression '61 * * * *': minutes: 61 is above the maximum 59")
+            error_("SAY CRON_NEXT('* * * *', '${AFTER}')", "expected 5 or 6 fields, got 4")
+            error_("SAY CRON_NEXT('@never', '${AFTER}')", "unknown shorthand @never")
+            error_("SAY CRON_NEXT('5-1 * * * *', '${AFTER}')", "range 5-1 runs backwards")
+            error_("SAY CRON_NEXT('*/0 * * * *', '${AFTER}')", "step must be a positive number")
+            error_("SAY CRON_NEXT('* * 0 * *', '${AFTER}')", "day-of-month: 0 is below the minimum 1")
+            error_("SAY CRON_NEXT('* * * 13 *', '${AFTER}')", "month: 13 is above the maximum 12")
+            error_("SAY CRON_NEXT('* * * * 7', '${AFTER}')", "day-of-week: 7 is above the maximum 6")
+            error_("SAY CRON_NEXT('x * * * *', '${AFTER}')", "minutes: not a number: x")
+            error_("SAY CRON_NEXT('', '${AFTER}')", "empty expression")
+            error_("LET n = 2\nSAY CRON_NEXT('* * * * *', '${AFTER}', n)", "CRON_NEXT takes two arguments")
+            error_("SAY CRON_NEXT('* * * * *')", "CRON_NEXT takes two arguments")
+        }
+        spec.it("is a builtin a host cannot replace, and works in expressions and CALL") callback {
+            ctx = engine.rexxae_create("SAY 1")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "CRON_NEXT", 2, 2), -1, "CRON_NEXT")
+            spec.assert_eq(engine.rexxae_register_function(ctx, "cron_valid", 1, 1), -1, "cron_valid")
+            spec.assert_str_eq(said("CALL CRON_NEXT '@daily', '${AFTER}'\nSAY RESULT"), "2026-11-04T00:00:00.000Z", "CALL sets RESULT")
+            spec.assert_str_eq(said("IF CRON_VALID('@daily') THEN SAY 'ok'\nELSE SAY 'no'"), "ok", "a condition")
+            spec.assert_str_eq(said("LET e = '0 0 12 * * 1-5'\nLET t = CRON_NEXT(e, '${AFTER}')\nSAY CRON_NEXT(e, t)"), "2026-11-05T12:00:00.000Z", "chained from its own output")
+        }
+    }
+    return spec.run_summary(fw)
+}

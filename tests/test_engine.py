@@ -26,6 +26,8 @@ for name, parameters, result in [
     ('get_variable_json', [P, S], S), ('set_variable_json', [P, S, S], I),
     ('argument_text', [P, I], S), ('argument_type', [P, I], I),
     ('cancel', [P, S], I),
+    ('set_log_level', [P, I], I), ('log_level', [P], I), ('log_tags_json', [P], S),
+    ('set_log_name', [P, S], I), ('log_name', [P], S),
 ]:
     fn = getattr(lib, 'aether_rexxae_' + name)
     fn.argtypes, fn.restype = parameters, result
@@ -384,6 +386,103 @@ class CancelTests(unittest.TestCase):
         self.assertEqual(step(ctx, 100), 2)
         self.assertEqual(cancel(ctx, b'x'), 0)
         destroy(ctx)
+
+
+LOG = 5
+
+
+class LogTests(unittest.TestCase):
+    """Static logging through the C ABI (a RexxAE extension, not parity)."""
+
+    def events(self, source, level, budget=100):
+        ctx = create(source.encode())
+        self.addCleanup(destroy, ctx)
+        self.assertEqual(set_log_level(ctx, level), 0)
+        seen = []
+        for _ in range(1000):
+            status = step(ctx, budget)
+            if status == LOG:
+                seen.append(('LOG', log_level(ctx), text(ctx).decode(), json.loads(log_tags_json(ctx))))
+            elif status == 1:
+                seen.append(('SAY', text(ctx).decode()))
+            elif status == 0:
+                return seen
+            else:
+                self.fail(f'status {status}: {error(ctx)}')
+        self.fail('did not finish')
+
+    def test_off_by_default_gives_no_event(self):
+        ctx = create(b"CALL LOG_FATAL 'x'\nSAY 'y'")
+        self.addCleanup(destroy, ctx)
+        self.assertEqual(step(ctx, 100), 1)
+        self.assertEqual(log_level(ctx), -1)
+        self.assertIsNone(log_tags_json(ctx))
+        self.assertEqual(log_name(ctx), b'')
+
+    def test_threshold_levels_and_tags(self):
+        source = "LET t.k = 'v'\nLET t.n = 2\nLET t.b = JSON_PARSE('true')\nCALL LOG_TRACE 'a'\nCALL LOG_INFO 'b', t\nCALL LOG_FATAL 'c'\nSAY 'end'"
+        self.assertEqual(self.events(source, 2), [
+            ('LOG', 2, 'b', {'k': 'v', 'n': 2, 'b': True}), ('LOG', 5, 'c', {}), ('SAY', 'end')])
+        self.assertEqual(len(self.events(source, 0)), 4)
+        self.assertEqual(self.events(source, -1), [('SAY', 'end')])
+
+    def test_invalid_levels_and_names(self):
+        ctx = create(b'SAY 1')
+        self.addCleanup(destroy, ctx)
+        for level in (-2, 6, 1000):
+            self.assertEqual(set_log_level(ctx, level), -1)
+        self.assertEqual(set_log_level(None, 1), -1)
+        self.assertEqual(set_log_name(ctx, 'wörker'.encode()), 0)
+        self.assertEqual(log_name(ctx).decode(), 'wörker')
+        self.assertEqual(set_log_name(ctx, b'x' * 257), -1)
+        self.assertEqual(set_log_name(ctx, b'x' * 256), 0)
+
+    def test_log_between_host_calls_resumes_once(self):
+        ctx = create(b"LET v = TESTA() || LOG_WARN('w') || TESTB()\nSAY v")
+        self.addCleanup(destroy, ctx)
+        set_log_level(ctx, 0)
+        for name in (b'TESTA', b'TESTB'):
+            self.assertEqual(register_function(ctx, name, 0, 0), 0)
+        seen = []
+        while True:
+            status = step(ctx, 1)
+            if status == 4:
+                seen.append(function(ctx).decode())
+                self.assertEqual(reply_value(ctx, json.dumps(seen[-1]).encode(), b''), 0)
+            elif status == LOG:
+                seen.append('LOG ' + text(ctx).decode())
+                self.assertEqual(reply_value(ctx, b'1', b''), -1, 'LOG takes no reply')
+            elif status == 1:
+                seen.append('SAY ' + text(ctx).decode())
+            elif status == 0:
+                break
+            elif status != 3:
+                self.fail(error(ctx))
+        self.assertEqual(seen, ['TESTA', 'LOG w', 'TESTB', 'SAY TESTATESTB'])
+
+    def test_cancel_while_log_pending_from_another_thread(self):
+        ctx = create(b"CALL LOG_INFO 'pending'\nSAY 'never'")
+        self.addCleanup(destroy, ctx)
+        set_log_level(ctx, 2)
+        self.assertEqual(step(ctx, 100), LOG)
+        worker = threading.Thread(target=lambda: cancel(ctx, b'stop'))
+        worker.start()
+        worker.join()
+        self.assertEqual(step(ctx, 100), -1)
+        self.assertEqual(error(ctx), b'cancelled by host: stop')
+        self.assertEqual(log_level(ctx), -1)
+
+    def test_cron_with_a_host_clock(self):
+        ctx = create(b"LET t = HOSTNOW()\nSAY CRON_NEXT('0 */15 * * * *', t)\nSAY CRON_VALID('nope')")
+        self.addCleanup(destroy, ctx)
+        self.assertEqual(register_function(ctx, b'HOSTNOW', 0, 0), 0)
+        self.assertEqual(step(ctx, 100), 4)
+        self.assertEqual(reply_value(ctx, b'1793724572123', b''), 0)
+        self.assertEqual(step(ctx, 100), 1)
+        self.assertEqual(text(ctx), b'1793725200000')
+        self.assertEqual(step(ctx, 100), 1)
+        self.assertEqual(text(ctx), b'0')
+        self.assertEqual(step(ctx, 100), 0)
 
 
 if __name__ == '__main__':

@@ -279,6 +279,46 @@ main() {
             defer rexxae.rexxae_destroy(ctx)
             spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "no ambient loader")
         }
+        spec.it("delivers LOG events at the host's threshold, off by default") callback {
+            source = "LET t.job = 'x'\nCALL LOG_DEBUG 'quiet'\nLET v = TESTECHO('a') || LOG_ERROR('bad', t)\nSAY v"
+            off = rexxae.rexxae_create(source)
+            defer rexxae.rexxae_destroy(off)
+            spec.assert_eq(rexxae.rexxae_register_function(off, "TESTECHO", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(off, 100), 4, "no LOG when off")
+            ctx = rexxae.rexxae_create(source)
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_set_log_level(ctx, 2), 0, "info")
+            spec.assert_eq(rexxae.rexxae_set_log_name(ctx, "binary"), 0, "name")
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTECHO", 1, 1), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "debug is below info")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "\"a\"", ""), 0, "reply")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 5, "LOG")
+            spec.assert_eq(rexxae.rexxae_log_level(ctx), 4, "error level")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "bad", "message")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_log_tags_json(ctx)), "{\"job\":\"x\"}", "tags")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_log_name(ctx)), "binary", "name")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "resumes without repeating TESTECHO")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "a", "value")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 0, "done")
+        }
+        spec.it("cancels a context suspended on LOG") callback {
+            ctx = rexxae.rexxae_create("CALL LOG_WARN 'w'\nSAY 'never'")
+            defer rexxae.rexxae_destroy(ctx)
+            rexxae.rexxae_set_log_level(ctx, 0)
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 5, "LOG")
+            spec.assert_eq(rexxae.rexxae_cancel(ctx, "deadline"), 0, "cancel")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), -1, "error")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_error(ctx)), "cancelled by host: deadline", "reason")
+        }
+        spec.it("computes cron activations from a host-supplied instant") callback {
+            ctx = rexxae.rexxae_create("LET now = TESTNOW()\nSAY CRON_NEXT('@daily', now) CRON_VALID('* * *')")
+            defer rexxae.rexxae_destroy(ctx)
+            spec.assert_eq(rexxae.rexxae_register_function(ctx, "TESTNOW", 0, 0), 0, "register")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 4, "clock request")
+            spec.assert_eq(rexxae.rexxae_reply_value(ctx, "\"2028-02-28T23:00:00Z\"", ""), 0, "instant")
+            spec.assert_eq(rexxae.rexxae_step(ctx, 100), 1, "SAY")
+            spec.assert_str_eq(string.copy(rexxae.rexxae_text(ctx)), "2028-02-29T00:00:00.000Z 0", "next day, a leap day")
+        }
     }
     return spec.run_summary(fw)
 }

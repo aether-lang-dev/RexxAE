@@ -129,6 +129,15 @@ main() {
             exercise("ADDRESS SYSTEM 'touch build/containment-escaped'\nSAY RC", 0, 1, 0, "13")
             exercise("ADDRESS TCP '127.0.0.1:54321'\nSAY RC", 0, 1, 0, "13")
         }
+        spec.it("cron and logging reach no clock, host or threshold of their own") callback {
+            // No host request, no stdlib denial: the extensions are pure.
+            exercise("SAY CRON_NEXT('@daily', '2026-11-03T16:49:32Z')\nCALL LOG_FATAL 'x'\nSAY CRON_VALID('* * * * *')", 0, 0, 0, "2026-11-04T00:00:00.000Z1")
+            // There is no ambient clock to call, and scripts cannot raise the threshold.
+            exercise("LET n = NOW()", -1, 0, 0, "")
+            exercise("CALL aether_rexxae_set_log_level 0", -1, 0, 0, "")
+            exercise("CALL rexxae_set_log_level 0", -1, 0, 0, "")
+            exercise("LET log_threshold = 0\nCALL LOG_FATAL 'still off'\nSAY 'quiet'", 0, 0, 0, "quiet")
+        }
         spec.it("keeps service discovery and registry authority out of script data") callback {
             exercise("LET policy.fs = true\nLET h.READ_CONFIG = 'all'\nCALL HOSTREAD 'tests/fixtures/private.txt'", -1, 1, 1, "")
             exercise("CALL aether_rexxae_register_function 'HOSTREAD'", -1, 0, 0, "")

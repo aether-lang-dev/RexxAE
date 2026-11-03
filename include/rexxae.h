@@ -18,7 +18,8 @@ enum RexxAEStatus {
     REXXAE_SAY = 1,
     REXXAE_COMMAND = 2,
     REXXAE_RUNNABLE = 3,
-    REXXAE_FUNCTION = 4
+    REXXAE_FUNCTION = 4,
+    REXXAE_LOG = 5
 };
 
 /* REQUIRE "module" [AS alias] requests the explicitly registered REQUIRE
@@ -60,12 +61,39 @@ int32_t aether_rexxae_reply(RexxAE ctx, int32_t rc,
  * still frees everything after a cancel. */
 int32_t aether_rexxae_cancel(RexxAE ctx, const char *reason);
 /* Borrowed strings, valid until the next step/reply/destroy. Read text on
- * SAY/COMMAND, address on COMMAND, error on ERROR. Copy to retain them. */
+ * SAY/COMMAND/LOG, address on COMMAND, error on ERROR. Copy to retain them. */
 const char *aether_rexxae_text(RexxAE ctx);
 const char *aether_rexxae_address(RexxAE ctx);
 const char *aether_rexxae_error(RexxAE ctx);
 int32_t aether_rexxae_line(RexxAE ctx);
 int32_t aether_rexxae_exit_code(RexxAE ctx);
+
+/* Static logging (RexxAE extension; RexxJS has no equivalent). Scripts call
+ * LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR or LOG_FATAL
+ * (message [, tags]); each returns "". The host sets this context's
+ * threshold: -1 = off (the default, so no LOG event ever occurs), or
+ * 0 trace, 1 debug, 2 info, 3 warn, 4 error, 5 fatal; a message below it
+ * produces no event. Returns 0, or -1 for NULL or a level outside -1..5.
+ * It may be set at any time, also while an event is pending; scripts cannot
+ * read or change it. aether_rexxae_create_next copies it and the name.
+ *
+ * A message at or above the threshold makes step return REXXAE_LOG. Read
+ * aether_rexxae_text (the message), aether_rexxae_log_level and
+ * aether_rexxae_log_tags_json (a JSON object of string/number/boolean
+ * values, "{}" when the script gave none), then step again; no reply is
+ * wanted. As with FUNCTION, registry and variable mutation is rejected while
+ * the event is pending, and the instruction resumes without repeating host
+ * calls already answered. Cancelling while it is pending ends the script. */
+int32_t aether_rexxae_set_log_level(RexxAE ctx, int32_t level);
+/* The pending LOG event's level (0..5), or -1 when none is pending. */
+int32_t aether_rexxae_log_level(RexxAE ctx);
+/* The pending LOG event's tags (borrowed JSON), or NULL when none is pending. */
+const char *aether_rexxae_log_tags_json(RexxAE ctx);
+/* A label (at most 256 bytes; copied) the host keeps with this context and
+ * attaches to its own log output. Scripts cannot see or set it. Returns 0,
+ * or -1 for NULL or a longer name. The getter returns "" until it is set. */
+int32_t aether_rexxae_set_log_name(RexxAE ctx, const char *name);
+const char *aether_rexxae_log_name(RexxAE ctx);
 
 /* Register an application function before or between steps. Names are
  * case-insensitive; builtins cannot be replaced. Arity is checked before

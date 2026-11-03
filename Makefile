@@ -29,7 +29,7 @@ endif
 LIB := build/librexxae.$(LIBEXT)
 
 .PHONY: repl reference-audit containment all aether-lib binary-test test spec parity inventory check-inventory memcheck clean
-all: $(LIB) build/counter
+all: $(LIB) build/counter build/logging
 
 repl: $(LIB)
 	python3 examples/repl.py $(LIB)
@@ -48,6 +48,10 @@ $(LIB): $(wildcard src/*.ae) | build
 
 # The shared library already carries its Aether runtime dependencies.
 build/counter: examples/counter.c include/rexxae.h $(LIB)
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude $< -Lbuild -lrexxae -Wl,-rpath,'$(RPATH)' -o $@
+
+# Static logging and a host-supplied clock for CRON_NEXT, from C.
+build/logging: examples/logging.c include/rexxae.h $(LIB)
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude $< -Lbuild -lrexxae -Wl,-rpath,'$(RPATH)' -o $@
 
 build/test_%: tests/test_%.ae $(wildcard src/*.ae) | build
@@ -89,9 +93,11 @@ containment: build/test_containment build/test_containment_shared build/test_tru
 	./build/test_trusted_service
 	python3 tools/check_containment.py --ae $(AE)
 
-spec: build/test_require build/test_session build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+spec: build/test_require build/test_session build/test_cron build/test_logging build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
 	./build/test_require
 	./build/test_session
+	./build/test_cron
+	./build/test_logging
 	./build/test_functions
 	./build/test_execution
 	./build/test_function_fixtures
@@ -106,6 +112,7 @@ test: all spec containment
 	python3 tests/test_engine.py $(LIB)
 	python3 tests/test_repl.py $(LIB)
 	./build/counter
+	./build/logging
 	python3 examples/host.py $(LIB)
 
 parity: all build/test_require
@@ -126,6 +133,9 @@ memcheck: all spec build/test_containment build/test_containment_shared build/te
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_require
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_session
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/counter
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/logging
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_cron
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_logging
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_functions
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_execution
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_function_fixtures

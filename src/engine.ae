@@ -20,7 +20,9 @@ exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_r
     rexxae_text, rexxae_address, rexxae_error, rexxae_line, rexxae_exit_code,
     rexxae_register_function, rexxae_function, rexxae_arguments_json,
     rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
-    rexxae_argument_text, rexxae_argument_type, rexxae_cancel)
+    rexxae_argument_text, rexxae_argument_type, rexxae_cancel,
+    rexxae_set_log_level, rexxae_log_level, rexxae_log_tags_json,
+    rexxae_set_log_name, rexxae_log_name)
 
 // Borrow the map-owned payload for the C ABI through public stdlib APIs.
 // string.bytes has no view for an empty string; provide a pinned NUL byte.
@@ -109,7 +111,7 @@ return_call_(ctx: ptr, value: ptr) -> int {
     while state.integer(ctx, "loop_depth") > state.index(frame, "loop_base") { pop_loop_(ctx) }
     close_call_(ctx, frame, depth - 1)
     evaluate.cache_result(ctx, state.text(frame, "node"), value)
-    state.number(ctx, "status", 6)
+    state.number(ctx, "status", 9)
     return state.index(frame, "pc")
 }
 
@@ -394,6 +396,9 @@ core_create(source: string) -> ptr {
     cache = map.map_new()
     map.map_put_raw(ctx, "cache", cache)
     state.number(ctx, "status", 3)
+    // Static logging is off until the host sets a threshold.
+    state.number(ctx, "log_threshold", -1)
+    state.write(ctx, "log_name", "")
     program.compile(ctx)
     if state.read(ctx, "error") != "" { state.number(ctx, "status", -1) }
     return ctx
@@ -419,6 +424,9 @@ core_create_next(previous: ptr, source: string) -> ptr {
         i = i + 1
     }
     state.write(ctx, "address", state.read(previous, "address"))
+    // Host settings, never script state: the log threshold and name.
+    state.write(ctx, "log_threshold", state.read(previous, "log_threshold"))
+    state.write(ctx, "log_name", state.read(previous, "log_name"))
     return ctx
 }
 @pure
@@ -451,13 +459,15 @@ core_step(ctx: ptr, budget: int) -> int {
         used = used + 1
         if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
         if state.integer(ctx, "status") == 4 { return 4 }
-        if state.integer(ctx, "status") == 5 {
+        // LOG: the instruction resumes on the next step, its call cached.
+        if state.integer(ctx, "status") == 5 { return 5 }
+        if state.integer(ctx, "status") == 8 {
             begin_call_(ctx, pc)
             if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
             continue
         }
         state.number(ctx, "pc", next)
-        if state.integer(ctx, "status") == 6 { state.number(ctx, "status", 3); continue }
+        if state.integer(ctx, "status") == 9 { state.number(ctx, "status", 3); continue }
         map.map_clear(map.map_get_raw(ctx, "cache"))
         status = state.integer(ctx, "status")
         if status != 3 { return status }
@@ -559,6 +569,37 @@ core_argument_text(ctx: ptr, index: int) -> ptr {
     json.json_free(value)
     return borrow_text_(ctx, "argument_text")
 }
+// Static logging. The threshold is -1 (off, the default) or 0 trace .. 5
+// fatal; messages below it produce no event. It is host configuration and
+// may be set at any time; scripts cannot read or change it.
+@pure
+core_set_log_level(ctx: ptr, level: int) -> int {
+    if ctx == null || level < -1 || level > 5 { return -1 }
+    state.number(ctx, "log_threshold", level)
+    return 0
+}
+// The pending LOG event's level, or -1 when no LOG event is pending.
+@pure
+core_log_level(ctx: ptr) -> int {
+    if ctx == null || state.integer(ctx, "status") != 5 { return -1 }
+    return state.integer(ctx, "log_event_level")
+}
+// The pending LOG event's tags as a JSON object ("{}" for none), or NULL.
+@pure
+core_log_tags_json(ctx: ptr) -> ptr {
+    if ctx == null || state.integer(ctx, "status") != 5 { return null }
+    return borrow_text_(ctx, "log_tags")
+}
+// A label the host attaches to this context's log output. Scripts cannot
+// see or set it.
+@pure
+core_set_log_name(ctx: ptr, name: string) -> int {
+    if ctx == null || string.length(name) > 256 { return -1 }
+    state.write(ctx, "log_name", name)
+    return 0
+}
+@pure
+core_log_name(ctx: ptr) -> ptr { return borrow_text_(ctx, "log_name") }
 @pure
 core_text(ctx: ptr) -> ptr { return borrow_text_(ctx, "text") }
 @pure
@@ -652,3 +693,13 @@ rexxae_arguments_json(handle: ptr) -> ptr { return core_arguments_json(inner_(ha
 rexxae_exit_code(handle: ptr) -> int { return core_exit_code(inner_(handle)) }
 @pure
 rexxae_line(handle: ptr) -> int { return core_line(inner_(handle)) }
+@pure
+rexxae_set_log_level(handle: ptr, level: int) -> int { return core_set_log_level(inner_(handle), level) }
+@pure
+rexxae_log_level(handle: ptr) -> int { return core_log_level(inner_(handle)) }
+@pure
+rexxae_log_tags_json(handle: ptr) -> ptr { return core_log_tags_json(inner_(handle)) }
+@pure
+rexxae_set_log_name(handle: ptr, name: string) -> int { return core_set_log_name(inner_(handle), name) }
+@pure
+rexxae_log_name(handle: ptr) -> ptr { return core_log_name(inner_(handle)) }

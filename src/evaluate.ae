@@ -8,14 +8,21 @@ import src.state
 import src.values
 import src.variables
 import src.builtins
+import src.cron
 
 exports(run, known, cache_result)
 
 const VALUE_FUNCTIONS = " JSON_PARSE JSON_STRINGIFY ARRAY_GET ARRAY_LENGTH ARRAY_PUSH JOIN JSON_GET JSON_KEYS TYPEOF IF ARG "
+// RexxAE extensions: RexxJS has none of these (tests/guest_functions.json
+// lists them apart; they are not counted as parity).
+const EXTENSION_FUNCTIONS = " CRON_NEXT CRON_VALID LOG_TRACE LOG_DEBUG LOG_INFO LOG_WARN LOG_ERROR LOG_FATAL "
 
 known(name: string) -> bool {
     key = string.concat(string.concat(" ", name), " ")
-    return builtins.known(name) || string.contains(VALUE_FUNCTIONS, key) != 0
+    return builtins.known(name) || string.contains(VALUE_FUNCTIONS, key) != 0 || string.contains(EXTENSION_FUNCTIONS, key) != 0
+}
+extension_(name: string) -> bool {
+    return string.contains(EXTENSION_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
 }
 cache_result(ctx: ptr, key: string, value: ptr) {
     cache = map.map_get_raw(ctx, "cache")
@@ -177,6 +184,106 @@ scalar_call(ctx: ptr, name: string, args: ptr) -> ptr {
     return values.string_value(result)
 }
 
+// LOG_TRACE .. LOG_FATAL (message [, tags]): static logging. The host sets
+// a threshold per context (off by default); a message at or above it
+// suspends the step with a LOG event (status 5) that needs no reply. The
+// call's value, "", is cached first, so resuming continues the expression.
+log_level_(name: string) -> int {
+    if name == "LOG_TRACE" { return 0 }
+    if name == "LOG_DEBUG" { return 1 }
+    if name == "LOG_INFO" { return 2 }
+    if name == "LOG_WARN" { return 3 }
+    if name == "LOG_ERROR" { return 4 }
+    return 5
+}
+log_call(ctx: ptr, name: string, args: ptr, node: string) -> ptr {
+    count = json.json_array_size(args)
+    if count < 1 || count > 2 { state.fail(ctx, string.concat(name, " takes a message and optional tags")); return null }
+    tags = "{}"
+    if count == 2 {
+        given = argument(args, 1)
+        if values.kind(given) != 5 { state.fail(ctx, string.concat(name, ": tags must be an object")); return null }
+        fields = values.data(given)
+        i = 0
+        while i < json.json_object_size_raw(fields) {
+            k = values.kind(json.json_object_value_at(fields, i))
+            if k != 1 && k != 2 && k != 3 {
+                state.fail(ctx, string.concat(string.concat(name, ": tag values must be strings, numbers or booleans: "), json.json_object_key_at(fields, i)))
+                return null
+            }
+            i = i + 1
+        }
+        raw = values.to_json(given, 0)
+        if raw == null { state.fail(ctx, string.concat(name, ": tag numbers must be finite")); return null }
+        encoded, err = json.encode(raw)
+        json.json_free(raw)
+        if err != "" { state.fail(ctx, err); return null }
+        tags = encoded
+    }
+    level = log_level_(name)
+    threshold = state.integer(ctx, "log_threshold")
+    if threshold < 0 || level < threshold { return values.string_value("") }
+    state.number(ctx, "log_event_level", level)
+    state.write(ctx, "text", values.text(argument(args, 0)))
+    state.write(ctx, "log_tags", tags)
+    empty = values.string_value("")
+    cache_result(ctx, node, empty)
+    json.json_free(empty)
+    state.number(ctx, "status", 5)
+    return null
+}
+
+// CRON_VALID(expr) is 1 or 0. CRON_NEXT(expr, after) is the first
+// activation strictly after `after`, in the form `after` came in (ISO 8601
+// UTC text, or epoch milliseconds), or "" when none is within five years.
+integral_text_(value: ptr) -> string {
+    text = values.text(value)
+    if string.string_try_double(text) == 0 { return text }
+    n = string.string_get_double(text)
+    if n != math.floor(n) || n > 1.0e15 || n < -1.0e15 { return text }
+    return string.from_long(n as long)
+}
+epoch_text_(text: string) -> bool {
+    n = string.length(text)
+    if n == 0 { return false }
+    i = 0
+    if string.char_at(text, 0) == 45 { i = 1 }
+    if i == n { return false }
+    while i < n {
+        c = string.char_at(text, i)
+        if c < 48 || c > 57 { return false }
+        i = i + 1
+    }
+    return true
+}
+cron_call(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if name == "CRON_VALID" {
+        if count != 1 { state.fail(ctx, "CRON_VALID takes one argument: a cron expression"); return null }
+        if cron.check(values.text(argument(args, 0))) == "" { return values.numeric("1") }
+        return values.numeric("0")
+    }
+    if count != 2 { state.fail(ctx, "CRON_NEXT takes two arguments: a cron expression and an instant"); return null }
+    after = argument(args, 1)
+    k = values.kind(after)
+    text = values.text(after)
+    epoch = false
+    if k == 2 {
+        text = integral_text_(after)
+        epoch = true
+    } else if k == 3 {
+        epoch = epoch_text_(text)
+    } else {
+        state.fail(ctx, string.concat(string.concat("CRON_NEXT: invalid instant: expected an ISO 8601 UTC time or epoch milliseconds, got a ", values.type_name(after)), " value"))
+        return null
+    }
+    result, err = cron.next_after(values.text(argument(args, 0)), text, epoch)
+    if err != "" { state.fail(ctx, string.concat("CRON_NEXT: ", err)); return null }
+    if result == "" { return values.string_value("") }
+    if epoch { return values.numeric(result) }
+    return values.string_value(result)
+}
+
 call(ctx: ptr, expr: ptr, depth: int) -> ptr {
     name = state.text(expr, "name")
     dynamic = state.text(expr, "dynamic")
@@ -252,8 +359,12 @@ call(ctx: ptr, expr: ptr, depth: int) -> ptr {
         state.save(ctx, "routine_args", args)
         state.number(ctx, "routine_target", routine)
         state.write(ctx, "routine_node", string.from_int(state.index(expr, "id")))
-        state.number(ctx, "status", 5)
+        state.number(ctx, "status", 8)
         return null
+    }
+    if extension_(name) {
+        if string.starts_with(name, "LOG_") != 0 { return log_call(ctx, name, args, string.from_int(state.index(expr, "id"))) }
+        return cron_call(ctx, name, args)
     }
     if known(name) {
         if builtins.known(name) { return scalar_call(ctx, name, args) }

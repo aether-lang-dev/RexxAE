@@ -307,59 +307,60 @@ operating system as well as by the engine. It answers the review of
 Alperen Çiftci: the worker locks itself down, and the host bounds every
 exchange.
 
+The protocol and both halves of it are Aether's: **`std.guest`** is the
+host's side and **`std.guest.child`** the worker's, documented once in
+Aether's `std/guest/README.md` (every message, both directions). They need
+an Aether with `std.guest`, which is not in a release yet.
+
 - `worker/worker.ae` builds `build/worker/rexxae-worker`, one binary with the
-  engine compiled in, so the process sandbox needs to grant it nothing. It
-  reads its script from the host, then enters `sandbox.enforce` with no
-  grants before the first `rexxae_step` (no platform paths). It mounts no
-  `ADDRESS` environment: commands get RC 1. What its own sandbox refuses is
-  reported to the host for the audit log.
-- `worker/rexxworker` is the host's side (`ae build host.ae --lib
-  path/to/RexxAE/worker`). `rexxworker.launch(perms, prog, name, audit_log)`
+  engine compiled in, so the process sandbox needs to grant it nothing. It is
+  the engine glue only: `std.guest.child` reads the mounts and the script,
+  and `child.run` enters `sandbox.enforce` with no grants before the first
+  `rexxae_step` (no platform paths). It mounts no `ADDRESS` environment:
+  commands get RC 1. What its own sandbox refuses is reported to the host
+  for the audit log.
+- The host uses `std.guest`: `guest.launch(perms, prog, name, audit_log)`
   spawns with `sandbox.spawn_socket` and fails closed where the child cannot
   be contained (macOS, Windows; Linux without Landlock).
-  `launch_uncontained` is the explicit, by-name alternative for development.
+  `guest.launch_uncontained` is the explicit, by-name alternative for
+  development.
+- `worker/rexxworker` is **deprecated**: a thin alias over `std.guest`, kept
+  for one release so a host built with `--lib path/to/RexxAE/worker` keeps
+  building. Replace `import rexxworker` with `import std.guest` and
+  `rexxworker.` with `guest.`; the handle type is `guest.Guest`.
 
-The protocol is `std.ipc` frames (a 4-byte big-endian length, then the
-bytes; at most 64 KiB), each a verb and its text:
+In short, over `std.ipc` frames (at most 64 KiB): the host sends `MOUNT NAME
+min max`, `PROBE`, `LOGLEVEL n` and `SCRIPT source`, then answers each
+`CALL NAME [json args]` with `REPLY json`, `FAIL message` or `FILE` and a
+descriptor (`{"granted":true,"text":...}`), and may send `CANCEL reason`; the
+worker sends `SAY`, `LOG`, `CALL`, `AUDIT`, and ends with `DONE code` or
+`ERROR message`.
 
-| Host to worker | | Worker to host | |
-|---|---|---|---|
-| `MOUNT NAME min max` | a host function, before `SCRIPT` | `SAY text` | |
-| `PROBE` | self-check of the lockdown, before `SCRIPT` | `CALL NAME [json args]` | a mounted function |
-| `LOGLEVEL n` | log threshold, -1 off (default) or 0..5; any time | `LOG level n tags message` | a LOG_* call; `tags` is n bytes of JSON; no answer |
-| `SCRIPT source` | lock down and run | `AUDIT text` | for the audit log |
-| `REPLY json` / `FAIL message` | answer the pending `CALL` | `DONE code` | then it exits |
-| `FILE`, then a descriptor | the `CALL`'s value is `{"granted":true,"text":...}` | `ERROR message` | then it exits |
-| `CANCEL reason` | stop the script (`rexxae_cancel`) | | |
-
-`rexxworker.log_level(&w, level)` sends `LOGLEVEL`; before `start` it holds
-from the first step, later from the worker's next step (also while a `CALL`
-waits for its answer). `rexxworker.next` returns a `LOG` event with `code`
-the level, `name` `TRACE`..`FATAL`, `text` the message and `tags` the JSON
+`guest.log_level(&g, level)` sends `LOGLEVEL`; before `start` it holds from
+the first step, later from the worker's next step (also while a `CALL`
+waits for its answer). `guest.next` returns a `LOG` event with `code` the
+level, `name` `TRACE`..`FATAL`, `text` the message and `tags` the JSON
 object. The worker sends nothing for messages below the threshold.
 
-A granted file crosses as an open descriptor (`ipc.send_fd` after the
-`FILE` frame, taken with `ipc.recv`), never a path. `rexxworker.deny` answers
-`{"granted":false,"why":...}`.
-
-**Deadlines.** `rexxworker.next(&w)` waits at most `w.deadline_ms` (5 s by
+**Deadlines.** `guest.next(&g)` waits at most `g.deadline_ms` (5 s by
 default) for the worker's next frame. When that passes the host sends
 `CANCEL`; the worker, which looks for one between steps of 1000
-instructions and while it waits for a reply, calls `rexxae_cancel`, so a
-script that loops forever or waits forever on the host ends with
-`ERROR cancelled by host: deadline of N ms passed`. A worker that does not
-answer within `w.grace_ms` (1 s) is hung up on and killed (`KILLED`). A
-frame over the maximum, a malformed one or one that stalls part way is
-refused the same way. Every spawn, GRANT, DENY, timeout, cancel and kill goes
-to the one audit log, with what the worker reported.
+instructions (`child.poll`) and while it waits for a reply, calls
+`rexxae_cancel`, so a script that loops forever or waits forever on the
+host ends with `ERROR cancelled by host: deadline of N ms passed`. A worker
+that does not answer within `g.grace_ms` (1 s) is hung up on and killed
+(`KILLED`). A frame over the maximum, a malformed one or one that stalls part
+way is refused the same way. Every spawn, GRANT, DENY, timeout, cancel and
+kill goes to the one audit log, with what the worker reported.
 
 `make worker-test` runs `tests/test_worker.ae`: a normal exchange, LOG
 events at a threshold (off by default, changed while a call waits, a
-malformed LOGLEVEL refused), a file granted and one denied, the lockdown probes, a loop cancelled by the
-deadline, a script waiting on a reply cancelled, a silent guest killed, and
-an oversize frame refused. It needs Aether 0.873.0 or later, the first release with std.ipc's
-frames and `sandbox.spawn_socket`
-([aether#3510](https://github.com/aether-lang-dev/aether/pull/3510)). On Linux the specs run contained; elsewhere
+malformed LOGLEVEL refused), a file granted and one denied, the lockdown
+probes, a loop cancelled by the deadline, a script waiting on a reply
+cancelled, a silent guest killed, an oversize frame refused, and the
+deprecated `rexxworker` alias. Build it with an Aether tree that has
+`std.guest` (`make worker-test AE=/path/to/aether/build/ae
+AETHER_HOME=/path/to/aether`). On Linux the specs run contained; elsewhere
 they check that `launch` refuses and run the rest uncontained.
 
 ## Coverage and limits

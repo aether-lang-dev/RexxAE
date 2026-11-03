@@ -1,407 +1,69 @@
-// rexxworker: the host's side of the RexxAE worker (worker/worker.ae).
+// rexxworker: DEPRECATED, for one release. Use Aether's std.guest.
 //
-// The worker runs one Rexx script in a child process the host starts with
-// sandbox.spawn_socket. The script has no effects of its own: every SAY and
-// every call to a function the host mounted comes up the socket as a frame,
-// and the host answers. Two walls hold the child: the process sandbox the
-// host spawns it in, and the worker's own sandbox.enforce, which it enters
-// with no grants before the script's first step.
+// This was the host's side of RexxAE's worker. Nothing in it was about Rexx
+// (it drove a MicroQuickJS worker too), so it moved into Aether's standard
+// library as std.guest, with the worker's side as std.guest.child; the
+// protocol is documented once, in std/guest/README.md. What is left here
+// forwards every call to std.guest unchanged, so a host built with
+// `--lib path/to/RexxAE/worker` keeps building for one release. Two changes
+// a caller sees:
 //
-// The protocol (README, "Worker process"): std.ipc frames, a 4-byte
-// big-endian length and the bytes, at most MAX_FRAME a frame, each one a
-// verb and its text.
+//   - the handle is std.guest's: write guest.Guest where a type is named
+//     (rexxworker.Worker is gone; Aether has no type aliases);
+//   - guest.launch takes the worker's arguments (null for none) after the
+//     program; these two pass none, as before;
+//   - an audit log that cannot be written is no longer printed to stdout
+//     (std modules print nothing unasked); guest.audit returns the error.
 //
-//   host -> worker   MOUNT <NAME> <min> <max>   before SCRIPT, one a function
-//                    PROBE                      before SCRIPT: self-check
-//                    LOGLEVEL <n>               the log threshold: -1 off (the
-//                                               default), 0 trace .. 5 fatal;
-//                                               before SCRIPT or at any time
-//                    SCRIPT <source>            lock down and start
-//                    REPLY <json>               the pending CALL's value
-//                    FAIL <message>             the pending CALL fails
-//                    FILE                       then a descriptor: the value is
-//                                               {"granted":true,"text":...}
-//                    CANCEL <reason>            stop the script (rexxae_cancel)
-//   worker -> host   SAY <text>
-//                    LOG <level> <n> <tags> <message>
-//                                               a LOG_* call at or above the
-//                                               threshold; <tags> is n bytes
-//                                               of JSON object; no answer
-//                    CALL <NAME> <json array of arguments>
-//                    AUDIT <text>               for the host's audit log
-//                    DONE <exit code>           then the worker exits
-//                    ERROR <message>            then the worker exits
-//
-// Deadlines. Each exchange, from what the host last sent or received to the
-// worker's next frame, is bounded by `deadline_ms`. When it passes the host
-// sends CANCEL; a worker whose script is looping or waiting on a reply
-// cancels it in the engine and answers ERROR "cancelled by host: ...". One
-// that does not answer within `grace_ms` is hung up on and killed. A frame
-// over MAX_FRAME, a malformed one or one that stalls part way is refused the
-// same way. Every GRANT, DENY, timeout and kill goes to one audit log.
-//
-// Usage (tests/test_worker.ae has every case):
-//
-//   perms = sandbox.new("rexx") {}            // the worker reads nothing
-//   w, err = rexxworker.launch(perms, "build/worker/rexxae-worker", "rexx", "audit.log")
-//   rexxworker.mount(&w, "GREET", 1, 1)
-//   rexxworker.start(&w, source)
-//   while true {
-//       e = rexxworker.next(&w)
-//       if e.kind == "SAY" { println(e.text) }
-//       else if e.kind == "LOG" { println("${e.name} ${e.text} ${e.tags}") }  // after log_level
-//       else if e.kind == "CALL" { rexxworker.answer(&w, rexxworker.json_string("hi")) }
-//       else { break }                        // DONE, ERROR or KILLED
-//   }
+// Move a host over by replacing `import rexxworker` with `import std.guest`
+// and `rexxworker.` with `guest.`. This module is removed in the release
+// after the one that ships std.guest.
 
-exports(Worker, Event, launch, launch_uncontained, mount, probe, start, next,
+exports(launch, launch_uncontained, mount, probe, start, next,
     answer, fail, grant_file, deny, cancel, close, audit, json_string,
     printable, log_level, level_name, MAX_FRAME, DEADLINE_MS, GRACE_MS)
 
-import std.io
-import std.ipc
-import std.list
-import std.os
+import std.guest
 import std.sandbox
-import std.string
 
-// The largest frame either side accepts.
 const MAX_FRAME = 65536
-// The default bound on one exchange, and on the answer to a CANCEL.
 const DEADLINE_MS = 5000
 const GRACE_MS = 1000
 
-// A running worker. `deadline_ms` and `grace_ms` may be changed at any time.
-struct Worker {
-    ch: int
-    pid: int
-    name: string
-    audit_path: string
-    deadline_ms: int
-    grace_ms: int
-    max_frame: int
-    // 1 once DONE, ERROR or KILLED has been returned: the child is reaped.
-    over: int
+launch(perms: sandbox.Grants, prog: string, name: string, audit_path: string) -> (guest.Guest, string) {
+    return guest.launch(perms, prog, null, name, audit_path)
 }
 
-// One thing the worker did. kind is SAY (text), LOG (code = the level 0..5,
-// name = TRACE .. FATAL, text = the message, tags = a JSON object; nothing
-// to answer), CALL (name, text = the
-// arguments as a JSON array; answer it with answer, fail, grant_file or deny
-// before the next call to next), DONE (code), ERROR (text: the worker's
-// message, "cancelled by host: ..." after a deadline) or KILLED (text: why
-// the host hung up and killed it).
-struct Event {
-    kind: string
-    name: string
-    text: string
-    code: int
-    tags: string
+launch_uncontained(perms: sandbox.Grants, prog: string, name: string, audit_path: string) -> (guest.Guest, string) {
+    return guest.launch_uncontained(perms, prog, null, name, audit_path)
 }
 
-fn event(kind: string, name: string, text: string, code: int) -> Event {
-    return Event { kind: kind, name: name, text: text, code: code, tags: "" }
-}
+mount(w: *guest.Guest, name: string, min: int, max: int) -> string { return guest.mount(w, name, min, max) }
 
-// TRACE, DEBUG, INFO, WARN, ERROR or FATAL for a level 0..5.
-level_name(level: int) -> string {
-    if level == 0 { return "TRACE" }
-    if level == 1 { return "DEBUG" }
-    if level == 2 { return "INFO" }
-    if level == 3 { return "WARN" }
-    if level == 4 { return "ERROR" }
-    if level == 5 { return "FATAL" }
-    return "?"
-}
+probe(w: *guest.Guest) -> string { return guest.probe(w) }
 
-// "<level> <n> <tags> <message>" from a LOG frame, or a KILLED-worthy reason.
-fn log_event(rest: string) -> (Event, string) {
-    level_text, after_level = split_verb(rest)
-    count_text, after_count = split_verb(after_level)
-    level, lerr = string.to_int(level_text)
-    count, cerr = string.to_int(count_text)
-    if lerr != "" || cerr != "" || level < 0 || level > 5 || count < 2 || count > string.length(after_count) {
-        return event("LOG", "", "", -1), "protocol: malformed LOG"
-    }
-    tags = string.substring(after_count, 0, count)
-    msg = ""
-    if string.length(after_count) > count + 1 {
-        msg = string.substring(after_count, count + 1, string.length(after_count))
-    }
-    e = event("LOG", level_name(level), msg, level)
-    e.tags = tags
-    return e, ""
-}
+log_level(w: *guest.Guest, level: int) -> string { return guest.log_level(w, level) }
 
-fn worker(ch: int, pid: int, name: string, audit_path: string) -> Worker {
-    return Worker {
-        ch: ch, pid: pid, name: name, audit_path: audit_path,
-        deadline_ms: DEADLINE_MS, grace_ms: GRACE_MS, max_frame: MAX_FRAME, over: 0
-    }
-}
+start(w: *guest.Guest, source: string) -> string { return guest.start(w, source) }
 
-// Starts the worker program `prog` in a child held to `perms`
-// (sandbox.spawn_socket). Fails closed: where the child cannot be contained
-// it returns the reason and starts nothing. `name` labels the audit log
-// lines; `audit_path` is the log ("" for none). The worker needs no grants
-// to run a script: it is one self-contained binary and reads its script
-// from the socket.
-launch(perms: sandbox.Grants, prog: string, name: string, audit_path: string) -> (Worker, string) {
-    argv = list.new()
-    env = list.new()
-    ch, pid, err = sandbox.spawn_socket(perms, prog, argv, env)
-    list.free(argv)
-    list.free(env)
-    w = worker(ch, pid, name, audit_path)
-    if err != "" {
-        w.over = 1
-        audit(&w, "SPAWN refused: ${err}")
-        return w, err
-    }
-    audit(&w, "SPAWN ${prog} (sandbox.spawn_socket)")
-    return w, ""
-}
+answer(w: *guest.Guest, json: string) -> string { return guest.answer(w, json) }
 
-// launch with NO process sandbox (sandbox.spawn_socket_uncontained), for
-// development where spawn_socket refuses (macOS). The worker still locks
-// itself down with sandbox.enforce. The audit log says which it was.
-launch_uncontained(perms: sandbox.Grants, prog: string, name: string, audit_path: string) -> (Worker, string) {
-    argv = list.new()
-    env = list.new()
-    ch, pid, err = sandbox.spawn_socket_uncontained(perms, prog, argv, env)
-    list.free(argv)
-    list.free(env)
-    w = worker(ch, pid, name, audit_path)
-    if err != "" {
-        w.over = 1
-        return w, err
-    }
-    audit(&w, "SPAWN ${prog} UNCONTAINED (sandbox.spawn_socket_uncontained)")
-    return w, ""
-}
+fail(w: *guest.Guest, why: string) -> string { return guest.fail(w, why) }
 
-// Mounts a host function NAME taking min..max arguments. Before start.
-mount(w: *Worker, name: string, min: int, max: int) -> string {
-    return ipc.write_frame(w.ch, "MOUNT ${name} ${min} ${max}")
-}
+grant_file(w: *guest.Guest, name: string, path: string) -> string { return guest.grant_file(w, name, path) }
 
-// Asks the worker to check its own wall once it has locked down: it tries
-// to read /etc/passwd and connect to 1.1.1.1:443 and reports both as AUDIT
-// lines. Before start.
-probe(w: *Worker) -> string {
-    return ipc.write_frame(w.ch, "PROBE")
-}
+deny(w: *guest.Guest, name: string, why: string) -> string { return guest.deny(w, name, why) }
 
-// Sets the worker's log threshold: -1 off (the default), 0 trace, 1 debug,
-// 2 info, 3 warn, 4 error, 5 fatal. Before start it holds from the first
-// step; after, from the worker's next step. LOG_* calls below it send
-// nothing. Out of range: the error, and nothing is sent.
-log_level(w: *Worker, level: int) -> string {
-    if level < -1 || level > 5 { return "log_level: -1 (off) or 0..5, not ${level}" }
-    return ipc.write_frame(w.ch, "LOGLEVEL ${level}")
-}
+cancel(w: *guest.Guest, reason: string) -> string { return guest.cancel(w, reason) }
 
-// Sends the script; the worker locks itself down and runs it.
-start(w: *Worker, source: string) -> string {
-    return ipc.write_frame(w.ch, "SCRIPT ${source}")
-}
+next(w: *guest.Guest) -> guest.Event { return guest.next(w) }
 
-// Answers the pending CALL with a JSON value.
-answer(w: *Worker, json: string) -> string {
-    return ipc.write_frame(w.ch, "REPLY ${json}")
-}
+close(w: *guest.Guest) { guest.close(w) }
 
-// Fails the pending CALL; the script ends with this error.
-fail(w: *Worker, why: string) -> string {
-    return ipc.write_frame(w.ch, "FAIL ${why}")
-}
+audit(w: *guest.Guest, line: string) { guest.audit(w, line) }
 
-// Answers the pending CALL, a request for the file `name`, with the file at
-// `path` as an open descriptor: the worker reads it and the script gets
-// {"granted":true,"text":...}. If `path` cannot be opened it is a deny.
-grant_file(w: *Worker, name: string, path: string) -> string {
-    fd, oerr = io.fd_open_read(path)
-    if oerr != "" { return deny(w, name, oerr) }
-    audit(w, "GRANT ${printable(name)} -> ${path}")
-    err = ipc.write_frame(w.ch, "FILE")
-    if err == "" { err = ipc.send_fd(w.ch, fd, "F") }
-    io.fd_close(fd)
-    return err
-}
+json_string(s: string) -> string { return guest.json_string(s) }
 
-// Answers the pending CALL, a request for the file `name`, with no: the
-// script gets {"granted":false,"why":why}.
-deny(w: *Worker, name: string, why: string) -> string {
-    audit(w, "DENY ${printable(name)}: ${why}")
-    return ipc.write_frame(w.ch, "REPLY {\"granted\":false,\"why\":${json_string(why)}}")
-}
+printable(s: string) -> string { return guest.printable(s) }
 
-// Asks the worker to stop its script now. next() then returns its ERROR.
-cancel(w: *Worker, reason: string) -> string {
-    audit(w, "CANCEL ${reason}")
-    return ipc.write_frame(w.ch, "CANCEL ${reason}")
-}
-
-// The worker's next event, waiting at most deadline_ms for it (see the top
-// of this file). AUDIT frames go to the audit log and are not returned.
-next(w: *Worker) -> Event {
-    if w.over == 1 { return event("ERROR", "", "the worker has finished", -1) }
-    while true {
-        data, rerr = ipc.read_frame_timeout(w.ch, w.max_frame, w.deadline_ms)
-        // Nothing of a frame arrived: the stream is still in step, so CANCEL
-        // can go down it. Any other error (a frame that stalled part way
-        // included) leaves it out of step.
-        if rerr == ipc.TIMED_OUT_BETWEEN_FRAMES { return deadline_passed(w) }
-        if rerr != "" { return hang_up(w, "frame refused: ${rerr}") }
-        verb, rest = split_verb(data)
-        if verb == "AUDIT" {
-            audit(w, "reports: ${printable(rest)}")
-        } else if verb == "SAY" {
-            return event("SAY", "", rest, 0)
-        } else if verb == "LOG" {
-            e, lerr = log_event(rest)
-            if lerr != "" { return hang_up(w, lerr) }
-            return e
-        } else if verb == "CALL" {
-            name, args = split_verb(rest)
-            return event("CALL", name, args, 0)
-        } else if verb == "DONE" {
-            code, cerr = string.to_int(rest)
-            if cerr != "" { code = -1 }
-            finish(w)
-            return event("DONE", "", "", code)
-        } else if verb == "ERROR" {
-            audit(w, "ERROR ${printable(rest)}")
-            finish(w)
-            return event("ERROR", "", rest, -1)
-        } else {
-            return hang_up(w, "protocol: unexpected '${printable(verb)}'")
-        }
-    }
-}
-
-// The exchange ran out of time with nothing received, so the stream is
-// still between frames: ask the worker to cancel and give it grace_ms to
-// say it has.
-fn deadline_passed(w: *Worker) -> Event {
-    audit(w, "TIMEOUT no frame within ${w.deadline_ms} ms; CANCEL sent")
-    serr = ipc.write_frame(w.ch, "CANCEL deadline of ${w.deadline_ms} ms passed")
-    if serr != "" { return hang_up(w, "CANCEL not delivered: ${serr}") }
-    while true {
-        data, rerr = ipc.read_frame_timeout(w.ch, w.max_frame, w.grace_ms)
-        if rerr == ipc.TIMED_OUT_BETWEEN_FRAMES {
-            return hang_up(w, "no answer to CANCEL within ${w.grace_ms} ms")
-        }
-        if rerr != "" { return hang_up(w, "after CANCEL: ${rerr}") }
-        verb, rest = split_verb(data)
-        if verb == "ERROR" {
-            audit(w, "ERROR ${printable(rest)}")
-            finish(w)
-            return event("ERROR", "", rest, -1)
-        }
-        if verb == "DONE" {
-            finish(w)
-            code, cerr = string.to_int(rest)
-            if cerr != "" { code = -1 }
-            return event("DONE", "", "", code)
-        }
-        if verb == "AUDIT" { audit(w, "reports: ${printable(rest)}") }
-        // A SAY or CALL already on its way when the CANCEL went: dropped.
-    }
-}
-
-// Hangs up and kills the worker.
-fn hang_up(w: *Worker, why: string) -> Event {
-    audit(w, "KILLED ${why}")
-    io.fd_close(w.ch)
-    os.kill(w.pid, 9)
-    os.wait_pid(w.pid)
-    w.over = 1
-    return event("KILLED", "", why, -1)
-}
-
-// After DONE or ERROR: hang up and reap. A worker that says it is done and
-// then does not exit is killed after grace_ms (rounded up to a second).
-fn finish(w: *Worker) {
-    io.fd_close(w.ch)
-    secs = (w.grace_ms + 999) / 1000
-    _status, timed_out, _err = os.wait_pid_timeout(w.pid, secs)
-    if timed_out != 0 {
-        audit(w, "KILLED did not exit after it finished")
-        os.kill(w.pid, 9)
-        os.wait_pid(w.pid)
-    }
-    w.over = 1
-}
-
-// Ends a worker early: hangs up and kills it. Safe after it has finished.
-close(w: *Worker) {
-    if w.over == 1 { return }
-    hang_up(w, "closed by the host")
-}
-
-// One line in the audit log, labelled with the worker's name.
-audit(w: *Worker, event: string) {
-    if w.audit_path == "" { return }
-    err = io.append_file(w.audit_path, "${w.name} ${event}\n")
-    if err != "" { println("[rexxworker] audit log ${w.audit_path}: ${err}") }
-}
-
-// `s` as a JSON string literal.
-json_string(s: string) -> string {
-    hex = "0123456789abcdef"
-    out = "\""
-    run = 0
-    i = 0
-    n = string.length(s)
-    while i < n {
-        c = string.char_at(s, i)
-        if c == 34 || c == 92 || (c >= 0 && c < 32) {
-            out = string.concat(out, string.substring(s, run, i))
-            if c == 34 {
-                out = string.concat(out, "\\\"")
-            } else if c == 92 {
-                out = string.concat(out, "\\\\")
-            } else if c == 10 {
-                out = string.concat(out, "\\n")
-            } else {
-                hi = c / 16
-                lo = c % 16
-                out = string.concat(out, "\\u00${string.substring(hex, hi, hi + 1)}${string.substring(hex, lo, lo + 1)}")
-            }
-            run = i + 1
-        }
-        i = i + 1
-    }
-    out = string.concat(out, string.substring(s, run, n))
-    return string.concat(out, "\"")
-}
-
-// `s` safe to print or log: control bytes and backslashes as \xNN, so a
-// worker cannot forge a log line or send escape sequences to a terminal.
-printable(s: string) -> string {
-    hex = "0123456789abcdef"
-    out = ""
-    run = 0
-    i = 0
-    n = string.length(s)
-    while i < n {
-        c = string.char_at(s, i)
-        if c >= 0 && (c < 32 || c == 127 || c == 92) {
-            out = string.concat(out, string.substring(s, run, i))
-            hi = c / 16
-            lo = c % 16
-            out = string.concat(out, "\\x${string.substring(hex, hi, hi + 1)}${string.substring(hex, lo, lo + 1)}")
-            run = i + 1
-        }
-        i = i + 1
-    }
-    return string.concat(out, string.substring(s, run, n))
-}
-
-// "VERB the rest" -> ("VERB", "the rest").
-fn split_verb(line: string) -> (string, string) {
-    at = string.index_of(line, " ")
-    if at < 0 { return line, "" }
-    return string.substring(line, 0, at), string.substring(line, at + 1, string.length(line))
-}
+level_name(level: int) -> string { return guest.level_name(level) }

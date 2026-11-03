@@ -113,18 +113,23 @@ in the reviewed import list for this alone. See README "Cancellation".
 
 ## Worker process
 
-`worker/worker.ae` (the child) and `worker/rexxworker` (the host's side) run
-a script in a sandboxed child process; README "Worker process" has the
-protocol. Keep it small: every verb is in that table. The worker compiles the
-engine in from source, so it needs no grants, and enters `sandbox.enforce`
-with no grants before its first step; `tools/check_containment.py` holds that
-and the worker's own import allowance, which is separate from the engine's
-and must not widen it. The host spawns with `sandbox.spawn_socket` (fail
-closed); `launch_uncontained` stays the only uncontained path, by name. Every
-exchange has a host deadline, then CANCEL (the worker uses `rexxae_cancel`),
-then a kill after the grace. `make worker-test` needs an Aether newer than
-the pinned release; do not move the pin for it. Containment can only be
-exercised on Linux; macOS proves the fail-closed refusal and the protocol.
+`worker/worker.ae` (the child) runs a script in a sandboxed child process
+for a host using Aether's `std.guest`; the protocol and the worker's half of
+it are `std.guest.child` (Aether's `std/guest/README.md`), so the worker is
+engine glue only. Keep it that way: a protocol change belongs in std.guest,
+not here. The worker compiles the engine in from source, so it needs no
+grants, and runs its script inside `child.run`, which enters
+`sandbox.enforce` with no grants before the first step;
+`tools/check_containment.py` holds that and the worker's own import
+allowance, which is separate from the engine's and must not widen it.
+`worker/rexxworker` is a deprecated alias over `std.guest` for one release;
+add nothing to it. The host spawns with `sandbox.spawn_socket` (fail
+closed); `guest.launch_uncontained` stays the only uncontained path, by
+name. Every exchange has a host deadline, then CANCEL (the worker uses
+`rexxae_cancel`), then a kill after the grace. `make worker-test` needs an
+Aether with `std.guest`, newer than the pinned release; do not move the pin
+for it. Containment can only be exercised on Linux; macOS proves the
+fail-closed refusal and the protocol.
 
 ## Containment is a required contract
 

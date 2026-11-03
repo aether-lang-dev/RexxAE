@@ -50,9 +50,9 @@ until the next step, and `aether_rexxae_cancel` ends the script.
 `aether_rexxae_create_next` copies the threshold and the name.
 `examples/logging.c` is a complete C host.
 
-The worker process carries it too: `rexxworker.log_level(&w, level)`
+The worker process carries it too: `guest.log_level(&g, level)` (Aether's `std.guest`)
 (a `LOGLEVEL` frame, before `start` or at any time), then `LOG` events
-from `rexxworker.next` with `code` = level, `name` = `TRACE`..`FATAL`,
+from `guest.next` with `code` = level, `name` = `TRACE`..`FATAL`,
 `text` = the message and `tags` = the JSON object. See README "Worker
 process".
 

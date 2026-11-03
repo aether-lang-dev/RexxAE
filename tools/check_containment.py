@@ -43,27 +43,28 @@ if functions & extensions:
     raise SystemExit(f'Names listed both as RexxJS functions and as extensions: {functions & extensions}')
 print(f'{len(functions)} guest functions, {len(extensions)} RexxAE extensions and engine/service import boundaries match the reviewed surface')
 # The worker process (worker/) is a separate component with its own reviewed
-# allowance; it never widens the engine's list above. The worker may touch
-# fs and tcp only for its PROBE self-check, inside its own no-grant enforce.
+# allowance; it never widens the engine's list above. The protocol, the
+# lockdown and the PROBE self-check (which touches fs and tcp, inside the
+# no-grant enforce) are Aether's std.guest.child; the worker is the engine
+# glue, and child.run, which enters sandbox.enforce with no grants, is the
+# only place it steps the engine.
 worker_source = Path('worker/worker.ae').read_text()
 worker_imports = set(re.findall(r'^import\s+(\S+)', worker_source, re.MULTILINE))
-if worker_imports != {'std.audit', 'std.fs', 'std.io', 'std.ipc', 'std.list', 'std.sandbox',
-                      'std.string', 'std.tcp', 'src.engine'}:
+if worker_imports != {'std.guest.child', 'std.string', 'src.engine'}:
     raise SystemExit(f'Worker imports changed: {sorted(worker_imports)}; review its effect boundary')
-lockdown = re.search(r'sandbox\.new\("rexxae-worker"\) \{\s*\}', worker_source)
-enforce = worker_source.find('sandbox.enforce(worker, audit_log) callback {')
-first_step = worker_source.find('run(ctx, ch)')
-if not lockdown or enforce < 0 or not (enforce < first_step):
-    raise SystemExit('The worker must enter sandbox.enforce with no grants before the first step')
-if worker_source.count('run(ctx, ch)') != 1 or worker_source.count('engine.rexxae_step(') != 1:
-    raise SystemExit('The worker steps the engine from one place, inside its enforce')
+locked = worker_source.find('child.run(h) callback {')
+first_step = worker_source.find('run_script(ctx, h)')
+if locked < 0 or not (locked < first_step):
+    raise SystemExit('The worker must run its script inside child.run (no-grant sandbox.enforce)')
+if worker_source.count('run_script(ctx, h)') != 1 or worker_source.count('engine.rexxae_step(') != 1:
+    raise SystemExit('The worker steps the engine from one place, inside child.run')
 host_source = Path('worker/rexxworker/module.ae').read_text()
 host_imports = set(re.findall(r'^import\s+(\S+)', host_source, re.MULTILINE))
-if host_imports != {'std.io', 'std.ipc', 'std.list', 'std.os', 'std.sandbox', 'std.string'}:
-    raise SystemExit(f'Worker host module imports changed: {sorted(host_imports)}')
-if host_source.count('sandbox.spawn_socket_uncontained(') != 1 or 'launch_uncontained(' not in host_source:
-    raise SystemExit('An uncontained worker must stay behind launch_uncontained, by name')
-print('worker and its host module match their reviewed imports; the worker locks down before its first step')
+if host_imports != {'std.guest', 'std.sandbox'}:
+    raise SystemExit(f'Worker host alias imports changed: {sorted(host_imports)}')
+if 'spawn_socket' in host_source:
+    raise SystemExit('The deprecated host alias forwards to std.guest; it spawns nothing itself')
+print('worker and its host alias match their reviewed imports; the worker runs its script inside child.run')
 cases = [
     ('filesystem', 'import std.fs\nexports(probe)\nprobe() { fs.read("/etc/passwd") }', ['--emit=lib'], ('--emit=lib rejects',)),
     # Since Aether 0.859.0 --emit=lib refuses std.file (and std.dir) itself;

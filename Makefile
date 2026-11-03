@@ -188,9 +188,10 @@ build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/c
 	$(CALC_AE) build $< --lib $(abspath build/calculator) -o $@
 
 # The worker process (worker/, README "Worker process"): a separate
-# component with its own build directory. It needs std.ipc frames and
-# sandbox.spawn_socket (Aether 0.873.0 or later). It is not part of
-# `make test`; run it with `make worker-test`.
+# component with its own build directory. It is built on Aether's std.guest
+# (the host's side) and std.guest.child (the worker's), which are not in a
+# release yet: build it with an Aether tree that has them (AE=, AETHER_HOME=).
+# It is not part of `make test`; run it with `make worker-test`.
 .PHONY: worker worker-test
 worker: build/worker/rexxae-worker
 

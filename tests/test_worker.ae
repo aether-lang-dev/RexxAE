@@ -1,5 +1,5 @@
-// The worker process (worker/worker.ae) driven by its host module
-// (worker/rexxworker): a real child, a real socket, real deadlines. On Linux
+// The worker process (worker/worker.ae, on std.guest.child) driven by
+// Aether's std.guest: a real child, a real socket, real deadlines. On Linux
 // the child is spawned with sandbox.spawn_socket; elsewhere spawn_socket
 // refuses (one spec checks that) and the rest run it uncontained, still
 // locked down by its own sandbox.enforce.
@@ -11,6 +11,7 @@ import std.ipc
 import std.os
 import std.sandbox
 import std.string
+import std.guest
 import rexxworker
 
 const WORKER = "build/worker/rexxae-worker"
@@ -18,31 +19,31 @@ const SILENT = "build/worker/silent"
 const LOG = "build/worker/test-audit.log"
 
 // The worker, contained where spawn_socket can contain it.
-fn begin(prog: string, name: string) -> rexxworker.Worker {
+fn begin(prog: string, name: string) -> guest.Guest {
     perms = sandbox.new("rexxae-worker-test") {
     }
     if os.platform() == "linux" {
-        w, err = rexxworker.launch(perms, prog, name, LOG)
+        w, err = guest.launch(perms, prog, null, name, LOG)
         sandbox.free(perms)
         if err != "" { println("spawn: ${err}") }
         return w
     }
-    w, err = rexxworker.launch_uncontained(perms, prog, name, LOG)
+    w, err = guest.launch_uncontained(perms, prog, null, name, LOG)
     sandbox.free(perms)
     if err != "" { println("spawn: ${err}") }
     return w
 }
 
 // Every event up to the end, one line each; a CALL is failed.
-fn transcript(w: *rexxworker.Worker) -> string {
+fn transcript(w: *guest.Guest) -> string {
     out = ""
     while true {
-        e = rexxworker.next(w)
+        e = guest.next(w)
         if e.kind == "SAY" {
             out = "${out}SAY ${e.text}\n"
         } else if e.kind == "CALL" {
             out = "${out}CALL ${e.name} ${e.text}\n"
-            rexxworker.fail(w, "not served here")
+            guest.fail(w, "not served here")
         } else if e.kind == "DONE" {
             return "${out}DONE ${e.code}\n"
         } else {
@@ -61,14 +62,30 @@ main() {
     fs.write(LOG, "")
     fw = spec.init()
     spec.describe(fw, "RexxAE worker process") {
+        spec.it("still runs through the deprecated rexxworker alias") callback {
+            perms = sandbox.new("alias") {
+            }
+            w, err = rexxworker.launch_uncontained(perms, WORKER, "alias", LOG)
+            sandbox.free(perms)
+            spec.assert_str_eq(err, "", "started")
+            rexxworker.mount(&w, "GREET", 1, 1)
+            rexxworker.start(&w, "LET g = GREET('rexx')\nSAY g")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.name} ${e.text}", "CALL GREET [\"rexx\"]", "the call")
+            rexxworker.answer(&w, rexxworker.json_string("hi"))
+            e = rexxworker.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.text}", "SAY hi", "the reply")
+            e = rexxworker.next(&w)
+            spec.assert_str_eq(e.kind, "DONE", "done")
+        }
         spec.it("spawn_socket fails closed where it cannot contain the child") callback {
             perms = sandbox.new("closed") {
             }
-            w, err = rexxworker.launch(perms, WORKER, "closed", LOG)
+            w, err = guest.launch(perms, WORKER, null, "closed", LOG)
             sandbox.free(perms)
             if os.platform() == "linux" {
                 spec.assert_str_eq(err, "", "contained on Linux")
-                rexxworker.close(&w)
+                guest.close(&w)
             } else {
                 println("    spawn_socket said: ${err}")
                 spec.assert_err_contains(err, "nothing was started", "refused, with the reason")
@@ -77,16 +94,16 @@ main() {
         }
         spec.it("runs a script and answers its host calls") callback {
             w = begin(WORKER, "normal")
-            spec.assert_str_eq(rexxworker.mount(&w, "GREET", 1, 1), "", "mount")
-            spec.assert_str_eq(rexxworker.start(&w, "SAY 'hello'\nLET g = GREET('rexx')\nSAY g\nEXIT 3"), "", "start")
-            e = rexxworker.next(&w)
+            spec.assert_str_eq(guest.mount(&w, "GREET", 1, 1), "", "mount")
+            spec.assert_str_eq(guest.start(&w, "SAY 'hello'\nLET g = GREET('rexx')\nSAY g\nEXIT 3"), "", "start")
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "SAY hello", "first SAY")
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.name} ${e.text}", "CALL GREET [\"rexx\"]", "the call, typed")
-            rexxworker.answer(&w, rexxworker.json_string("hi \"rexx\"\n"))
-            e = rexxworker.next(&w)
+            guest.answer(&w, guest.json_string("hi \"rexx\"\n"))
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "SAY hi \"rexx\"\n", "reply round-trips")
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq(e.kind, "DONE", "done")
             spec.assert_eq(e.code, 3, "exit code")
             spec.assert_contains(log_text(), "normal reports: rexxae-worker locked itself down before the first step: no grants", "lockdown audited")
@@ -94,29 +111,29 @@ main() {
         spec.it("carries LOG events at the host's threshold, with tags, and off by default") callback {
             script = "LET t.user = 'ann'\nLET t.n = 2\nCALL LOG_DEBUG 'quiet'\nCALL LOG_WARN 'careful: a b', t\nLET x = LOG_INFO('')\nSAY 'end'"
             off = begin(WORKER, "log-off")
-            rexxworker.start(&off, script)
+            guest.start(&off, script)
             spec.assert_str_eq(transcript(&off), "SAY end\nDONE 0\n", "no LOG frames when off")
             w = begin(WORKER, "log")
-            spec.assert_str_eq(rexxworker.log_level(&w, 7), "log_level: -1 (off) or 0..5, not 7", "out of range is refused here")
-            spec.assert_str_eq(rexxworker.log_level(&w, 2), "", "info")
-            rexxworker.start(&w, script)
-            e = rexxworker.next(&w)
+            spec.assert_str_eq(guest.log_level(&w, 7), "log_level: -1 (off) or 0..5, not 7", "out of range is refused here")
+            spec.assert_str_eq(guest.log_level(&w, 2), "", "info")
+            guest.start(&w, script)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.code} ${e.name}", "LOG 3 WARN", "warn, debug skipped")
             spec.assert_str_eq(e.text, "careful: a b", "message with spaces")
             spec.assert_str_eq(e.tags, "{\"user\":\"ann\",\"n\":2}", "tags")
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.name} [${e.text}] ${e.tags}", "LOG INFO [] {}", "empty message, no tags")
             spec.assert_str_eq(transcript(&w), "SAY end\nDONE 0\n", "then the rest")
         }
         spec.it("changes the log threshold while the script waits on the host") callback {
             w = begin(WORKER, "log-live")
-            rexxworker.mount(&w, "HOST_WAIT", 0, 0)
-            rexxworker.start(&w, "CALL LOG_ERROR 'not yet'\nLET v = HOST_WAIT()\nLET y = LOG_ERROR('now' v)\nSAY 'end'")
-            e = rexxworker.next(&w)
+            guest.mount(&w, "HOST_WAIT", 0, 0)
+            guest.start(&w, "CALL LOG_ERROR 'not yet'\nLET v = HOST_WAIT()\nLET y = LOG_ERROR('now' v)\nSAY 'end'")
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.name}", "CALL HOST_WAIT", "off: no LOG before the call")
-            rexxworker.log_level(&w, 0)
-            rexxworker.answer(&w, "\"x\"")
-            e = rexxworker.next(&w)
+            guest.log_level(&w, 0)
+            guest.answer(&w, "\"x\"")
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.name} ${e.text}", "LOG ERROR now x", "on from the next step")
             spec.assert_str_eq(transcript(&w), "SAY end\nDONE 0\n", "done")
         }
@@ -124,22 +141,22 @@ main() {
             w = begin(WORKER, "log-bad")
             // Straight down the socket: log_level checks the range itself.
             spec.assert_str_eq(ipc.write_frame(w.ch, "LOGLEVEL loud"), "", "sent")
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "ERROR protocol: LOGLEVEL wants -1 (off) or 0..5, got 'loud'", "refused")
         }
         spec.it("hands over a granted file as a descriptor and audits GRANT and DENY") callback {
             fs.write("build/worker/granted.txt", "greeting=from the host's disk")
             w = begin(WORKER, "files")
-            rexxworker.mount(&w, "HOST_REQUEST", 1, 1)
-            rexxworker.start(&w, "LET c = HOST_REQUEST('config')\nIF c.granted THEN SAY c.text\nLET p = HOST_REQUEST('/etc/passwd')\nIF p.granted THEN SAY 'leaked'\nELSE SAY 'no:' p.why")
+            guest.mount(&w, "HOST_REQUEST", 1, 1)
+            guest.start(&w, "LET c = HOST_REQUEST('config')\nIF c.granted THEN SAY c.text\nLET p = HOST_REQUEST('/etc/passwd')\nIF p.granted THEN SAY 'leaked'\nELSE SAY 'no:' p.why")
             out = ""
             while true {
-                e = rexxworker.next(&w)
+                e = guest.next(&w)
                 if e.kind == "CALL" {
                     if e.text == "[\"config\"]" {
-                        rexxworker.grant_file(&w, "config", "build/worker/granted.txt")
+                        guest.grant_file(&w, "config", "build/worker/granted.txt")
                     } else {
-                        rexxworker.deny(&w, "/etc/passwd", "not in this guest's policy")
+                        guest.deny(&w, "/etc/passwd", "not in this guest's policy")
                     }
                 } else if e.kind == "SAY" {
                     out = "${out}${e.text}|"
@@ -155,8 +172,8 @@ main() {
         }
         spec.it("refuses ADDRESS and holds its own lockdown (PROBE)") callback {
             w = begin(WORKER, "probe")
-            rexxworker.probe(&w)
-            rexxworker.start(&w, "ADDRESS SYSTEM 'cat /etc/passwd'\nSAY 'RC' RC")
+            guest.probe(&w)
+            guest.start(&w, "ADDRESS SYSTEM 'cat /etc/passwd'\nSAY 'RC' RC")
             spec.assert_str_eq(transcript(&w), "SAY RC 1\nDONE 0\n", "ADDRESS gets RC 1")
             log = log_text()
             spec.assert_contains(log, "probe reports: probe worker fs.read('/etc/passwd'): refused", "fs refused by the worker's enforce")
@@ -167,7 +184,7 @@ main() {
         spec.it("cancels a script that loops forever when the deadline passes") callback {
             w = begin(WORKER, "loop")
             w.deadline_ms = 300
-            rexxworker.start(&w, "SAY 'spinning'\nDO FOREVER\nLET x = 1\nEND")
+            guest.start(&w, "SAY 'spinning'\nDO FOREVER\nLET x = 1\nEND")
             spec.assert_str_eq(transcript(&w), "SAY spinning\nERROR cancelled by host: deadline of 300 ms passed\n", "stopped in the engine")
             log = log_text()
             spec.assert_contains(log, "loop TIMEOUT no frame within 300 ms; CANCEL sent", "timeout audited")
@@ -176,30 +193,30 @@ main() {
         spec.it("cancels a script waiting on the host for a reply that never comes") callback {
             w = begin(WORKER, "hear")
             w.deadline_ms = 300
-            rexxworker.mount(&w, "HOST_HEAR", 0, 0)
-            rexxworker.start(&w, "LET line = HOST_HEAR()\nSAY line")
-            e = rexxworker.next(&w)
+            guest.mount(&w, "HOST_HEAR", 0, 0)
+            guest.start(&w, "LET line = HOST_HEAR()\nSAY line")
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.name}", "CALL HOST_HEAR", "the guest waits on the host")
             // The host has nothing to say: the next exchange is the worker's
             // turn, which never comes. The deadline holds it.
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "ERROR cancelled by host: deadline of 300 ms passed", "cancelled while suspended")
         }
         spec.it("kills a guest that never answers, CANCEL included") callback {
             w = begin(SILENT, "silent")
             w.deadline_ms = 200
             w.grace_ms = 200
-            rexxworker.start(&w, "SAY 'never runs'")
+            guest.start(&w, "SAY 'never runs'")
             pid = w.pid
-            e = rexxworker.next(&w)
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "KILLED no answer to CANCEL within 200 ms", "killed")
             spec.assert_eq(os.kill(pid, 0), -1, "the process is gone")
             spec.assert_contains(log_text(), "silent KILLED no answer to CANCEL within 200 ms", "kill audited")
         }
         spec.it("refuses a frame over MAX_FRAME and kills the worker") callback {
             w = begin(WORKER, "big")
-            rexxworker.start(&w, "SAY COPIES('x', 70000)")
-            e = rexxworker.next(&w)
+            guest.start(&w, "SAY COPIES('x', 70000)")
+            e = guest.next(&w)
             spec.assert_str_eq("${e.kind} ${e.text}", "KILLED frame refused: ipc.read_frame: frame longer than max", "refused")
             spec.assert_contains(log_text(), "big KILLED frame refused: ipc.read_frame: frame longer than max", "audited")
         }

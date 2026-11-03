@@ -56,6 +56,11 @@ Retain the other complementary layers:
   `--lib build` or `--lib build/aether`.
 - Keep known compatibility differences in `tests/known_differences.json`, asserting
   both native and reference results. Do not count these cases as parity.
+- RexxAE extensions (builtins RexxJS lacks: `CRON_*`, `LOG_*`) live in
+  `EXTENSION_FUNCTIONS` (`src/evaluate.ae`), under `rexxae_extensions` in
+  `tests/guest_functions.json`, and as `kind: rexxae_extension` entries in
+  `tests/known_differences.json`. They are never parity; see
+  docs/cron-and-logging.md.
 
 Run the relevant specs while developing and `make test parity` before
 finishing a change. Use `make -B test parity memcheck` to rebuild all consumers

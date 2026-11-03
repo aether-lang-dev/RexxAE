@@ -65,14 +65,24 @@ tests, then implemented in both engines. RexxAE does not drift on its own.
   Both are needed only for Rexx that handles binary protocols. Until then,
   protocols (CoAP, DNS) stay native and reach scripts as host functions.
 
-## Now: cron and logging
+## Done: cron and logging (RexxAE extensions)
 
-- **Logging is static:** `LOG_TRACE` to `LOG_FATAL`, called as plain
-  functions with no logger object to create or pass around. The host sets
-  the threshold and receives the messages. (`LOG` is taken: in RexxJS it is
-  the logarithm.)
-- **Cron:** the next activation of a cron expression after a given instant,
-  in UTC. The instant comes from the host, as above.
+- **Logging is static** (done): `LOG_TRACE` to `LOG_FATAL` (message
+  [, tags]), called as plain functions with no logger object to create or
+  pass around. The host sets the threshold per context (off by default)
+  and receives `REXXAE_LOG` events, through the C interface and the worker
+  protocol. (`LOG` is taken: in RexxJS it is the logarithm.)
+- **Cron** (done): `CRON_VALID(expr)` and `CRON_NEXT(expr, after)`, the next
+  activation strictly after a given instant, in UTC. The instant comes from
+  the host, as above (ISO as `NOW` gives it, or epoch milliseconds as
+  `NOW_TIMESTAMP` gives it). Time zones wait for the host-owned zone item
+  above.
 
-Both are RexxAE extensions until RexxJS has the same functions; list them as
-such, not as parity.
+[cron-and-logging.md](docs/cron-and-logging.md) has the contracts. Both are
+RexxAE extensions until RexxJS has the same functions; they are listed as
+such (`tests/guest_functions.json`, `tests/known_differences.json`, the
+function inventory), not as parity.
+
+- **Follow-up: the same functions in RexxJS**, settled in the shared spec
+  and conformance tests above, so a script logs and schedules the same way
+  in both engines. Then move them from the extension lists to parity.

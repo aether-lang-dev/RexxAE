@@ -11,6 +11,9 @@ supported toolchains and validation status.
 - [Routines](routines.md): CALL, arguments, PROCEDURE and EXPOSE.
 - [SELECT](select.md): branches and reference parser restrictions.
 - [PARSE and compound values](parse-and-compounds.md): templates and data paths.
+- [Cron and static logging](cron-and-logging.md): the RexxAE extensions
+  CRON_VALID/CRON_NEXT (UTC, host clock) and LOG_TRACE .. LOG_FATAL
+  (REXXAE_LOG events); [provenance](provenance-toit.md) of the cron port.
 - [Function policy](function-policy.md) and generated
   [inventory](function-inventory.md): available profiles and remaining functions.
 

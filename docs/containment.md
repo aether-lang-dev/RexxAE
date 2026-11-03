@@ -21,7 +21,7 @@ containment are not assumed to be finished or inherited by RexxAE.
 | Boundary | Held by |
 |---|---|
 | Engine's native dependencies | Capability-empty library builds, @pure entry points, reviewed import list. |
-| Guest builtin surface | `tests/guest_functions.json`, checked against the actual builtin name lists. New names require review. |
+| Guest builtin surface | `tests/guest_functions.json`, checked against the actual builtin name lists, RexxJS names and RexxAE extensions apart. New names require review. The extensions are pure: LOG_* only raises a `REXXAE_LOG` event at a threshold only the host sets, and CRON_* has no clock (the instant comes from the script, which gets it from a host function). |
 | Functions a context can request | Host-only registration; one context does not inherit another's registry. |
 | Valid arguments/resources | The service gate checks types, arity, logical keys and resources before acting. |
 | ADDRESS environments | Host router allowlist. An unmounted environment is vetoed, never dispatched to a shell by default. |

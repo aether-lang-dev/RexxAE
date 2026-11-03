@@ -9,8 +9,19 @@
     "nativeFunctions": 71,
     "nativeScalarFunctions": 60,
     "nativeValueFunctions": 11,
+    "rexxaeExtensions": 8,
     "extraPackageManifests": 42
   },
+  "rexxaeExtensions": [
+    "CRON_NEXT",
+    "CRON_VALID",
+    "LOG_DEBUG",
+    "LOG_ERROR",
+    "LOG_FATAL",
+    "LOG_INFO",
+    "LOG_TRACE",
+    "LOG_WARN"
+  ],
   "core": [
     {
       "name": "ABBREV",

@@ -144,6 +144,19 @@ Current restrictions and behavior:
   function arithmetic in conditions, PARSE WITH handling and object aliases.
   Tests assert both implementations'
   results; these cases are not counted as matching programs.
+- Three more entries there (`kind: rexxae_extension`) pin the RexxAE
+  extensions below against RexxJS, which has none of them.
+
+## RexxAE extensions
+
+Eight builtins exist only in RexxAE: `LOG_TRACE`, `LOG_DEBUG`, `LOG_INFO`,
+`LOG_WARN`, `LOG_ERROR`, `LOG_FATAL`, `CRON_VALID` and `CRON_NEXT`
+([cron-and-logging.md](cron-and-logging.md)). They live in
+`EXTENSION_FUNCTIONS` in `src/evaluate.ae`, are listed under
+`rexxae_extensions` in `tests/guest_functions.json`, and the inventory names
+them apart; it fails if RexxJS ever registers one, so that the name is
+reviewed for parity. They are never counted as native ports or parity. Their
+specs are `tests/test_logging.ae` and `tests/test_cron.ae`.
 
 These are reference behaviors, not prescriptions for a redesigned language.
 If a quirk should be corrected, change the reference or explicitly introduce

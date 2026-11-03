@@ -88,5 +88,62 @@
       "8 8"
     ],
     "reason": "RexxAE owns copied values; RexxJS shares object identity across variable assignment. This difference now has an observable compound-write example."
+  },
+  {
+    "name": "extension_cron_valid",
+    "kind": "rexxae_extension",
+    "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",
+    "native_output": [
+      "1"
+    ],
+    "reference_output": [
+      "host-result"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "RexxAE extension, not parity: RexxJS has no CRON_VALID, so its LET sends the unknown call to the default ADDRESS environment as a command. Recorded until RexxJS gains the same function (TODO.md)."
+  },
+  {
+    "name": "extension_cron_next",
+    "kind": "rexxae_extension",
+    "source": "LET x = CRON_NEXT('@daily', '2026-11-03T16:49:32.123Z')\nSAY x",
+    "native_output": [
+      "2026-11-04T00:00:00.000Z"
+    ],
+    "reference_output": [
+      "host-result"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "RexxAE extension, not parity: RexxJS has no CRON_NEXT, so its LET sends the unknown call to the default ADDRESS environment as a command. Recorded until RexxJS gains the same function (TODO.md)."
+  },
+  {
+    "name": "extension_log_info",
+    "kind": "rexxae_extension",
+    "source": "LET r = LOG_INFO('hello')\nSAY 'after' r",
+    "native_output": [
+      "after "
+    ],
+    "reference_output": [
+      "after host-result"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "RexxAE extension, not parity: RexxJS has no LOG_INFO (or any LOG_ level function), so its LET sends the unknown call to the default ADDRESS environment as a command. Recorded until RexxJS gains the same function (TODO.md). Logging is off by default, so the native run has no LOG event."
   }
 ]

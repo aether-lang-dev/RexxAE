@@ -7,7 +7,8 @@ capability grants. Applications supply effects through explicit host requests;
 there is no JavaScript runtime dependency.
 
 This is a working implementation slice, not a complete port. It has typed
-values, 71 builtins with limited profiles, registered application functions, labeled routines with CALL/RETURN,
+values, 71 RexxJS builtins with limited profiles, eight RexxAE extensions
+(static logging and cron, not in RexxJS), registered application functions, labeled routines with CALL/RETURN,
 comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
 
 Current references are RexxJS `30fce5c` and spreadsheet `9358453`
@@ -204,6 +205,7 @@ variables, then call `aether_rexxae_step(ctx, instruction_budget)`:
 | `REXXAE_SAY` | Read text, display/capture it, then step again. |
 | `REXXAE_COMMAND` | Read address/text; reply with RC, RESULT and ERRORTEXT. |
 | `REXXAE_FUNCTION` | Read function name/JSON arguments; reply with JSON or an error. |
+| `REXXAE_LOG` | Read level, text and tags JSON, then step again; no reply. Only once the host sets a threshold. |
 | `REXXAE_RUNNABLE` | The instruction budget was used; schedule another step. |
 | `REXXAE_DONE` | Read the exit code, then destroy the context. |
 | `REXXAE_ERROR` | Read the error and source line, then destroy the context. |
@@ -218,6 +220,16 @@ objects. Variable getters/setters use the same representation. Convenience
 argument getters expose JSON type codes and Rexx display text. JSON excludes
 nonfinite numbers: those remain internal numeric values and cannot be
 exported as typed host arguments.
+
+`REXXAE_LOG` (5) comes from the static logging builtins `LOG_TRACE` ..
+`LOG_FATAL`, a RexxAE extension. Logging is off until the host calls
+`aether_rexxae_set_log_level(ctx, level)` (-1 off, 0 trace .. 5 fatal);
+messages below the threshold produce no event, so existing hosts see no
+change. `aether_rexxae_log_level`, `aether_rexxae_log_tags_json` and
+`aether_rexxae_text` read the event; `aether_rexxae_set_log_name` /
+`aether_rexxae_log_name` keep a host-side label for the context that
+scripts cannot see. [examples/logging.c](examples/logging.c) is a C host;
+[cron-and-logging.md](docs/cron-and-logging.md) has the details.
 
 Pending events repeat until answered. Expression results are memoized until
 an instruction completes, so resumption does not repeat an earlier host
@@ -314,10 +326,17 @@ bytes; at most 64 KiB), each a verb and its text:
 |---|---|---|---|
 | `MOUNT NAME min max` | a host function, before `SCRIPT` | `SAY text` | |
 | `PROBE` | self-check of the lockdown, before `SCRIPT` | `CALL NAME [json args]` | a mounted function |
+| `LOGLEVEL n` | log threshold, -1 off (default) or 0..5; any time | `LOG level n tags message` | a LOG_* call; `tags` is n bytes of JSON; no answer |
 | `SCRIPT source` | lock down and run | `AUDIT text` | for the audit log |
 | `REPLY json` / `FAIL message` | answer the pending `CALL` | `DONE code` | then it exits |
 | `FILE`, then a descriptor | the `CALL`'s value is `{"granted":true,"text":...}` | `ERROR message` | then it exits |
 | `CANCEL reason` | stop the script (`rexxae_cancel`) | | |
+
+`rexxworker.log_level(&w, level)` sends `LOGLEVEL`; before `start` it holds
+from the first step, later from the worker's next step (also while a `CALL`
+waits for its answer). `rexxworker.next` returns a `LOG` event with `code`
+the level, `name` `TRACE`..`FATAL`, `text` the message and `tags` the JSON
+object. The worker sends nothing for messages below the threshold.
 
 A granted file crosses as an open descriptor (`ipc.send_fd` after the
 `FILE` frame, taken with `ipc.recv`), never a path. `rexxworker.deny` answers
@@ -334,8 +353,9 @@ frame over the maximum, a malformed one or one that stalls part way is
 refused the same way. Every spawn, GRANT, DENY, timeout, cancel and kill goes
 to the one audit log, with what the worker reported.
 
-`make worker-test` runs `tests/test_worker.ae`: a normal exchange, a file
-granted and one denied, the lockdown probes, a loop cancelled by the
+`make worker-test` runs `tests/test_worker.ae`: a normal exchange, LOG
+events at a threshold (off by default, changed while a call waits, a
+malformed LOGLEVEL refused), a file granted and one denied, the lockdown probes, a loop cancelled by the
 deadline, a script waiting on a reply cancelled, a silent guest killed, and
 an oversize frame refused. It needs Aether 0.873.0 or later, the first release with std.ipc's
 frames and `sandbox.spawn_socket`
@@ -362,6 +382,17 @@ Supported now:
   with nested branches and first-match execution.
 - DO ranges/BY, repeat, WHILE, UNTIL, FOREVER and array/object OVER;
   innermost LEAVE/ITERATE, with existing loop variables restored as in RexxJS.
+- RexxAE extensions, not in RexxJS and not counted as parity
+  ([cron-and-logging.md](docs/cron-and-logging.md)):
+  - static logging, `LOG_TRACE` `LOG_DEBUG` `LOG_INFO` `LOG_WARN` `LOG_ERROR`
+    `LOG_FATAL` (message [, tags]), delivered as `REXXAE_LOG` events at a
+    host-set threshold, off by default;
+  - `CRON_VALID(expr)` and `CRON_NEXT(expr, after)`: five- or six-field cron
+    expressions and `@daily`-style shorthands, the next activation strictly
+    after an ISO 8601 UTC instant or epoch milliseconds, `""` if none within
+    five years. UTC only: no time zones or daylight saving, and no clock in
+    the engine (the host mounts one). Ported from Toit's cron
+    ([provenance](docs/provenance-toit.md)).
 - REQUIRE with a quoted reference and optional literal AS prefix, dispatched
   to an explicitly mounted resolver; the calculator supplies a relative HTTP resolver.
 - SAY, ADDRESS/quoted commands, integer EXIT, clause separators, comments,
@@ -378,8 +409,10 @@ except UTF-16-aware LENGTH; numeric coercion/formatting has tested profiles,
 not full JS equivalence.
 
 Bare `null` resolves to the unset symbol `NULL`; typed null comes
-from JSON_PARSE or a host. Seven compatibility differences are pinned in
-[known_differences.json](tests/known_differences.json), not counted as parity.
+from JSON_PARSE or a host. Ten differences are pinned in
+[known_differences.json](tests/known_differences.json), not counted as parity:
+seven compatibility differences and three RexxAE extensions (`kind`
+`rexxae_extension`), which RexxJS sends to the default ADDRESS environment.
 For shared syntax, assign composite values to variables before function
 calls and use double-quoted JSON object keys. Copy RESULT into another variable before
 RETURN; the reference parses RETURN RESULT as a function call. Assign compound
@@ -407,15 +440,16 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-On the supported core compiler, `make test` runs 411 native std.spec cases
-(including both binary variants), ctypes protocol checks, twelve Python
-session/console tests, the C example and Python host harness. `make parity`
+On the supported core compiler, `make test` runs 427 native std.spec cases
+in `make spec` (including 26 in each binary variant, 23 cron and 20 logging
+specs) and 45 containment specs, ctypes protocol checks, twelve Python
+session/console tests, both C examples (commands; logging with a host clock) and the Python host harness. `make parity`
 compares 513 programs, including host-call arguments/results, with RexxJS
 `30fce5c`. The dated standalone/vendor audit records the same results; its
 additional 28 boundary probes match 16 and remain separate from strict parity.
-Seven documented compatibility differences remain separately asserted and
-are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
-the C example and the native spec executables. Twelve compiler
+Ten documented differences (seven compatibility differences and three
+RexxAE extensions) remain separately asserted and are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
+the C examples and the native spec executables. Twelve compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract. The optional calculator's 29 native specs and 30 Python console tests
 also pass using the same release. Module execution passes Valgrind.

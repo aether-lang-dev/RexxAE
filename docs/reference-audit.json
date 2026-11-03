@@ -1,7 +1,7 @@
 {
   "previous_reference_revision": "e3bd4e975e96d674d85be5deb6b76a7c26f0deef",
   "probe_fixture": "tests/reference_update_20261019.json",
-  "native_source_sha256": "1b2a49e3f45d76b5bf82c006b5dbafbbbc20804876c1cf72dac399d69e4cbc3c",
+  "native_source_sha256": "f34fde4779e48b7846aac1af24c4ad057084032270341162587a4c238646bc44",
   "spreadsheet_revision": "9358453d19b3916d39e103850710fb01e938cd08",
   "spreadsheet_vendored_revision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
   "references": [
@@ -559,8 +559,8 @@
           "reference_note": "Current reference silently ignores this parenthesized ADDRESS clause; do not infer general expression support."
         }
       ],
-      "known_reference_snapshots_unchanged": 7,
-      "known_total": 7
+      "known_reference_snapshots_unchanged": 10,
+      "known_total": 10
     },
     {
       "name": "spreadsheet_vendor",
@@ -1116,8 +1116,8 @@
           "reference_note": "Current reference silently ignores this parenthesized ADDRESS clause; do not infer general expression support."
         }
       ],
-      "known_reference_snapshots_unchanged": 7,
-      "known_total": 7
+      "known_reference_snapshots_unchanged": 10,
+      "known_total": 10
     }
   ]
 }

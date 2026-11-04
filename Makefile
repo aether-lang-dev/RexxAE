@@ -1,5 +1,5 @@
 # Validated release; README documents requirements and verification status.
-AETHER_RELEASE := 0.873.0
+AETHER_RELEASE := 0.878.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.
@@ -189,8 +189,8 @@ build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/c
 
 # The worker process (worker/, README "Worker process"): a separate
 # component with its own build directory. It is built on Aether's std.guest
-# (the host's side) and std.guest.child (the worker's), which are not in a
-# release yet: build it with an Aether tree that has them (AE=, AETHER_HOME=).
+# (the host's side) and std.guest.child (the worker's), first released in
+# Aether 0.878.0 (the AETHER_RELEASE here).
 # It is not part of `make test`; run it with `make worker-test`.
 .PHONY: worker worker-test
 worker: build/worker/rexxae-worker

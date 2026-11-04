@@ -21,7 +21,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.873.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.878.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -38,10 +38,10 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Install and select the release with `ae version install 0.873.0` and
-`ae version use 0.873.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Install and select the release with `ae version install 0.878.0` and
+`ae version use 0.878.0`, then confirm both `ae` and `aetherc` in `ae version`.
 Alternatively, an official release extracted to
-`build/toolchains/aether-0.873.0` is selected automatically by Make; it sets
+`build/toolchains/aether-0.878.0` is selected automatically by Make; it sets
 `AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
 overrides the executable; an extracted installation also needs its matching
 `AETHER_HOME=/path/to/release`.
@@ -310,7 +310,7 @@ exchange.
 The protocol and both halves of it are Aether's: **`std.guest`** is the
 host's side and **`std.guest.child`** the worker's, documented once in
 Aether's `std/guest/README.md` (every message, both directions). They need
-an Aether with `std.guest`, which is not in a release yet.
+Aether 0.878.0 or later, the first release with `std.guest`.
 
 - `worker/worker.ae` builds `build/worker/rexxae-worker`, one binary with the
   engine compiled in, so the process sandbox needs to grant it nothing. It is

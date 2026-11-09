@@ -1,16 +1,22 @@
 import std.string
 import std.map
 import std.strbuilder
+import std.mem
 import src.state
 
 exports(new, next, symbol, keyword)
 
+release_unpublished_(slot: ptr) { map.map_free(mem.get_ptr(slot, 0)) }
+
 new(source: string) -> ptr {
     ctx = map.map_new()
+    defer release_unpublished_(&ctx)
     state.write(ctx, "source", source)
     state.number(ctx, "scan_line", 1)
     next(ctx)
-    return ctx
+    result = ctx
+    ctx = null
+    return result
 }
 symbol(ctx: ptr, text: string) -> bool { return state.integer(ctx, "kind") == 3 && state.read(ctx, "token") == text }
 keyword(ctx: ptr, text: string) -> bool { return state.integer(ctx, "kind") == 1 && string.to_upper(state.read(ctx, "token")) == text }
@@ -74,6 +80,7 @@ next(ctx: ptr) {
             state.number(ctx, "quote", quote)
             i = i + 1
             b = strbuilder.new(32)
+            defer state.release_builder(&b)
             closed = false
             while i < n {
                 c = string.char_at_n(source, n, i)
@@ -94,7 +101,7 @@ next(ctx: ptr) {
                     strbuilder.append_byte(b, c)
                 }
             }
-            text = strbuilder.finish(b)
+            text = strbuilder.finish(state.take_ptr(&b))
             if !closed { state.fail(ctx, "unterminated string") }
         } else if word(c) {
             kind = 1

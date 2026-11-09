@@ -107,19 +107,21 @@ replace(existing: ptr, path: string, value: ptr, depth: int) -> ptr {
     if dot < 0 { child = values.clone(value) }
     else { child = replace(old, string.substring(path, dot + 1, string.length(path)), value, depth + 1) }
     if child == null { return null }
+    defer state.release_tree(&child)
     fields = json.obj()
+    defer state.release_tree(&fields)
     replaced = false
     i = 0
     if values.kind(existing) == 5 {
         while i < json.json_object_size_raw(values.data(existing)) {
             field = json.json_object_key_at(values.data(existing), i)
-            if field == key { json.set(fields, field, child); replaced = true }
+            if field == key { json.set(fields, field, state.take_ptr(&child)); replaced = true }
             else { json.set(fields, field, values.clone(json.json_object_value_at(values.data(existing), i))) }
             i = i + 1
         }
     }
-    if !replaced { json.set(fields, key, child) }
-    return values.wrap(5, fields)
+    if !replaced { json.set(fields, key, state.take_ptr(&child)) }
+    return values.wrap(5, state.take_ptr(&fields))
 }
 
 put(ctx: ptr, name: string, value: ptr) -> bool {
@@ -128,10 +130,10 @@ put(ctx: ptr, name: string, value: ptr) -> bool {
     root_name = string.substring(name, 0, dot)
     key = string.concat("v:", root_name)
     old = state.load(ctx, key)
+    defer json.json_free(old)
     result = replace(old, string.substring(name, dot + 1, string.length(name)), value, 0)
-    json.json_free(old)
     if result == null { return false }
+    defer json.json_free(result)
     state.save(ctx, key, result)
-    json.json_free(result)
     return true
 }

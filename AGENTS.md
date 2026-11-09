@@ -165,8 +165,8 @@ roadmap when citing it as a precedent.
 RexxJS 8317bd1 is the current target; spreadsheet c19848d vendors b3d5e4e.
 The shared core source files match. docs/reference-update.md records current
 gaps; docs/reference-audit.json retains the dated measurements. README.md
-contains validation totals. The next native task is
-variable-led ADDRESS clauses. Assigned CALL expressions need a reference
+contains validation totals. Variable-led ADDRESS clauses use the normal host
+request path. Assigned CALL expressions need a reference
 semantics decision; do not copy surprising reference parser output silently.
 `make reference-audit` characterizes both pins using
 tests/reference_update_20261019.json; it is not a compatibility pass.

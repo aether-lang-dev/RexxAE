@@ -14,6 +14,7 @@ import src.evaluate
 import src.builtins
 import std.sync
 import std.mem
+import std.host
 import std.bytes
 
 exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_reply,
@@ -78,18 +79,18 @@ begin_call_(ctx: ptr, pc: int) {
     depth = state.integer(ctx, "call_depth")
     if depth >= 128 { state.fail(ctx, "routine call depth limit exceeded"); return }
     frame = json.obj()
+    defer json.json_free(frame)
     json.set(frame, "pc", json.from_int(pc))
     json.set(frame, "loop_base", json.from_int(state.integer(ctx, "loop_depth")))
     json.set(frame, "node", json.str(state.read(ctx, "routine_node")))
     procedure = state.load(ctx, string.concat("proc:", state.read(ctx, "routine_target")))
     if procedure != null {
+        defer json.json_free(procedure)
         json.set(frame, "generation", scopes.enter(ctx, procedure))
-        json.json_free(procedure)
     }
     // Implicit returns use the return value present at entry.
     json.set(frame, "default", json.str(state.read(ctx, "return_value")))
     state.save(ctx, call_key_(depth), frame)
-    json.json_free(frame)
     map.map_put_raw(ctx, cache_key_(depth), map.map_get_raw(ctx, "cache"))
     map.map_put_raw(ctx, "cache", map.map_new())
     state.number(ctx, "call_depth", depth + 1)
@@ -389,19 +390,36 @@ abort_cancelled_(ctx: ptr) -> int {
     state.number(ctx, "status", -1)
     return -1
 }
+// Stack slots make ownership transfer explicit without allocating a guard.
+release_context_slot_(slot: ptr) {
+    owned = mem.get_ptr(slot, 0)
+    if owned != null { core_destroy(owned) }
+}
+release_map_slot_(slot: ptr) { map.map_free(mem.get_ptr(slot, 0)) }
+release_atomic_slot_(slot: ptr) {
+    owned = mem.get_ptr(slot, 0)
+    if owned != null { sync.atomic_free(owned) }
+}
 @pure
 core_create(source: string) -> ptr {
     ctx = lex.new(source)
     if ctx == null { return null }
+    defer release_context_slot_(&ctx)
     cache = map.map_new()
-    map.map_put_raw(ctx, "cache", cache)
+    if cache == null { return null }
+    if map.map_put_raw(ctx, "cache", cache) == 0 {
+        map.map_free(cache)
+        return null
+    }
     state.number(ctx, "status", 3)
     // Static logging is off until the host sets a threshold.
     state.number(ctx, "log_threshold", -1)
     state.write(ctx, "log_name", "")
     program.compile(ctx)
     if state.read(ctx, "error") != "" { state.number(ctx, "status", -1) }
-    return ctx
+    result = ctx
+    ctx = null
+    return result
 }
 // Host-only session continuation: copy owned script values and the existing
 // service registry into a newly parsed program, never private execution state.
@@ -438,6 +456,14 @@ core_destroy(ctx: ptr) {
     while i < depth { map.map_free(map.map_get_raw(ctx, cache_key_(i))); i = i + 1 }
     map.map_free(ctx)
 }
+// Keep the instruction clone owned through an interrupted evaluation too.
+execute_instruction_(ctx: ptr, pc: int) -> int {
+    inst = state.load(ctx, string.concat("p:", string.from_int(pc)))
+    defer json.json_free(inst)
+    state.number(ctx, "line", state.index(inst, "line"))
+    state.number(ctx, "token_line", state.index(inst, "line"))
+    return execute_(ctx, inst, pc)
+}
 @pure
 core_step(ctx: ptr, budget: int) -> int {
     if ctx == null { return -1 }
@@ -451,11 +477,7 @@ core_step(ctx: ptr, budget: int) -> int {
         if cancelled_(ctx) { return abort_cancelled_(ctx) }
         pc = state.integer(ctx, "pc")
         if pc >= state.integer(ctx, "program_size") { state.number(ctx, "status", 0); return 0 }
-        inst = state.load(ctx, string.concat("p:", string.from_int(pc)))
-        state.number(ctx, "line", state.index(inst, "line"))
-        state.number(ctx, "token_line", state.index(inst, "line"))
-        next = execute_(ctx, inst, pc)
-        json.json_free(inst)
+        next = execute_instruction_(ctx, pc)
         used = used + 1
         if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
         if state.integer(ctx, "status") == 4 { return 4 }
@@ -626,12 +648,25 @@ inner_(handle: ptr) -> ptr {
 }
 wrap_(ctx: @keep ptr) -> ptr {
     if ctx == null { return null }
+    defer release_context_slot_(&ctx)
+    // A prior allocation refusal can leave enough room to build a handle.
+    // The ABI discards the return value of an interrupted export.
+    account = host.account_in_use()
+    if account != null && host.account_tripped(account) != 0 { return null }
     cell = sync.atomic_new(0)
-    map.map_put_raw(ctx, "cancel_cell", cell)
+    if cell == null { return null }
+    defer release_atomic_slot_(&cell)
+    if map.map_put_raw(ctx, "cancel_cell", cell) == 0 { return null }
     handle = map.map_new()
-    map.map_put_raw(handle, "ctx", ctx)
-    map.map_put_raw(handle, "cancel", cell)
-    return handle
+    if handle == null { return null }
+    defer release_map_slot_(&handle)
+    if map.map_put_raw(handle, "ctx", ctx) == 0 { return null }
+    if map.map_put_raw(handle, "cancel", cell) == 0 { return null }
+    result = handle
+    handle = null
+    cell = null
+    ctx = null
+    return result
 }
 @pure
 rexxae_create(source: string) -> ptr { return wrap_(core_create(source)) }

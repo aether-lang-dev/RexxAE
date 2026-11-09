@@ -18,6 +18,21 @@ main() {
             spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "terminated")
             spec.assert_eq(engine.rexxae_exit_code(ctx), 7, "host RC reaches EXIT")
         }
+        spec.it("dispatches variable-led ADDRESS through the normal host boundary") callback {
+            source = "LET cmd = 'cell.get '\nLET cell = 'B2'\nADDRESS REC cmd || cell\nSAY RC RESULT ERRORTEXT\nEXIT RC"
+            ctx = engine.rexxae_create(source)
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_step(ctx, 1), 3, "first assignment uses its budget")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 2, "host dispatch")
+            spec.assert_str_eq(string.copy(engine.rexxae_address(ctx)), "rec", "selected environment")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "cell.get B2", "concatenated command")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 2, "still pending")
+            spec.assert_eq(engine.rexxae_reply(ctx, 7, "denied", "host veto"), 0, "host veto accepted")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "output event")
+            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "7 denied host veto", "reply variables")
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "terminated")
+            spec.assert_eq(engine.rexxae_exit_code(ctx), 7, "host RC reaches EXIT")
+        }
         spec.it("keeps variables and budgets independent between contexts") callback {
             a = engine.rexxae_create("LET X = 'first'\nSAY X")
             b = engine.rexxae_create("LET X = 'second'\nSAY X")

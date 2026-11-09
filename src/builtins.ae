@@ -5,6 +5,8 @@ import std.map
 import std.list
 import std.strbuilder
 import std.math
+import std.mem
+import src.state
 
 exports(known, invoke, parameter_index, result_type, number_prefix)
 
@@ -135,8 +137,11 @@ trim_side(s: string, leading: bool, trailing: bool, chars: string, spaces: bool)
     return string.substring_n(s, n, first, last)
 }
 
+release_words_(slot: ptr) { list.list_free(mem.get_ptr(slot, 0)) }
+
 words(s: string) -> ptr {
     result = list.list_new()
+    defer release_words_(&result)
     n = string.length(s)
     i = 0
     while i < n {
@@ -148,7 +153,7 @@ words(s: string) -> ptr {
             list.list_add_string_owned(result, item)
         }
     }
-    return result
+    return state.take_ptr(&result)
 }
 
 word_at(items: ptr, i: int) -> string {
@@ -172,6 +177,7 @@ padding(pad: string, size: int) -> string {
     n = string.length(pad)
     if n == 0 || size <= 0 { return "" }
     b = strbuilder.new(size)
+    defer state.release_builder(&b)
     i = 0
     while i < size {
         take = n
@@ -179,7 +185,7 @@ padding(pad: string, size: int) -> string {
         strbuilder.append(b, string.substring_n(pad, n, 0, take))
         i = i + take
     }
-    return strbuilder.finish(b)
+    return strbuilder.finish(state.take_ptr(&b))
 }
 
 text_call(name: string, args: ptr) -> (string, string) {
@@ -259,9 +265,10 @@ text_call(name: string, args: ptr) -> (string, string) {
     }
     if name == "REVERSE" {
         out = strbuilder.new(n)
+        defer state.release_builder(&out)
         i = n
         while i > 0 { i = i - 1; strbuilder.append_byte(out, string.char_at_n(a, n, i)) }
-        return strbuilder.finish(out), ""
+        return strbuilder.finish(state.take_ptr(&out)), ""
     }
     if name == "REPEAT" || name == "COPIES" {
         count = integer(b, 0)
@@ -295,6 +302,7 @@ text_call(name: string, args: ptr) -> (string, string) {
         input = c
         if input == "" { input = "abcdefghijklmnopqrstuvwxyz" }
         out = strbuilder.new(n)
+        defer state.release_builder(&out)
         i = 0
         while i < n {
             one = string.substring_n(a, n, i, i + 1)
@@ -303,7 +311,7 @@ text_call(name: string, args: ptr) -> (string, string) {
             else { strbuilder.append(out, one) }
             i = i + 1
         }
-        return strbuilder.finish(out), ""
+        return strbuilder.finish(state.take_ptr(&out)), ""
     }
     if name == "VERIFY" {
         start = integer(arg(args, 3, "1"), 1)
@@ -322,6 +330,7 @@ text_call(name: string, args: ptr) -> (string, string) {
     if name == "SLUG" {
         lower = string.to_lower(a)
         out = strbuilder.new(n)
+        defer state.release_builder(&out)
         dash = false
         i = 0
         while i < n {
@@ -333,7 +342,7 @@ text_call(name: string, args: ptr) -> (string, string) {
             } else if ch == 45 || ch == 95 || whitespace(ch) { dash = true }
             i = i + 1
         }
-        return strbuilder.finish(out), ""
+        return strbuilder.finish(state.take_ptr(&out)), ""
     }
     items = words(a)
     defer list.list_free(items)
@@ -377,6 +386,7 @@ text_call(name: string, args: ptr) -> (string, string) {
         sep = padding(pad, spaces * string.length(pad))
     }
     out = strbuilder.new(n)
+    defer state.release_builder(&out)
     i = 0
     kept = 0
     while i < count {
@@ -389,7 +399,7 @@ text_call(name: string, args: ptr) -> (string, string) {
         }
         i = i + 1
     }
-    return strbuilder.finish(out), ""
+    return strbuilder.finish(state.take_ptr(&out)), ""
 }
 
 math_call(name: string, args: ptr) -> (string, string) {

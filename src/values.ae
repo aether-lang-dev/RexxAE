@@ -59,6 +59,7 @@ text(value: ptr) -> string {
     }
     if k == 5 { return "[object Object]" }
     out = strbuilder.new(32)
+    defer state.release_builder(&out)
     i = 0
     while i < json.json_array_size(payload) {
         if i > 0 { strbuilder.append_byte(out, 44) }
@@ -66,7 +67,7 @@ text(value: ptr) -> string {
         if kind(child) != 0 { strbuilder.append(out, text(child)) }
         i = i + 1
     }
-    return strbuilder.finish(out)
+    return strbuilder.finish(state.take_ptr(&out))
 }
 // RexxJS conditions treat numeric/string zero and the string 'false' as false.
 truth(value: ptr) -> bool {
@@ -91,6 +92,7 @@ from_json(value: ptr, depth: int) -> ptr {
     }
     result = json.obj()
     if k == 4 { json.json_free(result); result = json.arr() }
+    defer state.release_tree(&result)
     n = json.json_object_size_raw(value)
     if k == 4 { n = json.json_array_size(value) }
     i = 0
@@ -98,12 +100,12 @@ from_json(value: ptr, depth: int) -> ptr {
         child = json.json_object_value_at(value, i)
         if k == 4 { child = json.json_array_get_raw(value, i) }
         converted = from_json(child, depth + 1)
-        if converted == null { json.json_free(result); return null }
+        if converted == null { return null }
         if k == 4 { json.push(result, converted) }
         else { json.set(result, json.json_object_key_at(value, i), converted) }
         i = i + 1
     }
-    return wrap(k, result)
+    return wrap(k, state.take_ptr(&result))
 }
 to_json(value: ptr, depth: int) -> ptr {
     if depth > 64 { return null }
@@ -119,6 +121,7 @@ to_json(value: ptr, depth: int) -> ptr {
     if k == 3 { return json.str(text(value)) }
     result = json.obj()
     if k == 4 { json.json_free(result); result = json.arr() }
+    defer state.release_tree(&result)
     n = json.json_object_size_raw(payload)
     if k == 4 { n = json.json_array_size(payload) }
     i = 0
@@ -126,10 +129,10 @@ to_json(value: ptr, depth: int) -> ptr {
         child = json.json_object_value_at(payload, i)
         if k == 4 { child = json.json_array_get_raw(payload, i) }
         converted = to_json(child, depth + 1)
-        if converted == null { json.json_free(result); return null }
+        if converted == null { return null }
         if k == 4 { json.push(result, converted) }
         else { json.set(result, json.json_object_key_at(payload, i), converted) }
         i = i + 1
     }
-    return result
+    return state.take_ptr(&result)
 }

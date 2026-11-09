@@ -13,7 +13,7 @@ comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host ca
 
 Current references are RexxJS `30fce5c` and spreadsheet `9358453`
 (vendoring `30fce5c`). Strict differential fixtures match both reference
-engines. The separate update audit identifies variable-led ADDRESS clauses as an implementation gap.
+engines. Combined ADDRESS clauses support quoted and variable-led commands.
 `LET x = CALL f ...` gives f's RETURN value, as RexxJS has since `5d96050`;
 assigned CALL with comma or expression arguments remains unsupported. Its
 unsupported boundary cases are not counted as passing parity. See
@@ -21,7 +21,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.878.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.891.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -38,10 +38,10 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Install and select the release with `ae version install 0.878.0` and
-`ae version use 0.878.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Install and select the release with `ae version install 0.891.0` and
+`ae version use 0.891.0`, then confirm both `ae` and `aetherc` in `ae version`.
 Alternatively, an official release extracted to
-`build/toolchains/aether-0.878.0` is selected automatically by Make; it sets
+`build/toolchains/aether-0.891.0` is selected automatically by Make; it sets
 `AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
 overrides the executable; an extracted installation also needs its matching
 `AETHER_HOME=/path/to/release`.
@@ -310,7 +310,7 @@ exchange.
 The protocol and both halves of it are Aether's: **`std.guest`** is the
 host's side and **`std.guest.child`** the worker's, documented once in
 Aether's `std/guest/README.md` (every message, both directions). They need
-Aether 0.878.0 or later, the first release with `std.guest`.
+Aether 0.883.0 or later.
 
 - `worker/worker.ae` builds `build/worker/rexxae-worker`, one binary with the
   engine compiled in, so the process sandbox needs to grant it nothing. It is
@@ -441,11 +441,11 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-On the supported core compiler, `make test` runs 427 native std.spec cases
+On the supported core compiler, `make test` runs 428 native std.spec cases
 in `make spec` (including 26 in each binary variant, 23 cron and 20 logging
 specs) and 45 containment specs, ctypes protocol checks, twelve Python
 session/console tests, both C examples (commands; logging with a host clock) and the Python host harness. `make parity`
-compares 513 programs, including host-call arguments/results, with RexxJS
+compares 519 programs, including host-call arguments/results, with RexxJS
 `30fce5c`. The dated standalone/vendor audit records the same results; its
 additional 28 boundary probes match 16 and remain separate from strict parity.
 Ten documented differences (seven compatibility differences and three

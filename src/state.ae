@@ -1,8 +1,19 @@
 import std.string
 import std.map
 import std.json
+import std.mem
+import std.strbuilder
 
-exports(read, write, integer, number, fail, load, save, field, text, index)
+exports(read, write, integer, number, fail, load, save, field, text, index, release_tree, release_builder, take_ptr)
+
+// A stack slot owns the tree until its pointer is moved to a consumer.
+release_tree(slot: ptr) { json.json_free(mem.get_ptr(slot, 0)) }
+release_builder(slot: ptr) { strbuilder.free(mem.get_ptr(slot, 0)) }
+take_ptr(slot: ptr) -> ptr {
+    owned = mem.get_ptr(slot, 0)
+    mem.set_ptr(slot, 0, null)
+    return owned
+}
 
 read(ctx: ptr, key: string) -> string {
     value = map.map_get_raw(ctx, key)

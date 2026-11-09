@@ -30,6 +30,15 @@ for path in Path('src').glob('*.ae'):
     for names in re.findall(r'const EXTENSION_FUNCTIONS = "([^"]+)"', source):
         extensions.update(names.split())
     for module in re.findall(r'^import\s+(\S+)', source, re.MULTILINE):
+        if module == 'std.host' and path.name == 'engine.ae':
+            # The engine can observe its caller's active quota before publishing
+            # a handle. It must not change the account or invoke host services.
+            host_symbols = set(re.findall(r'\bhost\s*\.\s*(\w+)', source))
+            if (re.findall(r'^import\s+std\.host[^\n]*$', source, re.MULTILINE)
+                    != ['import std.host']
+                    or host_symbols != {'account_in_use', 'account_tripped'}):
+                raise SystemExit(f'{path}: engine host access changed: {sorted(host_symbols)}')
+            continue
         if not module.startswith('src.') and module not in allowed_std:
             raise SystemExit(f'{path}: unreviewed engine import {module}')
 if functions != expected_functions:

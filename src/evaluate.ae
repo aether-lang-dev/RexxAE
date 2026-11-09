@@ -75,8 +75,8 @@ typed_call(ctx: ptr, name: string, args: ptr) -> ptr {
     if name == "JSON_PARSE" {
         raw = json.json_parse_raw(values.text(a))
         if raw == null { state.fail(ctx, "invalid JSON input"); return null }
+        defer json.json_free(raw)
         result = values.from_json(raw, 0)
-        json.json_free(raw)
         if result == null { state.fail(ctx, "JSON value nesting limit exceeded") }
         return result
     }
@@ -480,19 +480,20 @@ run_uncached(ctx: ptr, expr: ptr, depth: int) -> ptr {
     if op == "array" || op == "object" {
         result = json.arr()
         if op == "object" { json.json_free(result); result = json.obj() }
+        defer state.release_tree(&result)
         items = state.field(expr, "items")
         i = 0
         while i < json.json_array_size(items) {
             item = argument(items, i)
             child = run(ctx, state.field(item, "value"), depth + 1)
-            if child == null { json.json_free(result); return null }
+            if child == null { return null }
             if op == "object" { json.set(result, state.text(item, "name"), child) }
             else { json.push(result, child) }
             i = i + 1
         }
         k = 4
         if op == "object" { k = 5 }
-        return values.wrap(k, result)
+        return values.wrap(k, state.take_ptr(&result))
     }
     state.fail(ctx, "unknown expression")
     return null

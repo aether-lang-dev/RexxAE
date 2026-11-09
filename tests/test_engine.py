@@ -98,6 +98,16 @@ CASES = [
     ('unset_case', 'SAY unset', ['UNSET'], [], 0),
     ('command', "ADDRESS COUNTER\n'VALUE'\nSAY RC RESULT", ['0 host-result'], [['counter', 'VALUE']], 0),
     ('inline_command', "ADDRESS COUNTER 'VALUE'\nSAY RC RESULT", ['0 host-result'], [['counter', 'VALUE']], 0),
+    ('address_variable', "LET cmd = 'cell.get A1'\nADDRESS REC cmd", [], [['rec', 'cell.get A1']], 0),
+    ('address_variable_keeps_environment', "LET cmd = 'one'\nADDRESS REC cmd\n' two'",
+     [], [['rec', 'one'], ['rec', ' two']], 0),
+    ('address_variable_concat', "LET cmd = 'get'\nLET ref = 'B2'\nADDRESS REC cmd 'cell' || ref",
+     [], [['rec', 'get cellB2']], 0),
+    ('address_compound_variable', "LET command.text = 'cell.get A1'\nADDRESS REC command.text",
+     [], [['rec', 'cell.get A1']], 0),
+    ('address_variable_reply', "LET cmd = 'one'\nADDRESS REC cmd\nSAY RC RESULT",
+     ['0 host-result'], [['rec', 'one']], 0),
+    ('address_empty_variable', "LET cmd = ''\nADDRESS REC cmd", [], [['rec', '']], 0),
     ('default', "ADDRESS DEFAULT\n'hello'", ['hello'], [], 0),
     ('exit', "SAY 'before'\nEXIT 7\nSAY 'after'", ['before'], [], 7),
     ('number_variable_type', 'LET ZERO = 0\nLET X = MATH_PERCENTAGE(25, ZERO)\nSAY X', ['25'], [], 0),
@@ -245,7 +255,7 @@ class EngineTests(unittest.TestCase):
                 self.assertEqual(run(source), dict(output=output, commands=commands, exit=code))
 
     def test_reply_and_pending_command(self):
-        ctx = create(b"ADDRESS APP\n'work'\nSAY RC RESULT ERRORTEXT")
+        ctx = create(b"LET cmd = 'work'\nADDRESS APP cmd\nSAY RC RESULT ERRORTEXT")
         try:
             self.assertEqual(reply(ctx, 0, b'', b''), -1)
             self.assertEqual(step(ctx, 0), 3)
@@ -264,13 +274,14 @@ class EngineTests(unittest.TestCase):
         for source in [b'\nLET X = (1 + 2', b"\nSAY 'oops", b'\nDO I = 1 TO 2',
                        b'\nLET X = 1 / 0', b'\nREQUIRE "file.js"', b'\nLET X = MISSING(1,2)',
                        b'\nSAY "hello {NAME}"', b'\n/* unfinished', b'\nPARSE SOURCE input',
-                       b'\nSAY', b"\nADDRESS APP\n'hello {NAME}'"]:
+                       b'\nSAY', b'\nADDRESS APP cmd + 1', b'\nADDRESS APP (cmd)',
+                       b"\nADDRESS APP\n'hello {NAME}'"]:
             with self.subTest(source=source):
                 ctx = create(source)
                 try:
                     self.assertEqual(step(ctx, 100), -1)
                     self.assertTrue(error(ctx))
-                    self.assertEqual(line(ctx), 3 if source.startswith(b'\nADDRESS') else 2)
+                    self.assertEqual(line(ctx), 3 if source.startswith(b"\nADDRESS APP\n") else 2)
                     self.assertEqual(step(ctx, 100), -1)
                 finally:
                     destroy(ctx)

@@ -9,19 +9,19 @@ These probes include unsupported syntax and are separate from strict parity.
 
 ## Variable-led ADDRESS clauses
 
-The reference accepts a variable or variable-led concatenation as the command
-clause. RexxAE currently requires a quoted-literal-led combined clause:
+RexxAE accepts variable-led commands in the combined form, including compound
+variables and terms joined by blanks, abuttal or `||`.
 
 ```rexx
-LET command = 'cell.get A1'
-ADDRESS APP command
-/* Currently rejected by RexxAE. Shared form: */
-ADDRESS APP 'cell.get A1'
+LET command = 'cell.get '
+LET cell = 'A1'
+ADDRESS APP command || cell
 ```
 
-Implementing variable-led clauses must preserve the selected environment,
-RC/RESULT/ERRORTEXT replies, budgeted stepping and host vetoes. ADDRESS remains
-an application request, with no implicit shell or extra authority.
+The clause sets the selected environment and emits the usual host request.
+The host retains control over dispatch and replies through RC, RESULT and
+ERRORTEXT. The supported variable-led form consists of terms joined by
+concatenation.
 
 ## Assigned CALL expression arguments
 

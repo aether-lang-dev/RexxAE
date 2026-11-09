@@ -9,6 +9,7 @@ exports(enter, leave)
 
 snapshot(ctx: ptr) -> ptr {
     result = json.obj()
+    defer state.release_tree(&result)
     keys = map.map_keys_raw(ctx)
     defer map.map_keys_free(keys)
     i = 0
@@ -19,7 +20,7 @@ snapshot(ctx: ptr) -> ptr {
         }
         i = i + 1
     }
-    return result
+    return state.take_ptr(&result)
 }
 clear(ctx: ptr) {
     // Own the names before removing entries: map key snapshots borrow names.
@@ -41,9 +42,12 @@ restore(ctx: ptr, saved: ptr) {
 }
 enter(ctx: ptr, exposed: ptr) -> ptr {
     generation = json.obj()
+    defer state.release_tree(&generation)
     saved = snapshot(ctx)
+    defer state.release_tree(&saved)
     json.set(generation, "argv", json.str(state.read(ctx, "argv")))
     shared = json.arr()
+    defer state.release_tree(&shared)
     clear(ctx)
     i = 0
     while i < json.json_object_size_raw(saved) {
@@ -61,9 +65,9 @@ enter(ctx: ptr, exposed: ptr) -> ptr {
         if encoded != "" { state.write(ctx, key, encoded) }
         i = i + 1
     }
-    json.set(generation, "variables", saved)
-    json.set(generation, "shared", shared)
-    return generation
+    json.set(generation, "variables", state.take_ptr(&saved))
+    json.set(generation, "shared", state.take_ptr(&shared))
+    return state.take_ptr(&generation)
 }
 leave(ctx: ptr, generation: ptr) {
     current = snapshot(ctx)

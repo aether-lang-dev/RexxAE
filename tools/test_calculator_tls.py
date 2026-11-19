@@ -10,8 +10,10 @@ import http.server
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import ssl
+import sys
 import subprocess
 import tempfile
 import threading
@@ -19,6 +21,23 @@ import time
 import traceback
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def reexec_with_tls13_python():
+    """The live checks need a TLS 1.3 client. Xcode's python3 (LibreSSL) has
+    none, so hand over to the first python3.N on PATH whose ssl has it."""
+    if ssl.HAS_TLSv1_3 or os.environ.get('CALC_TLS_REEXEC'):
+        return
+    for name in ('python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10'):
+        found = shutil.which(name)
+        if found:
+            os.environ['CALC_TLS_REEXEC'] = '1'
+            os.execv(found, [found] + sys.argv)
+    raise SystemExit('no python3 on PATH has TLS 1.3 (ssl.HAS_TLSv1_3 is false); '
+                     'install one, e.g. brew install python@3.13')
+
+
+reexec_with_tls13_python()
 
 
 def environment(**settings):
@@ -65,7 +84,7 @@ def require(condition, detail):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    local_ae = ROOT / 'build/toolchains/aether-0.870.0/bin/ae'
+    local_ae = ROOT / 'build/toolchains/aether-0.923.0/bin/ae'
     parser.add_argument('--ae', default=str(local_ae) if local_ae.exists() else 'ae')
     parser.add_argument('--report', type=Path, default=ROOT / 'build/calculator/tls-report.json')
     args = parser.parse_args()

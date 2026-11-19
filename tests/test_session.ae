@@ -14,8 +14,8 @@ main() {
             defer engine.rexxae_destroy(second)
             spec.assert_true(second != null, "new context")
             spec.assert_eq(engine.rexxae_step(second, 100), 1, "one new output")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(second)), "2", "prior instructions not replayed")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(first, "count")), "1", "prior context independent")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(second)), "2", "prior instructions not replayed")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(first, "count")), "1", "prior context independent")
             spec.assert_eq(engine.rexxae_step(second, 100), 0, "done")
         }
         spec.it("owns typed values after the previous context is destroyed") callback {
@@ -25,7 +25,7 @@ main() {
             engine.rexxae_destroy(first)
             defer engine.rexxae_destroy(second)
             spec.assert_eq(engine.rexxae_step(second, 100), 1, "typed value")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(second)), "{\"items\":[1,true,null]}", "owned structure")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(second)), "{\"items\":[1,true,null]}", "owned structure")
         }
         spec.it("inherits only host-mounted functions and does not replay them") callback {
             first = engine.rexxae_create("LET answer = TESTECHO(1)")
@@ -37,7 +37,7 @@ main() {
             engine.rexxae_destroy(first)
             defer engine.rexxae_destroy(second)
             spec.assert_eq(engine.rexxae_step(second, 100), 4, "second call")
-            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(second)), "[10]", "new call only")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(second)), "[10]", "new call only")
             spec.assert_eq(engine.rexxae_reply_value(second, "20", ""), 0, "reply")
             spec.assert_eq(engine.rexxae_step(second, 100), 0, "done")
         }
@@ -73,7 +73,7 @@ main() {
             engine.rexxae_destroy(bad)
             defer engine.rexxae_destroy(next)
             spec.assert_eq(engine.rexxae_step(next, 100), 1, "recovered")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(next)), "7", "retained")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(next)), "7", "retained")
         }
         spec.it("copies restored caller variables after a failed PROCEDURE") callback {
             first = engine.rexxae_create("LET x = 'caller'\nCALL work\nEXIT\nwork: PROCEDURE\nx = 'local'\nRETURN 1 / 0")
@@ -82,7 +82,7 @@ main() {
             engine.rexxae_destroy(first)
             defer engine.rexxae_destroy(next)
             spec.assert_eq(engine.rexxae_step(next, 100), 1, "fresh error/cache state")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(next)), "caller", "locals stay hidden")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(next)), "caller", "locals stay hidden")
             spec.assert_eq(engine.rexxae_step(next, 100), 0, "done")
         }
         spec.it("retains environment selection without carrying instructions or labels") callback {
@@ -91,7 +91,7 @@ main() {
             next = engine.rexxae_create_next(first, "'next'")
             defer engine.rexxae_destroy(next)
             spec.assert_eq(engine.rexxae_step(next, 100), 2, "environment retained")
-            spec.assert_str_eq(string.copy(engine.rexxae_address(next)), "app", "same selection")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_address(next)), "app", "same selection")
             missing = engine.rexxae_create_next(first, "CALL work")
             defer engine.rexxae_destroy(missing)
             engine.rexxae_destroy(first)
@@ -109,8 +109,8 @@ main() {
                 i = i + 1
             }
             defer engine.rexxae_destroy(ctx)
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "total")), "50", "each entry once")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "data")), "[true,null]", "owned state remains valid")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "total")), "50", "each entry once")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "data")), "[true,null]", "owned state remains valid")
         }
         spec.it("script registry-shaped variables cannot mount functions in later entries") callback {
             first = engine.rexxae_create("LET h.EXEC = {min:0,max:1}\nLET permissions.net = '*'")

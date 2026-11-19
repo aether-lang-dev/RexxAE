@@ -15,13 +15,13 @@ output(source: string, expected: ptr) {
         status = engine.rexxae_step(ctx, 1)
         if status == 1 {
             if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
-            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            else { spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
             index = index + 1
         }
         if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
         steps = steps + 1
     }
-    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { spec.fail(string.from_cstr(engine.rexxae_error(ctx))) }
     spec.assert_eq(status, 0, "completed within budgeted steps")
     spec.assert_eq(index, json.json_array_size(expected), "output count")
 }
@@ -57,14 +57,14 @@ main() {
                 status = engine.rexxae_step(ctx, 1)
                 if status == 4 {
                     calls = calls + 1
-                    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[${calls}]", "exact dispatch order")
+                    spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[${calls}]", "exact dispatch order")
                     spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "pending request repeats")
                     result = string.from_int(calls + 1)
                     if calls == 3 { result = "{\"ok\":true}" }
                     spec.assert_eq(engine.rexxae_reply_value(ctx, result, ""), 0, "typed reply")
                 }
                 if status == 1 {
-                    spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "[object Object]", "branch result")
+                    spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "[object Object]", "branch result")
                     output_count = output_count + 1
                 }
                 steps = steps + 1
@@ -116,7 +116,7 @@ main() {
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "missing END")
             spec.assert_eq(engine.rexxae_line(ctx), 2, "SELECT header")
-            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "expected END for SELECT", "diagnostic")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_error(ctx)), "expected END for SELECT", "diagnostic")
         }
         spec.it("budgets a loop containing selections and unwinds on EXIT") callback {
             ctx = engine.rexxae_create("LET i = 'old'\nDO i = 1 TO 100\nSELECT\nWHEN i = 5 THEN EXIT 9\nOTHERWISE LET n = i\nEND\nEND")
@@ -129,7 +129,7 @@ main() {
             }
             spec.assert_eq(status, 0, "completed")
             spec.assert_eq(engine.rexxae_exit_code(ctx), 9, "EXIT propagated")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"old\"", "loop restored")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "i")), "\"old\"", "loop restored")
         }
         spec.it("tears down nested selections suspended in a routine") callback {
             i = 0
@@ -151,7 +151,7 @@ main() {
             ctx = engine.rexxae_create(source)
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "depth guarded before output")
-            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "statement nesting limit exceeded", "depth diagnostic")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_error(ctx)), "statement nesting limit exceeded", "depth diagnostic")
         }
     }
     return spec.run_summary(fw)

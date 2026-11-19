@@ -16,7 +16,7 @@ take_ptr(slot: ptr) -> ptr {
 }
 
 read(ctx: ptr, key: string) -> string {
-    value = map.map_get_raw(ctx, key)
+    value, _err = map.get_string(ctx, key)
     if value == null { return "" }
     return string.copy(value)
 }

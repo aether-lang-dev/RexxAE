@@ -40,14 +40,14 @@ exercise(source: string, expected_status: int, expected_requests: int, minimum_d
     output = ""
     while status > 0 && steps < 200 {
         event = contained_event(ctx, worker)
-        status = string.string_get_int(string.copy(map.map_get_raw(event, "status")))
-        requests = requests + string.string_get_int(string.copy(map.map_get_raw(event, "requests")))
-        output = string.concat(output, string.copy(map.map_get_raw(event, "output")))
+        status = string.string_get_int(map_text_(event, "status"))
+        requests = requests + string.string_get_int(map_text_(event, "requests"))
+        output = string.concat(output, map_text_(event, "output"))
         map.map_free(event)
         steps = steps + 1
     }
     spec.assert_eq(status, expected_status, "guest outcome")
-    if requests != expected_requests { spec.fail(string.copy(rexxae.rexxae_error(ctx))) }
+    if requests != expected_requests { spec.fail(string.from_cstr(rexxae.rexxae_error(ctx))) }
     spec.assert_eq(requests, expected_requests, "exact boundary crossings")
     spec.assert_true(audit.denied_count() >= minimum_denials, "stdlib audit proves denial")
     spec.assert_str_eq(output, expected_output, "only authorized output")
@@ -62,15 +62,15 @@ contained_event(ctx: @keep ptr, worker: sandbox.Grants) -> ptr {
         seal except ctx, worker, event, sandbox, config, encoded, rexxae, spec, map, file, os, tcp, `string`
         sandbox.enforce(worker, config) callback {
             status = rexxae.rexxae_step(ctx, 1)
-            if status == 1 { map.map_put_string_owned(event, "output", string.copy(rexxae.rexxae_text(ctx))) }
+            if status == 1 { map.map_put_string_owned(event, "output", string.from_cstr(rexxae.rexxae_text(ctx))) }
             if status == 2 {
                 map.map_put_string_owned(event, "requests", "1")
                 spec.assert_eq(rexxae.rexxae_reply(ctx, 13, "", "environment not mounted"), 0, "veto ADDRESS")
             }
             if status == 4 {
                 map.map_put_string_owned(event, "requests", "1")
-                name = string.copy(rexxae.rexxae_function(ctx))
-                arg = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+                name = string.from_cstr(rexxae.rexxae_function(ctx))
+                arg = string.from_cstr(rexxae.rexxae_argument_text(ctx, 0))
                 result = "null"
                 err = "service not mounted"
                 if name == "READ_CONFIG" {
@@ -241,8 +241,8 @@ main() {
                     next = rexxae.rexxae_create_next(seed, "CALL HOSTREAD path")
                     defer rexxae.rexxae_destroy(next)
                     spec.assert_eq(rexxae.rexxae_step(next, 100), 4, "copied mount")
-                    spec.assert_str_eq(string.copy(rexxae.rexxae_arguments_json(next)), "[\"tests/fixtures/private.txt\"]", "copied data")
-                    _text, err = file.read(string.copy(rexxae.rexxae_argument_text(next, 0)))
+                    spec.assert_str_eq(string.from_cstr(rexxae.rexxae_arguments_json(next)), "[\"tests/fixtures/private.txt\"]", "copied data")
+                    _text, err = file.read(string.from_cstr(rexxae.rexxae_argument_text(next, 0)))
                     spec.assert_true(err != "", "continuation inherits deny-all")
                     spec.assert_true(audit.denied_count() >= 1, "runtime veto")
                     spec.assert_eq(rexxae.rexxae_reply_value(next, "null", "vetoed"), 0, "host refusal")
@@ -262,4 +262,11 @@ main() {
         }
     }
     return spec.run_summary(fw)
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

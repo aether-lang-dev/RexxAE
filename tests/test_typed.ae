@@ -12,14 +12,14 @@ expect_output(source: string, expected: string) {
     while status > 0 && count < 10000 {
         status = engine.rexxae_step(ctx, 1)
         if status == 1 {
-            strbuilder.append(out, string.copy(engine.rexxae_text(ctx)))
+            strbuilder.append(out, string.from_cstr(engine.rexxae_text(ctx)))
             strbuilder.append_byte(out, 10)
         }
         if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
         count = count + 1
     }
     spec.assert_eq(status, 0, "completed within bounded steps")
-    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { spec.fail(string.from_cstr(engine.rexxae_error(ctx))) }
     spec.assert_str_eq(strbuilder.finish(out), expected, source)
 }
 
@@ -74,26 +74,26 @@ main() {
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_register_function(ctx, "testhost", 1, 1), 0, "register")
             spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "first call")
-            spec.assert_str_eq(string.copy(engine.rexxae_function(ctx)), "TESTHOST", "name")
-            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[1]", "first argument")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_function(ctx)), "TESTHOST", "name")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[1]", "first argument")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "pending call is stable")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "-3", ""), 0, "first reply")
             spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "second call")
-            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[2]", "no repeated first effect")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[2]", "no repeated first effect")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "4", ""), 0, "second reply")
             spec.assert_eq(engine.rexxae_step(ctx, 1), 3, "assignment completed")
             spec.assert_eq(engine.rexxae_step(ctx, 1), 1, "SAY")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "7", "typed replies enter arithmetic")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "7", "typed replies enter arithmetic")
         }
         spec.it("preserves objects and arrays across the C boundary") callback {
             ctx = engine.rexxae_create("LET result = TESTHOST([1, true], {'key': 'value'})")
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 2, 2), 0, "register")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "call")
-            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[[1,true],{\"key\":\"value\"}]", "typed arguments")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[[1,true],{\"key\":\"value\"}]", "typed arguments")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "{\"ok\":true,\"empty\":null}", ""), 0, "object reply")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "result")), "{\"ok\":true,\"empty\":null}", "typed variable inspection")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "result")), "{\"ok\":true,\"empty\":null}", "typed variable inspection")
         }
         spec.it("allows correction of malformed replies and rejects pending mutation") callback {
             ctx = engine.rexxae_create("LET result = TESTHOST()")
@@ -119,7 +119,7 @@ main() {
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 0, 0), 0, "register")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "no host dispatch")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "7", "selected value")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "7", "selected value")
         }
         spec.it("can be destroyed during any suspended expression") callback {
             i = 0

@@ -21,7 +21,8 @@ known(name: string) -> bool {
 arg(args: ptr, index: int, fallback: string) -> string {
     key = string.from_int(index)
     if map.map_has(args, key) == 0 { return fallback }
-    return string.copy(map.map_get_raw(args, key))
+    value, _err = map.get_string(args, key)
+    return string.copy(value)
 }
 
 // Preserve the JS converter's `value || fallback`, including the difference
@@ -30,7 +31,7 @@ defaulted(args: ptr, index: int, fallback: string) -> string {
     value = arg(args, index, fallback)
     if value == "" { return fallback }
     type_key = string.concat("t:", string.from_int(index))
-    kind = map.map_get_raw(args, type_key)
+    kind, _err = map.get_string(args, type_key)
     type_name = ""
     if kind != null { type_name = string.copy(kind) }
     if type_name == "number" && value == "0" { return fallback }
@@ -157,7 +158,8 @@ words(s: string) -> ptr {
 }
 
 word_at(items: ptr, i: int) -> string {
-    return string.copy(list.list_get_raw(items, i))
+    item, _err = list.get_string(items, i)
+    return string.copy(item)
 }
 
 // JavaScript substring clamps and swaps endpoints, including negative lengths.

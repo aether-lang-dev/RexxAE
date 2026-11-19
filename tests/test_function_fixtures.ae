@@ -28,11 +28,11 @@ main() {
                 defer engine.rexxae_destroy(ctx)
                 status = engine.rexxae_step(ctx, 100)
                 if status == -1 {
-                    detail = string.copy(engine.rexxae_error(ctx))
+                    detail = string.from_cstr(engine.rexxae_error(ctx))
                     spec.fail("${expression}: ${detail}")
                 } else {
                     spec.assert_eq(status, 1, "SAY result")
-                    spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), expected, expression)
+                    spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), expected, expression)
                     spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
                 }
             }

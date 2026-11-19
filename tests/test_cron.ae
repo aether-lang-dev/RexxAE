@@ -11,9 +11,9 @@ said(source: string) -> string {
     ctx = engine.rexxae_create(source)
     defer engine.rexxae_destroy(ctx)
     status = engine.rexxae_step(ctx, 1000)
-    if status == -1 { return string.concat("ERROR ", string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { return string.concat("ERROR ", string.from_cstr(engine.rexxae_error(ctx))) }
     if status != 1 { return "no SAY: status ${status}" }
-    text = string.copy(engine.rexxae_text(ctx))
+    text = string.from_cstr(engine.rexxae_text(ctx))
     if engine.rexxae_step(ctx, 1000) != 0 { return "did not finish" }
     return text
 }

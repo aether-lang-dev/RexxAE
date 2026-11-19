@@ -22,5 +22,12 @@ read(key: string) -> string {
         content, err = file.read("tests/fixtures/public.txt")
         if err == "" { map.map_put_string_owned(result, "text", content) }
     }
-    return string.copy(map.map_get_raw(result, "text"))
+    return map_text_(result, "text")
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

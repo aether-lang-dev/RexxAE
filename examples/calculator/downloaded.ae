@@ -32,7 +32,7 @@ validate(source: string) -> string {
     ctx = rexxae.rexxae_create(source)
     if ctx == null { return "cannot parse module" }
     defer rexxae.rexxae_destroy(ctx)
-    if rexxae.rexxae_step(ctx, 0) == -1 { return string.copy(rexxae.rexxae_error(ctx)) }
+    if rexxae.rexxae_step(ctx, 0) == -1 { return string.from_cstr(rexxae.rexxae_error(ctx)) }
     return ""
 }
 
@@ -54,22 +54,22 @@ run(source: string, arguments: string, post: fn) -> (string, string) {
     rexxae.rexxae_register_function(ctx, "HTTP_POST", 2, 2)
     for i in 0..100000 {
         status = rexxae.rexxae_step(ctx, 1)
-        if status == -1 { return "", string.copy(rexxae.rexxae_error(ctx)) }
+        if status == -1 { return "", string.from_cstr(rexxae.rexxae_error(ctx)) }
         if status == 0 {
             if rexxae.rexxae_exit_code(ctx) != 0 { return "", "module exited with a nonzero status" }
             value = rexxae.rexxae_get_variable_json(ctx, "RESULT")
             if value == null { return "", "module did not return a result" }
-            return string.copy(value), ""
+            return string.from_cstr(value), ""
         }
-        if status == 1 { println(string.copy(rexxae.rexxae_text(ctx))) }
+        if status == 1 { println(string.from_cstr(rexxae.rexxae_text(ctx))) }
         if status == 2 { rexxae.rexxae_reply(ctx, 13, "", "module has no application command access") }
         if status == 4 {
-            if string.copy(rexxae.rexxae_function(ctx)) != "HTTP_POST" || rexxae.rexxae_argument_type(ctx, 0) != 3 || rexxae.rexxae_argument_type(ctx, 1) != 5 {
+            if string.from_cstr(rexxae.rexxae_function(ctx)) != "HTTP_POST" || rexxae.rexxae_argument_type(ctx, 0) != 3 || rexxae.rexxae_argument_type(ctx, 1) != 5 {
                 return "", "module HTTP_POST requires a path and JSON object"
             }
-            path = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+            path = string.from_cstr(rexxae.rexxae_argument_text(ctx, 0))
             if path != "/calculate" { return "", "module POST destination is not approved" }
-            values, _values_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
+            values, _values_error = json.parse(string.from_cstr(rexxae.rexxae_arguments_json(ctx)))
             body, _body_error = json.encode(json.json_array_get_raw(values, 1))
             json.json_free(values)
             if string.length(body) > 512 { return "", "module POST body exceeds 512 bytes" }
@@ -78,14 +78,21 @@ run(source: string, arguments: string, post: fn) -> (string, string) {
             map.map_put_string_owned(request, "body", body)
             map.map_put_string_owned(request, "error", "module transport did not reply")
             call(post, request)
-            error = string.copy(map.map_get_raw(request, "error"))
+            error = map_text_(request, "error")
             if error != "" { map.map_free(request); return "", error }
             response = map.map_get_raw(request, "response")
             if response == null { map.map_free(request); return "", "module transport did not supply a response" }
-            accepted = rexxae.rexxae_reply_value(ctx, string.copy(response), "")
+            accepted = rexxae.rexxae_reply_value(ctx, map_text_(request, "response"), "")
             map.map_free(request)
             if accepted != 0 { return "", "module transport response is outside the JSON profile" }
         }
     }
     return "", "module instruction limit reached"
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

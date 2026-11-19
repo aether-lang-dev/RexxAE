@@ -19,14 +19,14 @@ events(source: string, threshold: int) -> string {
     while steps < 200 {
         status = engine.rexxae_step(ctx, 1000)
         if status == 0 { return "${out}DONE" }
-        if status == -1 { return "${out}ERROR ${string.copy(engine.rexxae_error(ctx))}" }
-        if status == 1 { out = "${out}SAY ${string.copy(engine.rexxae_text(ctx))}|" }
+        if status == -1 { return "${out}ERROR ${string.from_cstr(engine.rexxae_error(ctx))}" }
+        if status == 1 { out = "${out}SAY ${string.from_cstr(engine.rexxae_text(ctx))}|" }
         if status == LOG {
-            out = "${out}LOG ${engine.rexxae_log_level(ctx)} ${string.copy(engine.rexxae_text(ctx))} ${string.copy(engine.rexxae_log_tags_json(ctx))}|"
+            out = "${out}LOG ${engine.rexxae_log_level(ctx)} ${string.from_cstr(engine.rexxae_text(ctx))} ${string.from_cstr(engine.rexxae_log_tags_json(ctx))}|"
         }
         if status == 4 {
-            out = "${out}CALL ${string.copy(engine.rexxae_function(ctx))} ${string.copy(engine.rexxae_arguments_json(ctx))}|"
-            args = string.copy(engine.rexxae_arguments_json(ctx))
+            out = "${out}CALL ${string.from_cstr(engine.rexxae_function(ctx))} ${string.from_cstr(engine.rexxae_arguments_json(ctx))}|"
+            args = string.from_cstr(engine.rexxae_arguments_json(ctx))
             engine.rexxae_reply_value(ctx, string.substring(args, 1, string.length(args) - 1), "")
         }
         steps = steps + 1
@@ -43,7 +43,7 @@ main() {
             ctx = engine.rexxae_create(ALL_LEVELS)
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_step(ctx, 1000), 1, "straight to SAY")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "end", "SAY text")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "end", "SAY text")
             spec.assert_eq(engine.rexxae_step(ctx, 1000), 0, "done")
         }
         spec.it("-1 turns it off again") callback {
@@ -73,7 +73,7 @@ main() {
             spec.assert_eq(engine.rexxae_step(ctx, 1000), LOG, "one")
             spec.assert_eq(engine.rexxae_set_log_level(ctx, 4), 0, "raise while pending")
             spec.assert_eq(engine.rexxae_step(ctx, 1000), LOG, "two is skipped, three arrives")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "three", "three")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "three", "three")
             spec.assert_eq(engine.rexxae_step(ctx, 1000), 0, "done")
         }
     }
@@ -142,7 +142,7 @@ main() {
             spec.assert_true(engine.rexxae_log_tags_json(ctx) == null, "no tags on SAY")
             spec.assert_eq(engine.rexxae_step(ctx, 100), LOG, "LOG")
             spec.assert_eq(engine.rexxae_log_level(ctx), 2, "info")
-            spec.assert_str_eq(string.copy(engine.rexxae_log_tags_json(ctx)), "{}", "tags")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_log_tags_json(ctx)), "{}", "tags")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "SAY")
             spec.assert_eq(engine.rexxae_log_level(ctx), -1, "after")
             spec.assert_eq(engine.rexxae_log_level(null), -1, "NULL context")
@@ -165,7 +165,7 @@ main() {
             spec.assert_eq(engine.rexxae_step(ctx, 100), LOG, "LOG")
             spec.assert_eq(engine.rexxae_cancel(ctx, "shutting down"), 0, "cancel")
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error")
-            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "cancelled by host: shutting down", "reason")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_error(ctx)), "cancelled by host: shutting down", "reason")
             spec.assert_eq(engine.rexxae_log_level(ctx), -1, "no longer pending")
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
         }
@@ -185,14 +185,14 @@ main() {
         spec.it("is empty until the host names the context, and bounded") callback {
             ctx = engine.rexxae_create("SAY 1")
             defer engine.rexxae_destroy(ctx)
-            spec.assert_str_eq(string.copy(engine.rexxae_log_name(ctx)), "", "default")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_log_name(ctx)), "", "default")
             spec.assert_eq(engine.rexxae_set_log_name(ctx, "billing-job"), 0, "set")
-            spec.assert_str_eq(string.copy(engine.rexxae_log_name(ctx)), "billing-job", "read back")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_log_name(ctx)), "billing-job", "read back")
             long_name = ""
             i = 0
             while i < 257 { long_name = string.concat(long_name, "x"); i = i + 1 }
             spec.assert_eq(engine.rexxae_set_log_name(ctx, long_name), -1, "257 bytes")
-            spec.assert_str_eq(string.copy(engine.rexxae_log_name(ctx)), "billing-job", "unchanged")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_log_name(ctx)), "billing-job", "unchanged")
         }
         spec.it("carries on, with the threshold, into a session's next program") callback {
             first = engine.rexxae_create("LET n = 1")
@@ -202,9 +202,9 @@ main() {
             spec.assert_eq(engine.rexxae_step(first, 100), 0, "first done")
             second = engine.rexxae_create_next(first, "CALL LOG_INFO 'quiet'\nLET x = LOG_WARN('loud' n)")
             defer engine.rexxae_destroy(second)
-            spec.assert_str_eq(string.copy(engine.rexxae_log_name(second)), "session", "name")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_log_name(second)), "session", "name")
             spec.assert_eq(engine.rexxae_step(second, 100), LOG, "warn")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(second)), "loud 1", "only the warning")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(second)), "loud 1", "only the warning")
             spec.assert_eq(engine.rexxae_step(second, 100), 0, "done")
         }
     }

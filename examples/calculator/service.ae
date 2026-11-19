@@ -75,8 +75,8 @@ call(url: string, ca: string, op: string, a: string, b: string) -> (string, stri
         map.map_put_string_owned(result, "error", error)
     }
     value = ""
-    if map.map_get_raw(result, "value") != null { value = string.copy(map.map_get_raw(result, "value")) }
-    return value, string.copy(map.map_get_raw(result, "error"))
+    if map.map_get_raw(result, "value") != null { value = map_text_(result, "value") }
+    return value, map_text_(result, "error")
 }
 
 // The downloaded calculator module gets one typed, endpoint-bound operation.
@@ -157,6 +157,13 @@ fetch(endpoint: string, ca: string, reference: string) -> (string, string) {
         map.map_put_string_owned(result, "error", error)
     }
     text = ""
-    if map.map_get_raw(result, "source") != null { text = string.copy(map.map_get_raw(result, "source")) }
-    return text, string.copy(map.map_get_raw(result, "error"))
+    if map.map_get_raw(result, "source") != null { text = map_text_(result, "source") }
+    return text, map_text_(result, "error")
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

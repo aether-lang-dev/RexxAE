@@ -8,7 +8,7 @@ request(source: string, expected: string) {
     defer engine.rexxae_destroy(ctx)
     spec.assert_eq(engine.rexxae_register_function(ctx, "REQUIRE", 1, 2), 0, "explicit loader")
     spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "import request")
-    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), expected, "module and alias")
+    spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), expected, "module and alias")
     spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "request is stable")
     spec.assert_eq(engine.rexxae_reply_value(ctx, "true", ""), 0, "approved import")
     spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "no replay")

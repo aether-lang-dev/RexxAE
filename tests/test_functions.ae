@@ -8,12 +8,12 @@ check_expr(expression: string, expected: string) {
     defer engine.rexxae_destroy(ctx)
     status = engine.rexxae_step(ctx, 100)
     if status == -1 {
-        detail = string.copy(engine.rexxae_error(ctx))
+        detail = string.from_cstr(engine.rexxae_error(ctx))
         spec.fail("${expression}: ${detail}")
         return
     }
     spec.assert_eq(status, 1, "function result produces SAY")
-    actual = string.copy(engine.rexxae_text(ctx))
+    actual = string.from_cstr(engine.rexxae_text(ctx))
     spec.assert_str_eq(actual, expected, expression)
     spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "program completed")
 }
@@ -22,7 +22,7 @@ check_error(source: string, fragment: string) {
     ctx = engine.rexxae_create(source)
     defer engine.rexxae_destroy(ctx)
     spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error status")
-    detail = string.copy(engine.rexxae_error(ctx))
+    detail = string.from_cstr(engine.rexxae_error(ctx))
     spec.assert_contains(detail, fragment, "specific error")
     spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error is terminal")
 }

@@ -12,7 +12,7 @@ import examples.calculator.downloaded
 import std.map
 
 dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
-    name = string.copy(rexxae.rexxae_function(ctx))
+    name = string.from_cstr(rexxae.rexxae_function(ctx))
     if name == "REQUIRE" {
         if endpoint == "" {
             rexxae.rexxae_reply_value(ctx, "null", "calculator module requires approved endpoint access")
@@ -22,7 +22,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
             rexxae.rexxae_reply_value(ctx, "null", "module reference must be a string")
             return
         }
-        reference = string.copy(rexxae.rexxae_argument_text(ctx, 0))
+        reference = string.from_cstr(rexxae.rexxae_argument_text(ctx, 0))
         if reference != "calculator" && reference != "/static/calculator.rexx" {
             rexxae.rexxae_reply_value(ctx, "null", "module unavailable; use /static/calculator.rexx")
             return
@@ -39,7 +39,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
                 map.map_put_string_owned(bindings, "_module_source", code)
             }
         }
-        args, _parse_error = json.parse(string.copy(rexxae.rexxae_arguments_json(ctx)))
+        args, _parse_error = json.parse(string.from_cstr(rexxae.rexxae_arguments_json(ctx)))
         defer json.json_free(args)
         alias = ""
         if json.json_array_size(args) == 2 {
@@ -47,7 +47,7 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
                 rexxae.rexxae_reply_value(ctx, "null", "AS requires a string alias")
                 return
             }
-            alias = string.copy(rexxae.rexxae_argument_text(ctx, 1))
+            alias = string.from_cstr(rexxae.rexxae_argument_text(ctx, 1))
         }
         exported = string.to_upper(modules.function_name("CALC", alias))
         // Acknowledge the import to return to RUNNABLE, then bind its API
@@ -68,12 +68,12 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
         rexxae.rexxae_reply_value(ctx, "null", "CALC requires three strings: operation, left, right")
         return
     }
-    if string.copy(map.map_get_raw(bindings, name)) == "/static/calculator.rexx" {
-        code = string.copy(map.map_get_raw(bindings, "_module_source"))
-        arguments = string.copy(rexxae.rexxae_arguments_json(ctx))
+    if map_text_(bindings, name) == "/static/calculator.rexx" {
+        code = map_text_(bindings, "_module_source")
+        arguments = string.from_cstr(rexxae.rexxae_arguments_json(ctx))
         result, error = downloaded.run(code, arguments, |request: ptr| {
-            path = string.copy(map.map_get_raw(request, "path"))
-            body = string.copy(map.map_get_raw(request, "body"))
+            path = map_text_(request, "path")
+            body = map_text_(request, "body")
             response, failure = service.post(endpoint, ca, path, body)
             map.map_put_string_owned(request, "response", response)
             map.map_put_string_owned(request, "error", failure)
@@ -81,9 +81,9 @@ dispatch(ctx: ptr, endpoint: string, ca: string, bindings: ptr) {
         if rexxae.rexxae_reply_value(ctx, result, error) != 0 { rexxae.rexxae_reply_value(ctx, "null", "module result is outside the JSON profile") }
         return
     }
-    op = string.copy(rexxae.rexxae_argument_text(ctx, 0))
-    a = string.copy(rexxae.rexxae_argument_text(ctx, 1))
-    b = string.copy(rexxae.rexxae_argument_text(ctx, 2))
+    op = string.from_cstr(rexxae.rexxae_argument_text(ctx, 0))
+    a = string.from_cstr(rexxae.rexxae_argument_text(ctx, 1))
+    b = string.from_cstr(rexxae.rexxae_argument_text(ctx, 2))
     value, err = service.call(endpoint, ca, op, a, b)
     encoded = json.str(value)
     defer json.json_free(encoded)
@@ -95,7 +95,7 @@ submit(previous: @keep ptr, source: string, endpoint: string, ca: string, bindin
     next = rexxae.rexxae_create_next(previous, source)
     if next == null { io.stderr_write("cannot create submission\n"); return previous }
     if rexxae.rexxae_step(next, 0) == -1 {
-        io.stderr_write("${string.copy(rexxae.rexxae_error(next))}\n")
+        io.stderr_write("${string.from_cstr(rexxae.rexxae_error(next))}\n")
         rexxae.rexxae_destroy(next)
         return previous
     }
@@ -103,11 +103,11 @@ submit(previous: @keep ptr, source: string, endpoint: string, ca: string, bindin
     while steps < 100000 {
         status = rexxae.rexxae_step(next, 1)
         if status == 0 || status == -1 {
-            if status == -1 { io.stderr_write("${string.copy(rexxae.rexxae_error(next))}\n") }
+            if status == -1 { io.stderr_write("${string.from_cstr(rexxae.rexxae_error(next))}\n") }
             rexxae.rexxae_destroy(previous)
             return next
         }
-        if status == 1 { println(string.copy(rexxae.rexxae_text(next))) }
+        if status == 1 { println(string.from_cstr(rexxae.rexxae_text(next))) }
         if status == 2 { rexxae.rexxae_reply(next, 13, "", "environment not mounted") }
         if status == 4 { dispatch(next, endpoint, ca, bindings) }
         steps = steps + 1
@@ -176,4 +176,11 @@ main() {
     }
     rexxae.rexxae_destroy(ctx)
     return 0
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

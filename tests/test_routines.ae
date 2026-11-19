@@ -16,13 +16,13 @@ output(source: string, expected: ptr) {
         status = engine.rexxae_step(ctx, 1)
         if status == 1 {
             if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
-            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            else { spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
             index = index + 1
         }
         if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
         steps = steps + 1
     }
-    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { spec.fail(string.from_cstr(engine.rexxae_error(ctx))) }
     spec.assert_eq(status, 0, "completed within budgeted steps")
     spec.assert_eq(index, json.json_array_size(expected), "output count")
 }
@@ -38,15 +38,15 @@ migration_output(source: string, expected: ptr, commands: ptr) {
         status = engine.rexxae_step(ctx, 1)
         if status == 1 {
             if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
-            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            else { spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
             index = index + 1
         }
         if status == 2 {
             if commands == null || command_index >= json.json_array_size(commands) { spec.fail("unexpected ADDRESS") }
             else {
                 wanted = json.json_array_get_raw(commands, command_index)
-                spec.assert_str_eq(string.copy(engine.rexxae_address(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 0))), "environment")
-                spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 1))), "command")
+                spec.assert_str_eq(string.from_cstr(engine.rexxae_address(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 0))), "environment")
+                spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(wanted, 1))), "command")
             }
             command_index = command_index + 1
             spec.assert_eq(engine.rexxae_reply(ctx, 0, "host-result", ""), 0, "reply")
@@ -54,7 +54,7 @@ migration_output(source: string, expected: ptr, commands: ptr) {
         if status == 4 { spec.fail("unexpected host function"); break }
         steps = steps + 1
     }
-    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { spec.fail(string.from_cstr(engine.rexxae_error(ctx))) }
     spec.assert_eq(status, 0, "completion")
     spec.assert_eq(index, json.json_array_size(expected), "output count")
     count = 0
@@ -112,14 +112,14 @@ main() {
                     wanted = "[1]"
                     if count == 2 { wanted = "[2]" }
                     if count == 3 { wanted = "[5]" }
-                    spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), wanted, "argument once")
+                    spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), wanted, "argument once")
                     spec.assert_eq(engine.rexxae_step(ctx, 1), 4, "pending is stable")
                     result = "2"
                     if count == 2 { result = "3" }
                     if count == 3 { result = "10" }
                     spec.assert_eq(engine.rexxae_reply_value(ctx, result, ""), 0, "reply")
                 }
-                if status == 1 { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "10", "return") }
+                if status == 1 { spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "10", "return") }
                 steps = steps + 1
             }
             spec.assert_eq(status, 0, "done")
@@ -140,7 +140,7 @@ main() {
             spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "host refused"), 0, "failure")
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
             spec.assert_eq(engine.rexxae_line(ctx), 10, "call line")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"original\"", "loop restored")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "i")), "\"original\"", "loop restored")
         }
         spec.it("restores procedure generations and caller loops on a host error") callback {
             ctx = engine.rexxae_create("LET i = 'root'\nLET x = 'outer'\nDO i = 1 TO 2\nCALL work\nEND\nEXIT\nwork: PROCEDURE EXPOSE x\nx = 'changed'\nDO i = 1 TO 3\nCALL inner\nEND\nRETURN\ninner: PROCEDURE\nDO i = 1 TO 2\nCALL TESTHOST\nEND\nRETURN")
@@ -149,25 +149,25 @@ main() {
             spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "nested request")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "null", "refused"), 0, "veto")
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "terminal")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "i")), "\"root\"", "caller loop restored after generation")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "x")), "\"changed\"", "exposed change propagated on error")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "i")), "\"root\"", "caller loop restored after generation")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "x")), "\"changed\"", "exposed change propagated on error")
         }
         spec.it("restores procedure variables on arithmetic error and EXIT") callback {
             bad = engine.rexxae_create("LET x = 'root'\nCALL work\nEXIT\nwork: PROCEDURE\nx = 'local'\nRETURN 1 / 0")
             defer engine.rexxae_destroy(bad)
             spec.assert_eq(engine.rexxae_step(bad, 100), -1, "arithmetic error")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(bad, "x")), "\"root\"", "restored")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(bad, "x")), "\"root\"", "restored")
             done = engine.rexxae_create("LET x = 'root'\nCALL work\nSAY 'bad'\nwork: PROCEDURE\nx = 'local'\nEXIT 7")
             defer engine.rexxae_destroy(done)
             spec.assert_eq(engine.rexxae_step(done, 100), 0, "EXIT")
             spec.assert_eq(engine.rexxae_exit_code(done), 7, "code")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(done, "x")), "\"root\"", "restored on EXIT")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(done, "x")), "\"root\"", "restored on EXIT")
         }
         spec.it("restores generations at the recursive call limit") callback {
             ctx = engine.rexxae_create("LET x = 'root'\nCALL again\nEXIT\nagain: PROCEDURE\nx = 'local'\nCALL again\nRETURN")
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_step(ctx, 1000), -1, "depth guard")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "x")), "\"root\"", "root generation restored")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "x")), "\"root\"", "root generation restored")
         }
         spec.it("rejects duplicate and unlabelled PROCEDURE declarations") callback {
             duplicate = engine.rexxae_create("CALL work\nEXIT\nwork: PROCEDURE\nPROCEDURE\nRETURN")
@@ -184,7 +184,7 @@ main() {
             ctx = engine.rexxae_create("CALL again\nEXIT\nagain:\nCALL again\nRETURN")
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_step(ctx, 1000), -1, "depth limit")
-            spec.assert_str_eq(string.copy(engine.rexxae_error(ctx)), "routine call depth limit exceeded", "diagnostic")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_error(ctx)), "routine call depth limit exceeded", "diagnostic")
             spec.assert_eq(engine.rexxae_line(ctx), 4, "recursive call line")
         }
         spec.it("rejects unavailable dynamic targets without dispatching effects") callback {

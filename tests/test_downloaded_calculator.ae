@@ -15,7 +15,7 @@ const HEADER = "/* @exports CALC */\n/* @seeks http.post /calculate */\n"
 
 run_module(source: string, args: string, expected: string) {
     result, error = downloaded.run(source, args, |request: ptr| {
-        body = string.copy(map.map_get_raw(request, "body"))
+        body = map_text_(request, "body")
         response, status = protocol.handle(body)
         map.map_put_string_owned(request, "response", response)
         if status == 200 { map.map_put_string_owned(request, "error", "") }
@@ -33,7 +33,7 @@ refused(source: string, args: string) {
         map.map_put_string_owned(result, "calls", "1")
     })
     spec.assert_true(error != "", "module refused")
-    spec.assert_str_eq(string.copy(map.map_get_raw(result, "calls")), "0", "no transport callback")
+    spec.assert_str_eq(map_text_(result, "calls"), "0", "no transport callback")
 }
 
 main() {
@@ -95,8 +95,15 @@ main() {
                 _value, error = service.fetch("http://localhost:8080/calculate", "", "/static/calculator.rexx")
                 map.map_put_string_owned(result, "error", error)
             }
-            spec.assert_str_eq(string.copy(map.map_get_raw(result, "error")), "module download denied by enclosing sandbox", "no socket attempted")
+            spec.assert_str_eq(map_text_(result, "error"), "module download denied by enclosing sandbox", "no socket attempted")
         }
     }
     return spec.run_summary(fw)
+}
+
+// A string value stored with map.map_put_string_owned; "" when absent.
+map_text_(m: ptr, key: string) -> string {
+    value, _err = map.get_string(m, key)
+    if value == null { return "" }
+    return string.copy(value)
 }

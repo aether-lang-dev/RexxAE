@@ -72,22 +72,22 @@ run_script(ctx: ptr, h: *child.Host) {
             return
         }
         if status == -1 {
-            child.error(h, string.copy(engine.rexxae_error(ctx)))
+            child.error(h, string.from_cstr(engine.rexxae_error(ctx)))
             return
         }
         if status == 1 {
-            child.say(h, string.copy(engine.rexxae_text(ctx)))
+            child.say(h, string.from_cstr(engine.rexxae_text(ctx)))
         } else if status == 2 {
             // No ADDRESS environment is mounted: every command is vetoed.
-            address = string.copy(engine.rexxae_address(ctx))
+            address = string.from_cstr(engine.rexxae_address(ctx))
             child.audit(h, "rexxae-worker refused ADDRESS ${address}: no environment is mounted")
             engine.rexxae_reply(ctx, 1, "", "ADDRESS ${address} is not mounted")
         } else if status == 5 {
-            tags = string.copy(engine.rexxae_log_tags_json(ctx))
-            child.log(h, engine.rexxae_log_level(ctx), tags, string.copy(engine.rexxae_text(ctx)))
+            tags = string.from_cstr(engine.rexxae_log_tags_json(ctx))
+            child.log(h, engine.rexxae_log_level(ctx), tags, string.from_cstr(engine.rexxae_text(ctx)))
         } else if status == 4 {
-            name = string.copy(engine.rexxae_function(ctx))
-            r = child.call_host(h, name, string.copy(engine.rexxae_arguments_json(ctx)))
+            name = string.from_cstr(engine.rexxae_function(ctx))
+            r = child.call_host(h, name, string.from_cstr(engine.rexxae_arguments_json(ctx)))
             if r.kind == "VALUE" {
                 if engine.rexxae_reply_value(ctx, r.text, "") != 0 {
                     engine.rexxae_reply_value(ctx, "null", "the host's reply is not valid JSON")

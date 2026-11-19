@@ -15,13 +15,13 @@ output(source: string, expected: ptr) {
         status = engine.rexxae_step(ctx, 1)
         if status == 1 {
             if index >= json.json_array_size(expected) { spec.fail("unexpected output") }
-            else { spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
+            else { spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), string.copy(json.json_get_string_raw(json.json_array_get_raw(expected, index))), "SAY") }
             index = index + 1
         }
         if status == 2 || status == 4 { spec.fail("unexpected host request"); break }
         steps = steps + 1
     }
-    if status == -1 { spec.fail(string.copy(engine.rexxae_error(ctx))) }
+    if status == -1 { spec.fail(string.from_cstr(engine.rexxae_error(ctx))) }
     spec.assert_eq(status, 0, "completed within budgeted steps")
     spec.assert_eq(index, json.json_array_size(expected), "output count")
 }
@@ -55,13 +55,13 @@ main() {
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_register_function(ctx, "TESTHOST", 1, 1), 0, "register")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "first input request")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "first")), "\"unchanged\"", "no partial binding")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "first")), "\"unchanged\"", "no partial binding")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "\"one:\"", ""), 0, "first part")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "second input request")
-            spec.assert_str_eq(string.copy(engine.rexxae_arguments_json(ctx)), "[2]", "no replay")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[2]", "no replay")
             spec.assert_eq(engine.rexxae_reply_value(ctx, "\"two\"", ""), 0, "second part")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "parsed output")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "one two", "bound text")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "one two", "bound text")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 0, "done")
         }
         spec.it("shares compound access through the public variable API") callback {
@@ -69,8 +69,8 @@ main() {
             defer engine.rexxae_destroy(ctx)
             spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config.input.value", "42"), 0, "seed nested input")
             spec.assert_eq(engine.rexxae_step(ctx, 100), 1, "read seeded property")
-            spec.assert_str_eq(string.copy(engine.rexxae_text(ctx)), "42", "input")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "config.result.ok")), "true", "typed property")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_text(ctx)), "42", "input")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "config.result.ok")), "true", "typed property")
             spec.assert_true(engine.rexxae_get_variable_json(ctx, "config.missing") == null, "missing property")
         }
         spec.it("rejects unsupported array writes without changing the old root") callback {
@@ -79,7 +79,7 @@ main() {
             spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config", "{\"data\":[1]}"), 0, "seed")
             spec.assert_eq(engine.rexxae_set_variable_json(ctx, "config.data.0", "2"), -1, "API rejects unsupported write")
             spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "script diagnostic")
-            spec.assert_str_eq(string.copy(engine.rexxae_get_variable_json(ctx, "config")), "{\"data\":[1]}", "old value intact")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_get_variable_json(ctx, "config")), "{\"data\":[1]}", "old value intact")
         }
         spec.it("does not treat missing paths as typed nulls") callback {
             expected, _err = json.parse("[\"DATA.ABSENT\",\"null\"]")

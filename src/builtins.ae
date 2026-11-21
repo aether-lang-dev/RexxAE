@@ -138,6 +138,40 @@ trim_side(s: string, leading: bool, trailing: bool, chars: string, spaces: bool)
     return string.substring_n(s, n, first, last)
 }
 
+// TRANSLATE's table, reduced to the first place of each byte of `input`:
+// the bytes in that order, and what each becomes (the byte at the same place
+// in `output`, or itself when `output` is shorter).
+translation_(input: string, output: string) -> (string, string) {
+    keys = ""
+    values = ""
+    m = string.length(input)
+    o = string.length(output)
+    j = 0
+    while j < m && string.length(keys) < 256 {
+        one = string.substring(input, j, j + 1)
+        if string.index_of(keys, one) < 0 {
+            keys = string.concat(keys, one)
+            if j < o { values = string.concat(values, string.substring(output, j, j + 1)) }
+            else { values = string.concat(values, one) }
+        }
+        j = j + 1
+    }
+    return keys, values
+}
+
+// The distinct bytes of `s`, in first-seen order.
+distinct_bytes_(s: string) -> string {
+    seen = ""
+    m = string.length(s)
+    j = 0
+    while j < m && string.length(seen) < 256 {
+        one = string.substring(s, j, j + 1)
+        if string.index_of(seen, one) < 0 { seen = string.concat(seen, one) }
+        j = j + 1
+    }
+    return seen
+}
+
 release_words_(slot: ptr) { list.list_free(mem.get_ptr(slot, 0)) }
 
 words(s: string) -> ptr {
@@ -303,13 +337,17 @@ text_call(name: string, args: ptr) -> (string, string) {
         if b == "" && c == "" { return string.to_upper(a), "" }
         input = c
         if input == "" { input = "abcdefghijklmnopqrstuvwxyz" }
+        // Each byte's replacement, from its first place in the input table:
+        // at most 256 entries, made in one pass, so a character is looked up
+        // in them and not in the whole table (which made a call quadratic).
+        keys, values = translation_(input, b)
         out = strbuilder.new(n)
         defer state.release_builder(&out)
         i = 0
         while i < n {
             one = string.substring_n(a, n, i, i + 1)
-            pos = string.index_of(input, one)
-            if pos >= 0 && pos < string.length(b) { strbuilder.append(out, string.substring(b, pos, pos + 1)) }
+            pos = string.index_of(keys, one)
+            if pos >= 0 { strbuilder.append(out, string.substring(values, pos, pos + 1)) }
             else { strbuilder.append(out, one) }
             i = i + 1
         }
@@ -320,10 +358,13 @@ text_call(name: string, args: ptr) -> (string, string) {
         if start < 1 { start = 1 }
         option = string.to_upper(c)
         matching = option == "M" || option == "MATCH"
+        // The distinct bytes of the reference, at most 256: a character is
+        // looked up in them, not in the whole reference.
+        reference = distinct_bytes_(b)
         i = start - 1
         while i < n {
             one = string.substring_n(a, n, i, i + 1)
-            found = string.contains(b, one) != 0
+            found = string.contains(reference, one) != 0
             if found == matching { return string.from_int(i + 1), "" }
             i = i + 1
         }

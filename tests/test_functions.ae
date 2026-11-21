@@ -1,5 +1,6 @@
 import std.spec
 import std.string
+import std.time
 import src.engine
 
 check_expr(expression: string, expected: string) {
@@ -25,6 +26,17 @@ check_error(source: string, fragment: string) {
     detail = string.from_cstr(engine.rexxae_error(ctx))
     spec.assert_contains(detail, fragment, "specific error")
     spec.assert_eq(engine.rexxae_step(ctx, 100), -1, "error is terminal")
+}
+
+// Milliseconds to evaluate `expression` with s and r strings of `size` bytes
+// that share one byte, at the end of r.
+timed_ms(expression: string, size: int) -> long {
+    t0 = time.now_ms()
+    ctx = engine.rexxae_create("LET s = COPIES('b', ${size})\nLET r = COPIES('a', ${size - 1}) || 'b'\nLET n = ${expression}\nSAY LENGTH(n)")
+    status = engine.rexxae_step(ctx, 100)
+    engine.rexxae_destroy(ctx)
+    spec.assert_eq(status, 1, "${expression} completes")
+    return time.now_ms() - t0
 }
 
 main() {
@@ -101,6 +113,31 @@ main() {
             check_error("SAY MATH_SQRT(-1)", "negative number")
             check_error("SAY UPPER('é')", "Unicode")
             check_error("SAY REPEAT('xx', 1000000)", "limit")
+        }
+        spec.it("keeps TRANSLATE's first-occurrence mapping and VERIFY's options") callback {
+            check_expr("TRANSLATE('abc', 'xyz', 'aab')", "xzc")
+            check_expr("TRANSLATE('abc', 'x', 'ab')", "xbc")
+            check_expr("TRANSLATE('banana', '', 'an')", "banana")
+            check_expr("VERIFY('aab', 'ba')", "0")
+            check_expr("VERIFY('aab', 'ba', 'M', 3)", "3")
+            check_expr("VERIFY('abc', '')", "1")
+        }
+        // One builtin call is one instruction to the step budget, and a host's
+        // CANCEL is only seen between instructions: a builtin must stay linear
+        // in its inputs, or a script holds its host for as long as it likes.
+        // TRANSLATE and VERIFY searched their whole table for each character
+        // (14 s for 1 MiB each, found by aether-guest-languages' stunt sweep).
+        spec.it("runs TRANSLATE and VERIFY in linear time on the largest inputs") callback {
+            for expression in ["TRANSLATE(s, r, r)", "TRANSLATE(s, s, r)", "VERIFY(s, r)", "VERIFY(r, s, 'M')"] {
+                big = timed_ms(expression, 1000000)
+                // Under valgrind (make memcheck) everything is slower: then
+                // the growth from a quarter of the size is what tells linear
+                // (about 4 times) from quadratic (about 16 times).
+                if big >= 2000 {
+                    small = timed_ms(expression, 250000)
+                    spec.assert_true(big < small * 8, "${expression}: ${small} ms at 250000 bytes, ${big} ms at 1000000")
+                }
+            }
         }
     }
     return spec.run_summary(fw)

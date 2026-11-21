@@ -115,29 +115,6 @@ ascii(s: string) -> bool {
 
 whitespace(c: int) -> bool { return c == 32 || (c >= 9 && c <= 13) }
 
-trim_side(s: string, leading: bool, trailing: bool, chars: string, spaces: bool) -> string {
-    n = string.length(s)
-    first = 0
-    last = n
-    while leading && first < last {
-        c = string.char_at_n(s, n, first)
-        one = string.substring_n(s, n, first, first + 1)
-        if spaces {
-            if !whitespace(c) { break }
-        } else if string.contains(chars, one) == 0 { break }
-        first = first + 1
-    }
-    while trailing && last > first {
-        c = string.char_at_n(s, n, last - 1)
-        one = string.substring_n(s, n, last - 1, last)
-        if spaces {
-            if !whitespace(c) { break }
-        } else if string.contains(chars, one) == 0 { break }
-        last = last - 1
-    }
-    return string.substring_n(s, n, first, last)
-}
-
 // TRANSLATE's table, reduced to the first place of each byte of `input`:
 // the bytes in that order, and what each becomes (the byte at the same place
 // in `output`, or itself when `output` is shorter).
@@ -170,6 +147,32 @@ distinct_bytes_(s: string) -> string {
         j = j + 1
     }
     return seen
+}
+
+trim_side(s: string, leading: bool, trailing: bool, chars: string, spaces: bool) -> string {
+    n = string.length(s)
+    // STRIP's characters, reduced to their distinct bytes (at most 256), so a
+    // character is looked up in them and not in the whole argument.
+    if !spaces { chars = distinct_bytes_(chars) }
+    first = 0
+    last = n
+    while leading && first < last {
+        c = string.char_at_n(s, n, first)
+        one = string.substring_n(s, n, first, first + 1)
+        if spaces {
+            if !whitespace(c) { break }
+        } else if string.contains(chars, one) == 0 { break }
+        first = first + 1
+    }
+    while trailing && last > first {
+        c = string.char_at_n(s, n, last - 1)
+        one = string.substring_n(s, n, last - 1, last)
+        if spaces {
+            if !whitespace(c) { break }
+        } else if string.contains(chars, one) == 0 { break }
+        last = last - 1
+    }
+    return string.substring_n(s, n, first, last)
 }
 
 release_words_(slot: ptr) { list.list_free(mem.get_ptr(slot, 0)) }

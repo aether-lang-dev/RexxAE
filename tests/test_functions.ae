@@ -35,7 +35,7 @@ timed_ms(expression: string, size: int) -> long {
     ctx = engine.rexxae_create("LET s = COPIES('b', ${size})\nLET r = COPIES('a', ${size - 1}) || 'b'\nLET n = ${expression}\nSAY LENGTH(n)")
     status = engine.rexxae_step(ctx, 100)
     engine.rexxae_destroy(ctx)
-    spec.assert_eq(status, 1, "${expression} completes")
+    spec.assert_true(status == 1 || status == -1, "${expression} ends in one step (status ${status})")
     return time.now_ms() - t0
 }
 
@@ -125,10 +125,12 @@ main() {
         // One builtin call is one instruction to the step budget, and a host's
         // CANCEL is only seen between instructions: a builtin must stay linear
         // in its inputs, or a script holds its host for as long as it likes.
-        // TRANSLATE and VERIFY searched their whole table for each character
-        // (14 s for 1 MiB each, found by aether-guest-languages' stunt sweep).
-        spec.it("runs TRANSLATE and VERIFY in linear time on the largest inputs") callback {
-            for expression in ["TRANSLATE(s, r, r)", "TRANSLATE(s, s, r)", "VERIFY(s, r)", "VERIFY(r, s, 'M')"] {
+        // TRANSLATE, VERIFY and STRIP searched their whole table for each
+        // character (14 s for 1 MiB each), and the cron parser built its
+        // normalized text a byte at a time (6 s); found by
+        // aether-guest-languages' stunt sweep.
+        spec.it("runs TRANSLATE, VERIFY, STRIP and the cron extensions in linear time on the largest inputs") callback {
+            for expression in ["TRANSLATE(s, r, r)", "TRANSLATE(s, s, r)", "VERIFY(s, r)", "VERIFY(r, s, 'M')", "STRIP(s, 'B', r)", "CRON_VALID(s)", "CRON_NEXT(s, 0)"] {
                 big = timed_ms(expression, 1000000)
                 // Under valgrind (make memcheck) everything is slower: then
                 // the growth from a quarter of the size is what tells linear

@@ -46,6 +46,7 @@
 // containing `*`), both must match, which in practice means the other one.
 // A stepped star such as `*/2` counts as restricted, as in robfig/cron.
 import std.string
+import std.strbuilder
 
 exports(check, next_after, MAX_YEARS)
 
@@ -186,23 +187,26 @@ field_(text: string, field: int) -> (string, string) {
     return string.concat(mask, "-"), ""
 }
 
-// Splits on runs of spaces and tabs.
+// Splits on runs of spaces and tabs. Built in one buffer: concatenating a
+// byte at a time made a long expression quadratic (6 s for 1 MiB).
 words_(text: string) -> string {
-    out = ""
     n = string.length(text)
+    out = strbuilder.new(n)
     i = 0
     pending = false
+    any = false
     while i < n {
         c = string.char_at(text, i)
         if c == 32 || c == 9 {
-            pending = string.length(out) > 0
+            pending = any
         } else {
-            if pending { out = string.concat(out, " "); pending = false }
-            out = string.concat(out, string.substring(text, i, i + 1))
+            if pending { strbuilder.append_byte(out, 32); pending = false }
+            strbuilder.append_byte(out, c)
+            any = true
         }
         i = i + 1
     }
-    return out
+    return strbuilder.finish(out)
 }
 
 // Parses `expr` into a schedule, or returns why it is not one.

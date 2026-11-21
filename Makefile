@@ -1,5 +1,8 @@
 # Validated release; README documents requirements and verification status.
-AETHER_RELEASE := 0.933.0
+# 0.934.0 is a floor move: on a gcc 16 host (cachyos) tests/test_resource_cleanup.py
+# died with SIGILL on a library panic, a -fcf-protection mismatch between the
+# library's export stubs and the runtime, fixed in 0.934.0 (runtime ABI revision 5).
+AETHER_RELEASE := 0.934.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.

@@ -1,0 +1,155 @@
+// rexxae_call: the host calling a label of a finished program (what the
+// worker's EXPORT and std.guest's INVOKE are built on), and what a host may
+// set on a context that has just been answered.
+import std.spec
+import std.string
+import src.engine
+
+// Steps to the end, answering nothing: the SAY texts, then "DONE" or
+// "ERROR <message>".
+fn run(ctx: ptr) -> string {
+    out = ""
+    while true {
+        s = engine.rexxae_step(ctx, 1000)
+        if s == 1 {
+            out = "${out}${string.from_cstr(engine.rexxae_text(ctx))};"
+        } else if s == 0 {
+            return "${out}DONE"
+        } else if s == -1 {
+            return "${out}ERROR ${string.from_cstr(engine.rexxae_error(ctx))}"
+        } else {
+            return "${out}STATUS ${s}"
+        }
+    }
+    return out
+}
+
+fn result(ctx: ptr) -> string {
+    r = engine.rexxae_result_json(ctx)
+    if r == null { return "(none)" }
+    return string.from_cstr(r)
+}
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "calling a label of a finished program") {
+        spec.it("runs the label with the script's variables and returns its value") callback {
+            ctx = engine.rexxae_create("n = 10\nEXIT 0\nADD:\nn = n + ARG(1)\nRETURN n")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_str_eq(run(ctx), "DONE", "the script")
+            spec.assert_eq(engine.rexxae_call(ctx, "add", "[5]"), 0, "call")
+            spec.assert_str_eq(run(ctx), "DONE", "the call")
+            spec.assert_str_eq(result(ctx), "15", "first value")
+            spec.assert_eq(engine.rexxae_call(ctx, "ADD", "[1]"), 0, "the name is a label: any case")
+            run(ctx)
+            spec.assert_str_eq(result(ctx), "16", "state carries")
+        }
+        spec.it("passes any number of arguments of any JSON type") callback {
+            ctx = engine.rexxae_create("EXIT 0\nPICK:\nRETURN ARG(ARG(1))")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            args = "[11,\"two\",{\"k\":[1,true,null]},4,5,6,7,8,9,10,\"eleven\"]"
+            spec.assert_eq(engine.rexxae_call(ctx, "pick", args), 0, "eleven arguments")
+            run(ctx)
+            spec.assert_str_eq(result(ctx), "\"eleven\"", "the eleventh")
+            engine.rexxae_call(ctx, "pick", "[3,\"two\",{\"k\":[1,true,null]}]")
+            run(ctx)
+            spec.assert_str_eq(result(ctx), "{\"k\":[1,true,null]}", "an object, typed")
+        }
+        spec.it("does not take the script's own N for a stem tail (no generated loop)") callback {
+            ctx = engine.rexxae_create("N = 'oops'\ninv.1 = 'x'\nEXIT 0\nTAIL:\nRETURN ARG(1)")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            engine.rexxae_call(ctx, "tail", "[\"plain\"]")
+            run(ctx)
+            spec.assert_str_eq(result(ctx), "\"plain\"", "the argument, untouched")
+        }
+        spec.it("returns null from a label that ends without RETURN, and EXIT's value") callback {
+            ctx = engine.rexxae_create("EXIT 0\nQUIET:\nx = 1\nOUT:\nEXIT 7")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            engine.rexxae_call(ctx, "out", "[]")
+            spec.assert_str_eq(run(ctx), "DONE", "EXIT ends the call")
+            spec.assert_str_eq(result(ctx), "7", "EXIT's value")
+            engine.rexxae_call(ctx, "quiet", "[]")
+            spec.assert_str_eq(run(ctx), "DONE", "the label ends at the next")
+            spec.assert_str_eq(result(ctx), "null", "no RETURN: null")
+        }
+        spec.it("may be called again after a label fails, with state intact") callback {
+            ctx = engine.rexxae_create("n = 0\nEXIT 0\nCOUNT:\nn = n + 1\nRETURN n\nBOOM:\nRETURN 1 / 0")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            engine.rexxae_call(ctx, "count", "[]")
+            run(ctx)
+            spec.assert_eq(engine.rexxae_call(ctx, "boom", "[]"), 0, "call")
+            spec.assert_contains(run(ctx), "ERROR", "the label fails")
+            spec.assert_eq(engine.rexxae_call(ctx, "count", "[]"), 0, "called again")
+            spec.assert_str_eq(run(ctx), "DONE", "no recompile")
+            spec.assert_str_eq(result(ctx), "2", "the counter carried")
+        }
+        spec.it("calls the host from a label, and answers it") callback {
+            ctx = engine.rexxae_create("EXIT 0\nFETCH:\nLET d = DETAILS(ARG(1))\nRETURN d.kind")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_register_function(ctx, "DETAILS", 1, 1), 0, "mount")
+            run(ctx)
+            engine.rexxae_call(ctx, "fetch", "[\"123456\"]")
+            spec.assert_eq(engine.rexxae_step(ctx, 1000), 4, "the host call")
+            spec.assert_str_eq(string.from_cstr(engine.rexxae_arguments_json(ctx)), "[\"123456\"]", "its argument")
+            engine.rexxae_reply_value(ctx, "{\"kind\":\"deposit\"}", "")
+            spec.assert_str_eq(run(ctx), "DONE", "returns")
+            spec.assert_str_eq(result(ctx), "\"deposit\"", "the details")
+        }
+        spec.it("refuses a label that does not exist, a running context, and arguments that are not an array") callback {
+            ctx = engine.rexxae_create("SAY 'a'\nEXIT 0\nL:\nRETURN 1")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_call(ctx, "l", "[]"), -1, "before the script has run")
+            spec.assert_eq(engine.rexxae_step(ctx, 1000), 1, "SAY")
+            spec.assert_eq(engine.rexxae_call(ctx, "l", "[]"), -1, "while it runs")
+            run(ctx)
+            spec.assert_eq(engine.rexxae_call(ctx, "nosuch", "[]"), -2, "no such label")
+            spec.assert_eq(engine.rexxae_call(ctx, "l", "{}"), -1, "not an array")
+            spec.assert_eq(engine.rexxae_call(ctx, "l", "[1,"), -1, "not JSON")
+            spec.assert_eq(engine.rexxae_has_label(ctx, "L"), 1, "has L")
+            spec.assert_eq(engine.rexxae_has_label(ctx, "nosuch"), 0, "has no other")
+        }
+        spec.it("stays cancelled once cancelled") callback {
+            ctx = engine.rexxae_create("EXIT 0\nSPIN:\nDO FOREVER\nEND")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            engine.rexxae_call(ctx, "spin", "[]")
+            spec.assert_eq(engine.rexxae_step(ctx, 1000), 3, "running")
+            engine.rexxae_cancel(ctx, "stop")
+            spec.assert_str_eq(run(ctx), "ERROR cancelled by host: stop", "cancelled in the label")
+            engine.rexxae_call(ctx, "spin", "[]")
+            spec.assert_str_eq(run(ctx), "ERROR cancelled by host: stop", "and after")
+        }
+    }
+    spec.describe(fw, "rexxae_set_variable_json on a context that has just been answered") {
+        // What the exploration of host-calls-guest hit: set_variable_json
+        // reported success after a reply, and the next instruction did not see
+        // the variable. It does see it; the host had written another spelling.
+        // A RexxAE variable name is case-sensitive, as RexxJS's is, and the
+        // host API is literal: V and v are two variables.
+        spec.it("is seen by the next instruction under the same spelling") callback {
+            ctx = engine.rexxae_create("LET a = F()\nSAY v")
+            defer engine.rexxae_destroy(ctx)
+            engine.rexxae_register_function(ctx, "F", 0, 0)
+            spec.assert_eq(engine.rexxae_step(ctx, 100), 4, "the call")
+            spec.assert_eq(engine.rexxae_reply_value(ctx, "7", ""), 0, "answered")
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "v", "\"hi\""), 0, "set")
+            spec.assert_str_eq(run(ctx), "hi;DONE", "seen")
+        }
+        spec.it("is another variable under another case: the host API is literal") callback {
+            ctx = engine.rexxae_create("LET a = F()\nSAY v")
+            defer engine.rexxae_destroy(ctx)
+            engine.rexxae_register_function(ctx, "F", 0, 0)
+            engine.rexxae_step(ctx, 100)
+            engine.rexxae_reply_value(ctx, "7", "")
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "V", "\"hi\""), 0, "set V")
+            spec.assert_str_eq(run(ctx), "V;DONE", "v is unset: its name")
+            got = engine.rexxae_get_variable_json(ctx, "V")
+            spec.assert_str_eq(if got == null { "(null)" } else { string.from_cstr(got) }, "\"hi\"", "V holds it")
+        }
+    }
+    return spec.run_summary(fw)
+}

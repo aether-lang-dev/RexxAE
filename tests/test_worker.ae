@@ -52,6 +52,29 @@ fn transcript(w: *guest.Guest) -> string {
     }
 }
 
+// guest.invoke, then the invocation's events until RETURN or RAISE: the
+// outcome as "RETURN <json>" / "RAISE <why>", or how the guest ended. A CALL
+// to TXN_DETAILS is answered for id 123456, failed otherwise.
+fn call_guest(w: *guest.Guest, name: string, args: string) -> string {
+    why = guest.invoke(w, name, args)
+    if why != "" { return "NOSEND ${why}" }
+    while true {
+        e = guest.next(w)
+        if e.kind == "CALL" {
+            if e.name == "TXN_DETAILS" && e.text == "[\"123456\"]" {
+                guest.answer(w, "{\"kind\":\"deposit\",\"amount\":100}")
+            } else {
+                guest.fail(w, "no transaction ${e.text}")
+            }
+        } else if e.kind == "RETURN" || e.kind == "RAISE" || e.kind == "ERROR" || e.kind == "KILLED" {
+            return "${e.kind} ${e.text}"
+        } else if e.kind == "DONE" {
+            return "DONE ${e.code}"
+        }
+    }
+    return ""
+}
+
 fn log_text() -> string {
     text, err = fs.read(LOG)
     if err != "" { return "" }
@@ -212,6 +235,43 @@ main() {
             spec.assert_str_eq("${e.kind} ${e.text}", "KILLED no answer to CANCEL within 200 ms", "killed")
             spec.assert_eq(os.kill(pid, 0), -1, "the process is gone")
             spec.assert_contains(log_text(), "silent KILLED no answer to CANCEL within 200 ms", "kill audited")
+        }
+        spec.it("serves EXPORTed labels with the script's state, and ends on END") callback {
+            w = begin(WORKER, "exports")
+            guest.mount(&w, "TXN_DETAILS", 1, 1)
+            guest.start(&w, "seen = 0\nLET ok = EXPORT('on_txn')\nLET ok = EXPORT('pick')\nEXIT 0\nON_TXN:\nLET d = txn_details(ARG(1))\nseen = seen + 1\nRETURN seen d.kind d.amount\nPICK:\nRETURN ARG(ARG(1))")
+            e = guest.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.text}", "READY [\"on_txn\",\"pick\"]", "READY with the names")
+            spec.assert_str_eq(call_guest(&w, "on_txn", "[\"123456\"]"), "RETURN \"1 deposit 100\"", "notify, then fetch")
+            spec.assert_str_eq(call_guest(&w, "on_txn", "[\"999999\"]"), "RAISE no transaction [\"999999\"]", "the host refuses: RAISE")
+            spec.assert_str_eq(call_guest(&w, "on_txn", "[\"123456\"]"), "RETURN \"2 deposit 100\"", "serves on, state intact")
+            spec.assert_str_eq(call_guest(&w, "pick", "[10,1,2,3,4,5,6,7,8,{\"ten\":[true,null]}]"), "RETURN {\"ten\":[true,null]}", "ten arguments, typed")
+            spec.assert_str_eq(guest.end(&w), "", "END")
+            e = guest.next(&w)
+            spec.assert_str_eq("${e.kind} ${e.code}", "DONE 0", "DONE 0")
+        }
+        spec.it("sends DONE as before when nothing is exported, and refuses EXPORT of no label") callback {
+            w = begin(WORKER, "no-exports")
+            guest.start(&w, "SAY 'plain'\nEXIT 2")
+            spec.assert_str_eq(transcript(&w), "SAY plain\nDONE 2\n", "unchanged")
+            w2 = begin(WORKER, "bad-export")
+            guest.start(&w2, "LET ok = EXPORT('nowhere')")
+            spec.assert_str_eq(transcript(&w2), "ERROR EXPORT: no label nowhere\n", "refused")
+        }
+        spec.it("refuses EXPORT inside an invocation: the names are fixed at READY") callback {
+            w = begin(WORKER, "late-export")
+            guest.start(&w, "LET ok = EXPORT('late')\nEXIT 0\nLATE:\nLET ok = EXPORT('late')\nRETURN 1")
+            e = guest.next(&w)
+            spec.assert_str_eq(e.kind, "READY", "ready")
+            spec.assert_str_eq(call_guest(&w, "late", "[]"), "RAISE EXPORT: the exports are fixed once the script has ended", "refused")
+            guest.close(&w)
+        }
+        spec.it("cancels an export that loops, and ends the worker") callback {
+            w = begin(WORKER, "export-loop")
+            w.deadline_ms = 300
+            guest.start(&w, "LET ok = EXPORT('spin')\nEXIT 0\nSPIN:\nDO FOREVER\nEND")
+            guest.next(&w)
+            spec.assert_str_eq(call_guest(&w, "spin", "[]"), "ERROR cancelled by host: deadline of 300 ms passed", "cancelled in the label")
         }
         spec.it("refuses a frame over MAX_FRAME and kills the worker") callback {
             w = begin(WORKER, "big")

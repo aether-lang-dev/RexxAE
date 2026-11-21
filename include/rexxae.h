@@ -35,6 +35,24 @@ RexxAE aether_rexxae_create(const char *source);
  * This is a host operation; scripts cannot use it to acquire services. */
 RexxAE aether_rexxae_create_next(RexxAE previous, const char *source);
 void aether_rexxae_destroy(RexxAE ctx);
+/* Call a label of a finished program: the host's way into a script that has
+ * ended (a guest worker's exports). ctx must be DONE, or in ERROR after an
+ * earlier call failed; its variables, registrations and ADDRESS are kept, so
+ * the label runs with the script's state. The label is entered as CALL enters
+ * it (PROCEDURE isolates), its arguments the elements of args_json, a JSON
+ * array (any number, any JSON value). Then step as usual: the call ends DONE
+ * when the label RETURNs or EXITs, and aether_rexxae_result_json reads the
+ * value (null when it ends without RETURN); ERROR when it fails, after which
+ * ctx may be called again. A cancelled context stays cancelled. Returns 0
+ * when the call is set up, -1 for a context that is not finished or args
+ * that are not a JSON array, -2 when the program has no such label (labels
+ * are compared in upper case). */
+int32_t aether_rexxae_call(RexxAE ctx, const char *label, const char *args_json);
+/* 1 when the program has the label, else 0. */
+int32_t aether_rexxae_has_label(RexxAE ctx, const char *label);
+/* After a call has ended DONE: its value as JSON, borrowed until the next
+ * step; NULL otherwise. */
+const char *aether_rexxae_result_json(RexxAE ctx);
 /* Execute at most budget instructions; budget <= 0 executes none.
  * COMMAND/FUNCTION repeat until reply; DONE and ERROR are terminal.
  * Expression results and routine frames survive pending host requests.

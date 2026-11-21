@@ -23,7 +23,7 @@ exports(rexxae_create, rexxae_create_next, rexxae_destroy, rexxae_step, rexxae_r
     rexxae_reply_value, rexxae_get_variable_json, rexxae_set_variable_json,
     rexxae_argument_text, rexxae_argument_type, rexxae_cancel,
     rexxae_set_log_level, rexxae_log_level, rexxae_log_tags_json,
-    rexxae_set_log_name, rexxae_log_name)
+    rexxae_set_log_name, rexxae_log_name, rexxae_call, rexxae_has_label, rexxae_result_json)
 
 // Borrow the map-owned payload for the C ABI through public stdlib APIs.
 // string.bytes has no view for an empty string; provide a pinned NUL byte.
@@ -559,6 +559,78 @@ core_set_variable_json(ctx: ptr, name: string, encoded: string) -> int {
     if !ok { return -1 }
     return 0
 }
+// Calling a label of a finished program: the host's way into a script that
+// has ended (std.guest's INVOKE, through a worker). The context must be DONE
+// or in ERROR (an earlier call that failed); its variables, registrations and
+// ADDRESS stay as they are, so the label runs with the script's state. The
+// label is entered as CALL enters it (PROCEDURE isolates, EXPOSE exposes),
+// with `encoded`, a JSON array, as its arguments; then step as usual. The
+// call ends DONE when the label RETURNs (or EXITs: the value is its result
+// either way), and rexxae_result_json reads the value; ERROR when it fails,
+// after which the context may be called again. 0 when the call is set up; -1
+// for a context that is not finished or arguments that are not a JSON array;
+// -2 when the program has no such label.
+@pure
+core_call(ctx: ptr, label: string, encoded: string) -> int {
+    if ctx == null { return -1 }
+    status = state.integer(ctx, "status")
+    if status != 0 && status != -1 { return -1 }
+    target = state.integer(ctx, string.concat("r:", string.to_upper(label)))
+    if target <= 0 { return -2 }
+    raw = json.json_parse_raw(encoded)
+    if raw == null { return -1 }
+    defer json.json_free(raw)
+    if json.json_type(raw) != 4 { return -1 }
+    args = json.arr()
+    defer json.json_free(args)
+    i = 0
+    while i < json.json_array_size(raw) {
+        value = values.from_json(json.json_array_get_raw(raw, i), 0)
+        if value == null { return -1 }
+        json.push(args, value)
+        i = i + 1
+    }
+    // A failed call left its error and unwound its frames; a cancelled
+    // context stays cancelled (the cell is checked before every instruction).
+    state.write(ctx, "error", "")
+    unwind_(ctx)
+    map.map_clear(map.map_get_raw(ctx, "cache"))
+    // A label that ends without RETURN returns null.
+    absent = values.null_value()
+    state.save(ctx, "return_value", absent)
+    json.json_free(absent)
+    state.write(ctx, "exit", "")
+    state.save(ctx, "routine_args", args)
+    state.number(ctx, "routine_target", target)
+    state.write(ctx, "routine_node", "call")
+    // The frame's return address is the end of the program: the label's
+    // RETURN lands there, and the step that reaches it ends the call DONE.
+    begin_call_(ctx, state.integer(ctx, "program_size"))
+    if state.read(ctx, "error") != "" { unwind_(ctx); state.number(ctx, "status", -1); return -1 }
+    return 0
+}
+@pure
+core_has_label(ctx: ptr, label: string) -> int {
+    if ctx == null { return 0 }
+    if state.integer(ctx, string.concat("r:", string.to_upper(label))) > 0 { return 1 }
+    return 0
+}
+// The value of the last call (rexxae_call) as JSON: what the label RETURNed,
+// EXIT's value, or null; borrowed until the next step.
+@pure
+core_result_json(ctx: ptr) -> ptr {
+    if ctx == null || state.integer(ctx, "status") != 0 { return null }
+    code = state.read(ctx, "exit")
+    value = null
+    if code != "" { value = values.numeric(code) } else { value = state.load(ctx, "return_value") }
+    if value == null { return null }
+    raw = values.to_json(value, 0)
+    json.json_free(value)
+    if raw == null { return null }
+    state.save(ctx, "inspect", raw)
+    json.json_free(raw)
+    return borrow_text_(ctx, "inspect")
+}
 @pure
 core_get_variable_json(ctx: ptr, name: string) -> ptr {
     if ctx == null { return null }
@@ -738,3 +810,9 @@ rexxae_log_tags_json(handle: ptr) -> ptr { return core_log_tags_json(inner_(hand
 rexxae_set_log_name(handle: ptr, name: string) -> int { return core_set_log_name(inner_(handle), name) }
 @pure
 rexxae_log_name(handle: ptr) -> ptr { return core_log_name(inner_(handle)) }
+@pure
+rexxae_call(handle: ptr, label: string, encoded: string) -> int { return core_call(inner_(handle), label, encoded) }
+@pure
+rexxae_has_label(handle: ptr, label: string) -> int { return core_has_label(inner_(handle), label) }
+@pure
+rexxae_result_json(handle: ptr) -> ptr { return core_result_json(inner_(handle)) }

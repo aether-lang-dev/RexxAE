@@ -14,6 +14,17 @@ endif
 ifeq ($(strip $(AETHER_HOME)),)
 export AETHER_HOME := $(abspath $(dir $(shell command -v $(AE)))/..)
 endif
+# AETHER_HOME is not enough where ae is reached through a symlink or the
+# install keeps its libraries elsewhere (~/.aether/current/lib): spawn_socket
+# then finds no preload and every worker test is refused. It honours
+# AETHER_SANDBOX_PRELOAD first, so name the library beside the libaether
+# that `ae cflags --libs` points at, when there is one.
+ifeq ($(strip $(AETHER_SANDBOX_PRELOAD)),)
+AE_LIBDIR := $(patsubst -L%,%,$(firstword $(filter -L%,$(shell $(AE) cflags --libs 2>/dev/null))))
+ifneq ($(wildcard $(AE_LIBDIR)/libaether_sandbox.so),)
+export AETHER_SANDBOX_PRELOAD := $(AE_LIBDIR)/libaether_sandbox.so
+endif
+endif
 CALC_AE ?= $(AE)
 CC ?= cc
 REXXJS ?= ../RexxJS

@@ -266,6 +266,14 @@ main() {
             spec.assert_str_eq(call_guest(&w, "late", "[]"), "RAISE EXPORT: the exports are fixed once the script has ended", "refused")
             guest.close(&w)
         }
+        spec.it("raises a value too large to return, and serves on") callback {
+            w = begin(WORKER, "export-big")
+            guest.start(&w, "LET ok = EXPORT('big')\nEXIT 0\nBIG:\nRETURN COPIES('x', ARG(1))")
+            guest.next(&w)
+            spec.assert_contains(call_guest(&w, "big", "[70000]"), "RAISE the value is 70002 bytes, over the frame limit", "raised, not sent")
+            spec.assert_str_eq(call_guest(&w, "big", "[3]"), "RETURN \"xxx\"", "serves on")
+            guest.close(&w)
+        }
         spec.it("cancels an export that loops, and ends the worker") callback {
             w = begin(WORKER, "export-loop")
             w.deadline_ms = 300

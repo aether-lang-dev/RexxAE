@@ -126,7 +126,10 @@ serve_labels(ctx: ptr, h: *child.Host, exported: ptr) {
         if status == -2 { return }
         if status == 0 {
             v = engine.rexxae_result_json(ctx)
-            child.returned(h, if v == null { "null" } else { string.from_cstr(v) })
+            // A value too large for the host's frame is not sent: raised
+            // instead, and the worker serves on.
+            rerr = child.returned(h, if v == null { "null" } else { string.from_cstr(v) })
+            if rerr != "" { child.raised(h, rerr) }
         } else {
             child.raised(h, string.from_cstr(engine.rexxae_error(ctx)))
         }

@@ -21,7 +21,7 @@ unsupported boundary cases are not counted as passing parity. See
 
 ## Build and test
 
-Targets Aether **0.934.0**; requires a C compiler and make. Tests require Python 3; differential
+Targets Aether **0.935.0**; requires a C compiler and make. Tests require Python 3; differential
 tests and inventory generation also need Node.js and a RexxJS checkout.
 No npm install is required.
 
@@ -38,10 +38,10 @@ make memcheck                   # requires Valgrind
 make inventory check-inventory  # function/dependency analysis
 ```
 
-Install and select the release with `ae version install 0.934.0` and
-`ae version use 0.934.0`, then confirm both `ae` and `aetherc` in `ae version`.
+Install and select the release with `ae version install 0.935.0` and
+`ae version use 0.935.0`, then confirm both `ae` and `aetherc` in `ae version`.
 Alternatively, an official release extracted to
-`build/toolchains/aether-0.934.0` is selected automatically by Make; it sets
+`build/toolchains/aether-0.935.0` is selected automatically by Make; it sets
 `AETHER_HOME` to keep that compiler and stdlib together. `AE=/path/to/ae`
 overrides the executable; an extracted installation also needs its matching
 `AETHER_HOME=/path/to/release`.
@@ -309,8 +309,8 @@ exchange.
 
 The protocol and both halves of it are Aether's: **`std.guest`** is the
 host's side and **`std.guest.child`** the worker's, documented once in
-Aether's `std/guest/README.md` (every message, both directions). They need
-Aether 0.883.0 or later.
+Aether's `std/guest/README.md` (every message, both directions). Exported
+labels (`READY` and `INVOKE`, the host calling the guest) need Aether 0.935.0.
 
 - `worker/worker.ae` builds `build/worker/rexxae-worker`, one binary with the
   engine compiled in, so the process sandbox needs to grant it nothing. It is
@@ -389,9 +389,8 @@ served with the script's state (notify then fetch, ten typed arguments, a
 host refusal as `RAISE`, `END`), `DONE` unchanged with no exports, `EXPORT` of
 no label and inside an invocation refused, a loop in an export cancelled, and
 the deprecated `rexxworker` alias. `tests/test_call.ae` (`make spec`) holds
-`rexxae_call` itself. Build it with an Aether tree that has
-`std.guest` (`make worker-test AE=/path/to/aether/build/ae
-AETHER_HOME=/path/to/aether`). On Linux the specs run contained; elsewhere
+`rexxae_call` itself. `make worker-test` builds it with the release named
+above (`AE=` and `AETHER_HOME=` select another). On Linux the specs run contained; elsewhere
 they check that `launch` refuses and run the rest uncontained.
 
 ## Coverage and limits

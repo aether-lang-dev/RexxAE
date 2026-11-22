@@ -1,8 +1,8 @@
 # Validated release; README documents requirements and verification status.
-# 0.934.0 is a floor move: on a gcc 16 host (cachyos) tests/test_resource_cleanup.py
-# died with SIGILL on a library panic, a -fcf-protection mismatch between the
-# library's export stubs and the runtime, fixed in 0.934.0 (runtime ABI revision 5).
-AETHER_RELEASE := 0.934.0
+# 0.935.0 is a floor move: the worker serves EXPORTed labels through
+# std.guest.child's serve_exports and the host's INVOKE, the host-calls-guest
+# verb first released in 0.935.0 (aether PR #3802).
+AETHER_RELEASE := 0.935.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.
@@ -206,8 +206,8 @@ build/calculator/test_downloaded: tests/test_downloaded_calculator.ae examples/c
 
 # The worker process (worker/, README "Worker process"): a separate
 # component with its own build directory. It is built on Aether's std.guest
-# (the host's side) and std.guest.child (the worker's), first released in
-# Aether 0.891.0, and still works on the AETHER_RELEASE here.
+# (the host's side) and std.guest.child (the worker's); serving exported
+# labels (READY and INVOKE) needs the AETHER_RELEASE here, 0.935.0.
 # It is not part of `make test`; run it with `make worker-test`.
 .PHONY: worker worker-test
 worker: build/worker/rexxae-worker

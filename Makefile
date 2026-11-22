@@ -1,8 +1,9 @@
 # Validated release; README documents requirements and verification status.
 # 0.935.0 is a floor move: the worker serves EXPORTed labels through
 # std.guest.child's serve_exports and the host's INVOKE, the host-calls-guest
-# verb first released in 0.935.0 (aether PR #3802).
-AETHER_RELEASE := 0.935.0
+# verb first released in 0.935.0 (aether PR #3802), which stays the floor.
+# 0.936.0 is a tracking move, no new primitive needed and no source change.
+AETHER_RELEASE := 0.936.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.

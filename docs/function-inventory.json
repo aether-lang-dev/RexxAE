@@ -6,9 +6,9 @@
     "registeredNames": 505,
     "languageFunctions": 386,
     "converterHelpers": 119,
-    "nativeFunctions": 94,
+    "nativeFunctions": 104,
     "nativeScalarFunctions": 60,
-    "nativeValueFunctions": 34,
+    "nativeValueFunctions": 44,
     "rexxaeExtensions": 8,
     "extraPackageManifests": 42
   },
@@ -250,16 +250,16 @@
     {
       "name": "BASE64_DECODE",
       "source": "core/src/cryptography-functions.js",
-      "disposition": "native-crypto-review",
-      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "BASE64_ENCODE",
       "source": "core/src/cryptography-functions.js",
-      "disposition": "native-crypto-review",
-      "aether": "std.cryptography/std.encoding/std.uuid/std.nanoid; host entropy",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "BASENAME",
@@ -1314,9 +1314,9 @@
     {
       "name": "JSON_DELETE",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSON_FLATTEN",
@@ -1335,9 +1335,9 @@
     {
       "name": "JSON_HAS",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSON_KEYS",
@@ -1349,9 +1349,9 @@
     {
       "name": "JSON_MERGE",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSON_PARSE",
@@ -1363,9 +1363,9 @@
     {
       "name": "JSON_SET",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSON_STRINGIFY",
@@ -1384,16 +1384,16 @@
     {
       "name": "JSON_VALID",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSON_VALUES",
       "source": "core/src/json-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "JSONL_ADD_LINE",
@@ -2553,16 +2553,16 @@
     {
       "name": "URL_DECODE",
       "source": "core/src/url-functions.js",
-      "disposition": "native-url",
-      "aether": "std.url/std.encoding",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "URL_ENCODE",
       "source": "core/src/url-functions.js",
-      "disposition": "native-url",
-      "aether": "std.url/std.encoding",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "URL_PARSE",

@@ -105,6 +105,24 @@ main() {
             spec.assert_true(string.starts_with(said("SAY ARRAY_POP(JSON_PARSE('{}'))"), "ERROR") != 0, "object")
         }
     }
+    spec.describe(fw, "JSON documents, URLs and Base64") {
+        spec.it("SET and DELETE return new JSON text and leave their input alone") callback {
+            spec.assert_str_eq(said("LET o = JSON_PARSE('{\"a\":[1,{\"b\":2}]}')\nLET r = JSON_SET(o, 'a.1.b', 3)\nLET d = JSON_DELETE(o, 'a.0')\nLET p = JSON_SET(o, 'a.2', 'end')\nSAY r d p JSON_STRINGIFY(o)"), "{\"a\":[1,{\"b\":3}]} {\"a\":[{\"b\":2}]} {\"a\":[1,{\"b\":2},\"end\"]} {\"a\":[1,{\"b\":2}]}", "paths through arrays")
+            spec.assert_str_eq(said("LET r = JSON_SET('{\"a\":5}', 'a.b', 1)\nSAY r"), "{\"a\":{\"b\":1}}", "a scalar step becomes an object")
+            spec.assert_str_eq(said("LET r = JSON_SET('not json', 'a', 1)\nLET h = JSON_HAS('not json', 'a')\nSAY r h"), "not json false", "text that is not JSON")
+            spec.assert_true(string.starts_with(said("SAY JSON_SET('[1]', '5', 1)"), "ERROR") != 0, "past the end of an array")
+        }
+        spec.it("MERGE keeps the first object's order and returns it when either is not an object") callback {
+            spec.assert_str_eq(said("LET m = JSON_MERGE('{\"b\":1,\"a\":2}', '{\"a\":3}')\nLET n = JSON_MERGE('[1]', '{\"a\":3}')\nSAY m n"), "{\"b\":1,\"a\":3} [1]", "merge")
+        }
+        spec.it("encode and decode URLs and Base64 over UTF-8 bytes") callback {
+            spec.assert_str_eq(said("LET u = URL_ENCODE('é ✓')\nLET d = URL_DECODE(u)\nSAY u d"), "%C3%A9%20%E2%9C%93 é ✓", "UTF-8")
+            spec.assert_str_eq(said("LET a = URL_DECODE('%ZZ')\nLET b = URL_DECODE('%C3')\nLET c = URL_DECODE('%')\nSAY '[' || a || b || c || ']'"), "[]", "malformed")
+            spec.assert_str_eq(said("LET e = BASE64_ENCODE('a')\nLET f = BASE64_ENCODE('abc')\nLET g = BASE64_ENCODE('')\nSAY e f '[' || g || ']' BASE64_DECODE('YQ==') BASE64_DECODE('YW Jj') BASE64_DECODE('Pj4_')"), "YQ== YWJj [] a abc >>?", "padding, blanks, base64url")
+            spec.assert_true(string.starts_with(said("SAY BASE64_DECODE('a$b')"), "ERROR") != 0, "bad character")
+            spec.assert_true(string.starts_with(said("SAY BASE64_DECODE('abcde')"), "ERROR") != 0, "a lone sixth group")
+        }
+    }
     spec.describe(fw, "the external data queue") {
         spec.it("PUSH is last in first out, QUEUE first in first out") callback {
             spec.assert_str_eq(said("QUEUE 'a'\nQUEUE 'b'\nPUSH 'c'\nPUSH 'd'\nPARSE PULL w\nPARSE PULL x\nPARSE PULL y\nPARSE PULL z\nSAY w x y z"), "d c a b", "order")

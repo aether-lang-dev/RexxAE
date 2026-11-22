@@ -5,5 +5,7 @@
  "ARRAY_INCLUDES": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json.",
  "ARRAY_INDEXOF": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json.",
  "ARRAY_POP": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string.",
- "ARRAY_SHIFT": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string."
+ "ARRAY_SHIFT": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string.",
+ "BASE64_ENCODE": "Equal for ASCII. RexxAE encodes the UTF-8 bytes of any text; RexxJS (btoa under node 16 and later) throws on a character above U+00FF.",
+ "BASE64_DECODE": "Equal for ASCII results. RexxAE gives the decoded bytes; RexxJS (atob) gives one character per byte (Latin-1)."
 }

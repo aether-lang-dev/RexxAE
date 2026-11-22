@@ -828,5 +828,90 @@
     "array_slice_named",
     "ARRAY_SLICE(array='[1,2,3,4]', start=1, end=3)",
     "2,3"
+  ],
+  [
+    "json_valid",
+    "JSON_VALID('{\"a\":1}')",
+    "true"
+  ],
+  [
+    "json_valid_not",
+    "JSON_VALID('{a:1}')",
+    "false"
+  ],
+  [
+    "json_has_path",
+    "JSON_HAS('{\"a\":{\"b\":1},\"c\":[1,2]}', 'a.b')",
+    "true"
+  ],
+  [
+    "json_has_index",
+    "JSON_HAS('{\"a\":{\"b\":1},\"c\":[1,2]}', 'c.1')",
+    "true"
+  ],
+  [
+    "json_has_missing",
+    "JSON_HAS('{\"a\":{\"b\":1},\"c\":[1,2]}', 'a.z')",
+    "false"
+  ],
+  [
+    "json_set_path",
+    "JSON_SET('{\"a\":{\"b\":1},\"c\":[1,2]}', 'a.b', 5)",
+    "{\"a\":{\"b\":5},\"c\":[1,2]}"
+  ],
+  [
+    "json_set_new_path",
+    "JSON_SET('{\"a\":1}', 'x.y', 'z')",
+    "{\"a\":1,\"x\":{\"y\":\"z\"}}"
+  ],
+  [
+    "json_delete_path",
+    "JSON_DELETE('{\"a\":{\"b\":1},\"c\":[1,2]}', 'a.b')",
+    "{\"a\":{},\"c\":[1,2]}"
+  ],
+  [
+    "json_delete_missing",
+    "JSON_DELETE('{\"a\":{\"b\":1},\"c\":[1,2]}', 'q.b')",
+    "{\"a\":{\"b\":1},\"c\":[1,2]}"
+  ],
+  [
+    "json_values",
+    "JSON_VALUES('{\"a\":1,\"b\":\"x\"}')",
+    "1,x"
+  ],
+  [
+    "json_merge",
+    "JSON_MERGE('{\"a\":1,\"b\":2}', '{\"b\":3,\"c\":4}')",
+    "{\"a\":1,\"b\":3,\"c\":4}"
+  ],
+  [
+    "url_encode",
+    "URL_ENCODE('a b&c/~*()')",
+    "a%20b%26c%2F~*()"
+  ],
+  [
+    "url_decode",
+    "URL_DECODE('a%20b%26%41')",
+    "a b&A"
+  ],
+  [
+    "url_decode_malformed",
+    "URL_DECODE('%E0%A4%A')",
+    ""
+  ],
+  [
+    "base64_encode",
+    "BASE64_ENCODE('Hello, World')",
+    "SGVsbG8sIFdvcmxk"
+  ],
+  [
+    "base64_encode_pad",
+    "BASE64_ENCODE('ab')",
+    "YWI="
+  ],
+  [
+    "base64_decode",
+    "BASE64_DECODE('SGVsbG8sIFdvcmxk')",
+    "Hello, World"
   ]
 ]

@@ -5,6 +5,7 @@
 // tests/known_differences.json and docs/rexxjs-suggestions.md.
 import std.string
 import std.map
+import std.strbuilder
 import std.json
 import std.math
 import src.state
@@ -13,7 +14,7 @@ import src.variables
 
 exports(known, call, stack_push, stack_queue, stack_pull, stack_size)
 
-const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS STACK_PUSH STACK_PULL STACK_QUEUE STACK_SIZE STACK_PEEK STACK_CLEAR ARRAY_POP ARRAY_SHIFT ARRAY_REVERSE ARRAY_SLICE ARRAY_CONCAT ARRAY_INCLUDES ARRAY_INDEXOF ARRAY_SUM ARRAY_MIN ARRAY_MAX ARRAY_AVERAGE ARRAY_UNIQUE "
+const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS STACK_PUSH STACK_PULL STACK_QUEUE STACK_SIZE STACK_PEEK STACK_CLEAR ARRAY_POP ARRAY_SHIFT ARRAY_REVERSE ARRAY_SLICE ARRAY_CONCAT ARRAY_INCLUDES ARRAY_INDEXOF ARRAY_SUM ARRAY_MIN ARRAY_MAX ARRAY_AVERAGE ARRAY_UNIQUE JSON_VALID JSON_HAS JSON_SET JSON_DELETE JSON_VALUES JSON_MERGE URL_ENCODE URL_DECODE BASE64_ENCODE BASE64_DECODE "
 
 known(name: string) -> bool {
     return string.contains(LIBRARY_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
@@ -394,9 +395,371 @@ array_call_(ctx: ptr, name: string, args: ptr) -> ptr {
     return values.wrap(4, result)
 }
 
+// ---- JSON documents (RexxJS json-functions.js): an object or JSON text in,
+// paths split at points, JSON text out for SET, DELETE and MERGE.
+
+// The argument as a raw JSON tree (owned), or null when it is not JSON.
+json_tree_(value: ptr) -> ptr {
+    k = values.kind(value)
+    if k == 4 || k == 5 { return values.to_json(value, 0) }
+    if k == 3 { return json.json_parse_raw(values.text(value)) }
+    return null
+}
+clone_tree_(node: ptr) -> ptr {
+    encoded, err = json.encode(node)
+    if err != "" { return null }
+    return json.json_parse_raw(encoded)
+}
+encoded_(ctx: ptr, tree: ptr) -> ptr {
+    text, err = json.encode(tree)
+    if err != "" { state.fail(ctx, err); return null }
+    return values.string_value(text)
+}
+// The child of an object (by key) or an array (by index text), borrowed.
+child_(node: ptr, part: string) -> ptr {
+    t = json.json_type(node)
+    if t == 5 { return json.json_object_get_raw(node, part) }
+    if t == 4 && string.string_try_int(part) != 0 && string.from_int(string.string_get_int(part)) == part {
+        return json.json_array_get_raw(node, string.string_get_int(part))
+    }
+    return null
+}
+// A copy of `node` with the path from `parts[at]` set to `value` (or the
+// last part removed when `value` is null). Missing or non-object steps become
+// {} as RexxJS makes them. Returns null when an array step cannot hold it.
+rebuilt_(node: ptr, parts: ptr, at: int, value: ptr, depth: int) -> ptr {
+    if depth > 64 { return null }
+    part = json.json_get_string_raw(json.json_array_get_raw(parts, at))
+    last = at == json.json_array_size(parts) - 1
+    t = json.json_type(node)
+    if t == 4 {
+        size = json.json_array_size(node)
+        index = -1
+        if string.string_try_int(part) != 0 && string.from_int(string.string_get_int(part)) == part { index = string.string_get_int(part) }
+        if index < 0 || index > size || (index == size && (value == null || !last)) { return null }
+        out = json.arr()
+        i = 0
+        while i < size {
+            if i == index {
+                if last { if value != null { json.push(out, clone_tree_(value)) } }
+                else {
+                    inner = rebuilt_(json.json_array_get_raw(node, i), parts, at + 1, value, depth + 1)
+                    if inner == null { json.json_free(out); return null }
+                    json.push(out, inner)
+                }
+            } else { json.push(out, clone_tree_(json.json_array_get_raw(node, i))) }
+            i = i + 1
+        }
+        if index == size { json.push(out, clone_tree_(value)) }
+        return out
+    }
+    out = json.obj()
+    found = false
+    if t == 5 {
+        i = 0
+        while i < json.json_object_size_raw(node) {
+            key = state.key_at(node, i)
+            child = json.json_object_value_at(node, i)
+            if key == part {
+                found = true
+                if last { if value != null { json.set(out, key, clone_tree_(value)) } }
+                else {
+                    next = child
+                    if json.json_type(child) != 4 && json.json_type(child) != 5 { next = null }
+                    inner = null
+                    if next == null {
+                        if value == null { inner = clone_tree_(child) }
+                        else { empty = json.obj(); inner = rebuilt_(empty, parts, at + 1, value, depth + 1); json.json_free(empty) }
+                    } else { inner = rebuilt_(next, parts, at + 1, value, depth + 1) }
+                    if inner == null { json.json_free(out); return null }
+                    json.set(out, key, inner)
+                }
+            } else { json.set(out, key, clone_tree_(child)) }
+            i = i + 1
+        }
+    }
+    if !found && value != null {
+        if last { json.set(out, part, clone_tree_(value)) }
+        else {
+            empty = json.obj()
+            inner = rebuilt_(empty, parts, at + 1, value, depth + 1)
+            json.json_free(empty)
+            if inner == null { json.json_free(out); return null }
+            json.set(out, part, inner)
+        }
+    }
+    return out
+}
+path_parts_(path: string) -> ptr {
+    parts = json.arr()
+    n = string.length(path)
+    start = 0
+    i = 0
+    while i <= n {
+        if i == n || string.char_at_n(path, n, i) == 46 {
+            json.push(parts, json.str(string.substring_n(path, n, start, i)))
+            start = i + 1
+        }
+        i = i + 1
+    }
+    return parts
+}
+
+json_call_(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if count == 0 { state.fail(ctx, string.concat(name, " requires a JSON value")); return null }
+    if name == "JSON_VALID" {
+        if values.kind(argument_(args, 0)) != 3 && values.kind(argument_(args, 0)) != 2 { return values.boolean(false) }
+        raw = json.json_parse_raw(values.text(argument_(args, 0)))
+        if raw == null { return values.boolean(false) }
+        json.json_free(raw)
+        return values.boolean(true)
+    }
+    tree = json_tree_(argument_(args, 0))
+    if tree == null {
+        // RexxJS returns its input for SET, DELETE and MERGE when it is not
+        // JSON, false for HAS and [] for VALUES.
+        if name == "JSON_HAS" { return values.boolean(false) }
+        if name == "JSON_VALUES" { return values.wrap(4, json.arr()) }
+        return values.clone(argument_(args, 0))
+    }
+    defer json.json_free(tree)
+    if name == "JSON_VALUES" {
+        result = json.arr()
+        if json.json_type(tree) == 5 {
+            i = 0
+            while i < json.json_object_size_raw(tree) {
+                converted = values.from_json(json.json_object_value_at(tree, i), 0)
+                if converted != null { json.push(result, converted) }
+                i = i + 1
+            }
+        }
+        return values.wrap(4, result)
+    }
+    if name == "JSON_MERGE" {
+        other = null
+        if count > 1 { other = json_tree_(argument_(args, 1)) }
+        if other == null || json.json_type(tree) != 5 || json.json_type(other) != 5 {
+            if other != null { json.json_free(other) }
+            return values.clone(argument_(args, 0))
+        }
+        defer json.json_free(other)
+        merged = json.obj()
+        defer json.json_free(merged)
+        i = 0
+        while i < json.json_object_size_raw(tree) {
+            key = state.key_at(tree, i)
+            source = json.json_object_get_raw(other, key)
+            if source == null { source = json.json_object_value_at(tree, i) }
+            json.set(merged, key, clone_tree_(source))
+            i = i + 1
+        }
+        i = 0
+        while i < json.json_object_size_raw(other) {
+            key = state.key_at(other, i)
+            if json.json_object_get_raw(tree, key) == null { json.set(merged, key, clone_tree_(json.json_object_value_at(other, i))) }
+            i = i + 1
+        }
+        return encoded_(ctx, merged)
+    }
+    if count < 2 { state.fail(ctx, string.concat(name, " requires a path")); return null }
+    parts = path_parts_(values.text(argument_(args, 1)))
+    defer json.json_free(parts)
+    if name == "JSON_HAS" {
+        current = tree
+        i = 0
+        while i < json.json_array_size(parts) {
+            current = child_(current, json.json_get_string_raw(json.json_array_get_raw(parts, i)))
+            if current == null { return values.boolean(false) }
+            i = i + 1
+        }
+        return values.boolean(true)
+    }
+    if name == "JSON_DELETE" {
+        // Unchanged (as JSON text) when the path does not reach a value.
+        current = tree
+        i = 0
+        while i < json.json_array_size(parts) && current != null {
+            current = child_(current, json.json_get_string_raw(json.json_array_get_raw(parts, i)))
+            i = i + 1
+        }
+        if current == null || json.json_type(tree) != 5 { return encoded_(ctx, tree) }
+        out = rebuilt_(tree, parts, 0, null, 0)
+        if out == null { return encoded_(ctx, tree) }
+        defer json.json_free(out)
+        return encoded_(ctx, out)
+    }
+    // JSON_SET
+    value = values.string_value("")
+    if count > 2 { json.json_free(value); value = values.clone(argument_(args, 2)) }
+    defer json.json_free(value)
+    raw = values.to_json(value, 0)
+    if raw == null { state.fail(ctx, "JSON_SET value cannot be represented as JSON"); return null }
+    defer json.json_free(raw)
+    if json.json_type(tree) != 5 && json.json_type(tree) != 4 { return values.clone(argument_(args, 0)) }
+    out = rebuilt_(tree, parts, 0, raw, 0)
+    if out == null { state.fail(ctx, "JSON_SET cannot place that path in an array"); return null }
+    defer json.json_free(out)
+    return encoded_(ctx, out)
+}
+
+// ---- URL and Base64 (url-functions.js, cryptography-functions.js).
+const HEX = "0123456789ABCDEF"
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+// encodeURIComponent over the text's UTF-8 bytes.
+url_encode_(s: string) -> string {
+    n = string.length(s)
+    out = strbuilder.new(n + 8)
+    defer state.release_builder(&out)
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        if c < 0 { c = c + 256 }
+        if lower_(c) || upper_(c) || digit_(c) || c == 45 || c == 95 || c == 46 || c == 33 || c == 126 || c == 42 || c == 39 || c == 40 || c == 41 {
+            strbuilder.append_byte(out, c)
+        } else {
+            strbuilder.append_byte(out, 37)
+            strbuilder.append_byte(out, string.char_at(HEX, c / 16))
+            strbuilder.append_byte(out, string.char_at(HEX, c % 16))
+        }
+        i = i + 1
+    }
+    return strbuilder.finish(state.take_ptr(&out))
+}
+hex_value_(c: int) -> int {
+    if digit_(c) { return c - 48 }
+    if c >= 65 && c <= 70 { return c - 55 }
+    if c >= 97 && c <= 102 { return c - 87 }
+    return -1
+}
+// Whether the bytes are well-formed UTF-8, as decodeURIComponent requires.
+utf8_valid_(s: string) -> bool {
+    n = string.length(s)
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        if c < 0 { c = c + 256 }
+        extra = 0
+        if c < 128 { extra = 0 }
+        else if c >= 194 && c <= 223 { extra = 1 }
+        else if c >= 224 && c <= 239 { extra = 2 }
+        else if c >= 240 && c <= 244 { extra = 3 }
+        else { return false }
+        if i + extra > n - 1 { return false }
+        j = 1
+        while j <= extra {
+            d = string.char_at_n(s, n, i + j)
+            if d < 0 { d = d + 256 }
+            if d < 128 || d > 191 { return false }
+            j = j + 1
+        }
+        i = i + extra + 1
+    }
+    return true
+}
+// decodeURIComponent; "" for a malformed escape or bytes that are not UTF-8.
+url_decode_(s: string) -> string {
+    n = string.length(s)
+    out = strbuilder.new(n)
+    defer state.release_builder(&out)
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        if c == 37 {
+            if i + 2 > n - 1 { return "" }
+            hi = hex_value_(string.char_at_n(s, n, i + 1))
+            lo = hex_value_(string.char_at_n(s, n, i + 2))
+            if hi < 0 || lo < 0 { return "" }
+            strbuilder.append_byte(out, hi * 16 + lo)
+            i = i + 3
+        } else {
+            strbuilder.append_byte(out, c)
+            i = i + 1
+        }
+    }
+    decoded = strbuilder.finish(state.take_ptr(&out))
+    if !utf8_valid_(decoded) { return "" }
+    return decoded
+}
+base64_encode_(s: string) -> string {
+    n = string.length(s)
+    out = strbuilder.new(n / 3 * 4 + 8)
+    defer state.release_builder(&out)
+    i = 0
+    while i < n {
+        a = string.char_at_n(s, n, i)
+        if a < 0 { a = a + 256 }
+        b = 0
+        c = 0
+        if i + 1 < n { b = string.char_at_n(s, n, i + 1); if b < 0 { b = b + 256 } }
+        if i + 2 < n { c = string.char_at_n(s, n, i + 2); if c < 0 { c = c + 256 } }
+        triple = a * 65536 + b * 256 + c
+        strbuilder.append_byte(out, string.char_at(B64, triple / 262144 % 64))
+        strbuilder.append_byte(out, string.char_at(B64, triple / 4096 % 64))
+        if i + 1 < n { strbuilder.append_byte(out, string.char_at(B64, triple / 64 % 64)) } else { strbuilder.append_byte(out, 61) }
+        if i + 2 < n { strbuilder.append_byte(out, string.char_at(B64, triple % 64)) } else { strbuilder.append_byte(out, 61) }
+        i = i + 3
+    }
+    return strbuilder.finish(state.take_ptr(&out))
+}
+b64_value_(c: int) -> int {
+    if upper_(c) { return c - 65 }
+    if lower_(c) { return c - 71 }
+    if digit_(c) { return c + 4 }
+    if c == 43 || c == 45 { return 62 }
+    if c == 47 || c == 95 { return 63 }
+    return -1
+}
+// Base64 (or base64url) text to bytes: blanks and padding are skipped; an
+// error for any other character, or a lone sixth bit group.
+base64_decode_(s: string) -> (string, bool) {
+    n = string.length(s)
+    out = strbuilder.new(n)
+    defer state.release_builder(&out)
+    bits = 0
+    held = 0
+    groups = 0
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        if c != 61 && !blank_(c) && c != 10 && c != 13 {
+            v = b64_value_(c)
+            if v < 0 { return "", false }
+            bits = bits * 64 + v
+            held = held + 6
+            groups = groups + 1
+            if held >= 8 {
+                held = held - 8
+                strbuilder.append_byte(out, bits / pow2_(held) % 256)
+                bits = bits % pow2_(held)
+            }
+        }
+        i = i + 1
+    }
+    if groups % 4 == 1 { return "", false }
+    return strbuilder.finish(state.take_ptr(&out)), true
+}
+pow2_(k: int) -> int {
+    r = 1
+    while k > 0 { r = r * 2; k = k - 1 }
+    return r
+}
+
 call(ctx: ptr, name: string, args: ptr) -> ptr {
     count = json.json_array_size(args)
     if string.starts_with(name, "ARRAY_") != 0 { return array_call_(ctx, name, args) }
+    if string.starts_with(name, "JSON_") != 0 { return json_call_(ctx, name, args) }
+    if name == "URL_ENCODE" || name == "URL_DECODE" || name == "BASE64_ENCODE" || name == "BASE64_DECODE" {
+        text = ""
+        if count > 0 { text = values.text(argument_(args, 0)) }
+        if name == "URL_ENCODE" { return values.string_value(url_encode_(text)) }
+        if name == "URL_DECODE" { return values.string_value(url_decode_(text)) }
+        if name == "BASE64_ENCODE" { return values.string_value(base64_encode_(text)) }
+        decoded, ok = base64_decode_(text)
+        if !ok { state.fail(ctx, "Invalid base64 input"); return null }
+        return values.string_value(decoded)
+    }
     if name == "DATATYPE" { return datatype_(ctx, args) }
     if name == "SYMBOL" { return symbol_(ctx, args) }
     if name == "AND" || name == "OR" {

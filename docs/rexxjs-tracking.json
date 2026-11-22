@@ -1,10 +1,10 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 570,
+ "parityPrograms": 587,
  "counts": {
-  "in both, tested equal by parity": 140,
-  "RexxJS only": 191,
-  "in both, known to differ": 21,
+  "in both, tested equal by parity": 148,
+  "RexxJS only": 181,
+  "in both, known to differ": 23,
   "RexxAE-specific (embedding)": 17,
   "in both, not covered by a parity program": 13,
   "in neither (classic Rexx)": 18,
@@ -189,14 +189,14 @@
   {
    "name": "BASE64_DECODE",
    "library": "cryptography-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Equal for ASCII results. RexxAE gives the decoded bytes; RexxJS (atob) gives one character per byte (Latin-1)."
   },
   {
    "name": "BASE64_ENCODE",
    "library": "cryptography-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Equal for ASCII. RexxAE encodes the UTF-8 bytes of any text; RexxJS (btoa under node 16 and later) throws on a character above U+00FF."
   },
   {
    "name": "CENTER",
@@ -723,7 +723,7 @@
   {
    "name": "JSON_DELETE",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -741,7 +741,7 @@
   {
    "name": "JSON_HAS",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -753,7 +753,7 @@
   {
    "name": "JSON_MERGE",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -765,7 +765,7 @@
   {
    "name": "JSON_SET",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -783,13 +783,13 @@
   {
    "name": "JSON_VALID",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "JSON_VALUES",
    "library": "json-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -1485,13 +1485,13 @@
   {
    "name": "URL_DECODE",
    "library": "url-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "URL_ENCODE",
    "library": "url-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {

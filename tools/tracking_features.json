@@ -334,7 +334,7 @@
    "B"
   ],
   "corpus": "(?m)^(PUSH|PULL) ",
-  "note": "RexxJS's PULL does not uppercase (gives b); classic PULL is PARSE UPPER PULL. Suggested RexxJS fix."
+  "note": "RexxJS's PULL keeps the case (b); classic PULL is PARSE UPPER PULL (tests/known_differences.json). Suggested RexxJS fix."
  },
  {
   "area": "Instructions",
@@ -361,7 +361,8 @@
   "expect": [
    "Hello World"
   ],
-  "corpus": "PARSE PULL"
+  "corpus": "PARSE PULL",
+  "note": "RexxJS has no PARSE PULL (nor PARSE UPPER or LOWER); a suggested RexxJS addition."
  },
  {
   "area": "Instructions",

@@ -1,13 +1,14 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 542,
+ "parityPrograms": 552,
  "counts": {
-  "in both, tested equal by parity": 124,
-  "RexxJS only": 214,
-  "in both, known to differ": 15,
+  "in both, tested equal by parity": 131,
+  "RexxJS only": 205,
+  "in both, known to differ": 16,
   "RexxAE-specific (embedding)": 17,
-  "in both, not covered by a parity program": 12,
-  "in neither (classic Rexx)": 21,
+  "in both, not covered by a parity program": 13,
+  "in neither (classic Rexx)": 18,
+  "RexxAE only": 3,
   "host-specific to RexxJS, not tracked": 133
  },
  "functions": [
@@ -1346,37 +1347,37 @@
   {
    "name": "STACK_CLEAR",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "STACK_PEEK",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "STACK_PULL",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "STACK_PUSH",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "STACK_QUEUE",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "STACK_SIZE",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -2324,34 +2325,34 @@
   {
    "area": "Instructions",
    "feature": "PUSH / PULL (LIFO; PULL uppercases)",
-   "note": "RexxJS's PULL does not uppercase (gives b); classic PULL is PARSE UPPER PULL. Suggested RexxJS fix.",
-   "class": "RexxJS only",
+   "note": "RexxJS's PULL keeps the case (b); classic PULL is PARSE UPPER PULL (tests/known_differences.json). Suggested RexxJS fix.",
+   "class": "in both, known to differ",
    "probe": "PUSH 'a'\nPUSH 'b'\nPULL x\nSAY x",
-   "observed": "RexxJS said [\"b\"]; RexxAE error: unsupported statement (expected assignment)"
+   "observed": "RexxJS said [\"b\"]"
   },
   {
    "area": "Instructions",
    "feature": "QUEUE / PULL (FIFO)",
    "note": "",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "probe": "QUEUE 'A'\nQUEUE 'B'\nPULL x\nSAY x",
-   "observed": "RexxAE error: unsupported statement (expected assignment)"
+   "observed": ""
   },
   {
    "area": "Instructions",
    "feature": "PULL from an empty queue",
    "note": "Classic Rexx reads a line from the default input stream here; both engines have no terminal, and give the empty string.",
-   "class": "RexxJS only",
+   "class": "in both, not covered by a parity program",
    "probe": "PULL x\nSAY '[' || x || ']'",
-   "observed": "RexxAE error: unsupported statement (expected assignment)"
+   "observed": ""
   },
   {
    "area": "Instructions",
    "feature": "PARSE PULL",
-   "note": "",
-   "class": "in neither (classic Rexx)",
+   "note": "RexxJS has no PARSE PULL (nor PARSE UPPER or LOWER); a suggested RexxJS addition.",
+   "class": "RexxAE only",
    "probe": "PUSH 'Hello World'\nPARSE PULL a b\nSAY a b",
-   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+   "observed": "RexxJS sent the clause to the default ADDRESS environment"
   },
   {
    "area": "Instructions",
@@ -2749,17 +2750,17 @@
    "area": "PARSE",
    "feature": "PARSE UPPER VAR",
    "note": "",
-   "class": "in neither (classic Rexx)",
+   "class": "RexxAE only",
    "probe": "s = 'Hello World'\nPARSE UPPER VAR s a b\nSAY a b",
-   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+   "observed": "RexxJS sent the clause to the default ADDRESS environment"
   },
   {
    "area": "PARSE",
    "feature": "PARSE LOWER VAR",
    "note": "",
-   "class": "in neither (classic Rexx)",
+   "class": "RexxAE only",
    "probe": "s = 'Hello World'\nPARSE LOWER VAR s a b\nSAY a b",
-   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+   "observed": "RexxJS sent the clause to the default ADDRESS environment"
   },
   {
    "area": "PARSE",
@@ -2791,7 +2792,7 @@
    "note": "Classic gives the system and invocation; neither engine has a fixed answer, so this probe only checks the clause is accepted.",
    "class": "in neither (classic Rexx)",
    "probe": "PARSE SOURCE a b c\nSAY a",
-   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE, PULL or ARG"
   },
   {
    "area": "PARSE",
@@ -2799,7 +2800,7 @@
    "note": "",
    "class": "in neither (classic Rexx)",
    "probe": "PARSE VERSION v\nSAY 'ok'",
-   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE, PULL or ARG"
   },
   {
    "area": "Conditions and errors",

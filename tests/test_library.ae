@@ -69,5 +69,28 @@ main() {
             spec.assert_str_eq(said("LET v = IFS(1, JSON_PARSE('[1, 2]'))\nSAY TYPEOF(v) ARRAY_LENGTH(v)"), "object 2", "a typed value passes through")
         }
     }
+    spec.describe(fw, "the external data queue") {
+        spec.it("PUSH is last in first out, QUEUE first in first out") callback {
+            spec.assert_str_eq(said("QUEUE 'a'\nQUEUE 'b'\nPUSH 'c'\nPUSH 'd'\nPARSE PULL w\nPARSE PULL x\nPARSE PULL y\nPARSE PULL z\nSAY w x y z"), "d c a b", "order")
+        }
+        spec.it("PULL uppercases and parses; PARSE PULL keeps the case; PARSE LOWER PULL lowers it") callback {
+            spec.assert_str_eq(said("QUEUE 'Hello big World'\nPULL a b\nSAY a '|' b"), "HELLO | BIG WORLD", "PULL")
+            spec.assert_str_eq(said("QUEUE 'Hello big World'\nPARSE PULL a . c\nSAY a c"), "Hello World", "PARSE PULL")
+            spec.assert_str_eq(said("QUEUE 'Hello World'\nPARSE LOWER PULL a\nSAY a"), "hello world", "PARSE LOWER PULL")
+            spec.assert_str_eq(said("s = 'MiXed'\nPARSE UPPER VAR s u\nPARSE LOWER VALUE s WITH l\nSAY u l"), "MIXED mixed", "PARSE UPPER VAR, LOWER VALUE")
+        }
+        spec.it("a bare PULL drops the top line; PUSH with nothing pushes an empty line") callback {
+            spec.assert_str_eq(said("QUEUE 'one'\nQUEUE 'two'\nPULL\nPULL x\nPUSH\nLET n = STACK_SIZE()\nSAY x n"), "TWO 1", "bare forms")
+        }
+        spec.it("is one queue for the whole context, shared by PROCEDURE routines") callback {
+            spec.assert_str_eq(said("CALL fill\nPULL a\nSAY a\nEXIT\nfill: PROCEDURE\nQUEUE 'from routine'\nRETURN"), "FROM ROUTINE", "shared")
+        }
+        spec.it("takes ten thousand lines at the bottom and gives them back in order") callback {
+            spec.assert_str_eq(said("DO i = 1 TO 10000\nQUEUE i\nEND\nLET n = STACK_SIZE()\nPULL first\nDO 9998\nPULL x\nEND\nPULL last\nSAY n first last STACK_SIZE()"), "10000 1 10000 0", "bulk")
+        }
+        spec.it("is not an assignment target's keyword: push = 3 assigns") callback {
+            spec.assert_str_eq(said("push = 3\nqueue = 4\npull = 5\nSAY push queue pull"), "3 4 5", "names")
+        }
+    }
     return spec.run_summary(fw)
 }

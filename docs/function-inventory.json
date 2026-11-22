@@ -6,9 +6,9 @@
     "registeredNames": 505,
     "languageFunctions": 386,
     "converterHelpers": 119,
-    "nativeFunctions": 76,
+    "nativeFunctions": 82,
     "nativeScalarFunctions": 60,
-    "nativeValueFunctions": 16,
+    "nativeValueFunctions": 22,
     "rexxaeExtensions": 8,
     "extraPackageManifests": 42
   },
@@ -2259,44 +2259,44 @@
     {
       "name": "STACK_CLEAR",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STACK_PEEK",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STACK_PULL",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STACK_PUSH",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STACK_QUEUE",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STACK_SIZE",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "STARTS_WITH",

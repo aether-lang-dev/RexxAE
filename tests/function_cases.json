@@ -723,5 +723,35 @@
     "ifs_first",
     "IFS(1, 'a', 1, 'b')",
     "a"
+  ],
+  [
+    "stack_size_empty",
+    "STACK_SIZE()",
+    "0"
+  ],
+  [
+    "stack_push_count",
+    "STACK_PUSH('a')",
+    "1"
+  ],
+  [
+    "stack_queue_count",
+    "STACK_QUEUE('a')",
+    "1"
+  ],
+  [
+    "stack_pull_empty",
+    "STACK_PULL()",
+    ""
+  ],
+  [
+    "stack_peek_empty",
+    "STACK_PEEK()",
+    ""
+  ],
+  [
+    "stack_clear_empty",
+    "STACK_CLEAR()",
+    "0"
   ]
 ]

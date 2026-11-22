@@ -184,6 +184,53 @@
     "reason": "Classic SYMBOL gives LIT for a constant symbol (one starting with a digit or a point). RexxJS's name pattern rejects it as BAD. A suspected RexxJS bug."
   },
   {
+    "name": "pull_uppercases",
+    "source": "PUSH 'b'\nPULL x\nSAY x",
+    "native_output": [
+      "B"
+    ],
+    "reference_output": [
+      "b"
+    ],
+    "reason": "Classic PULL is PARSE UPPER PULL and uppercases the line. RexxJS's PULL keeps the case. A suspected RexxJS bug (docs/rexxjs-suggestions.md); PARSE PULL keeps the case in RexxAE."
+  },
+  {
+    "name": "parse_pull",
+    "source": "PUSH 'Hello World'\nPARSE PULL a b\nSAY a b",
+    "native_output": [
+      "Hello World"
+    ],
+    "reference_output": [
+      "A B"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "Classic PARSE PULL (and PARSE UPPER/LOWER) is in RexxAE; RexxJS has neither and sends the clause to the default ADDRESS environment, after which a and b are unset. A suggested RexxJS addition."
+  },
+  {
+    "name": "parse_upper_var",
+    "source": "s = 'Hello World'\nPARSE UPPER VAR s a b\nSAY a b",
+    "native_output": [
+      "HELLO WORLD"
+    ],
+    "reference_output": [
+      "A B"
+    ],
+    "native_commands": [],
+    "reference_commands": [
+      [
+        "default",
+        null
+      ]
+    ],
+    "reason": "Classic PARSE UPPER VAR; RexxJS sends the clause to the default ADDRESS environment. A suggested RexxJS addition."
+  },
+  {
     "name": "extension_cron_valid",
     "kind": "rexxae_extension",
     "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",

@@ -424,14 +424,35 @@ parse_template(ctx: ptr, delimiters: bool) -> ptr {
     return state.take_ptr(&tokens)
 }
 
+// PULL [template] and PARSE [UPPER|LOWER] PULL [template]: the top line of
+// the external data queue ("" when it is empty), parsed. With no template
+// the line is taken and dropped.
+pull_statement_(ctx: ptr, case_: string) {
+    inst = instruction(ctx, "parse")
+    defer state.release_tree(&inst)
+    json.set(inst, "mode", json.str("pull"))
+    json.set(inst, "case", json.str(case_))
+    if state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4 || lex.keyword(ctx, "ELSE") { json.set(inst, "template", json.arr()) }
+    else { json.set(inst, "template", parse_template(ctx, true)) }
+    emit(ctx, state.take_ptr(&inst))
+}
+
 parse_statement(ctx: ptr) {
     lex.next(ctx)
+    case_ = ""
+    if lex.keyword(ctx, "UPPER") || lex.keyword(ctx, "LOWER") {
+        case_ = string.to_lower(state.read(ctx, "token"))
+        lex.next(ctx)
+        if lex.keyword(ctx, "ARG") { state.fail(ctx, "PARSE UPPER ARG and PARSE LOWER ARG are not implemented"); return }
+    }
     if lex.keyword(ctx, "ARG") { argument_statement(ctx); return }
+    if lex.keyword(ctx, "PULL") { lex.next(ctx); pull_statement_(ctx, case_); return }
     mode = string.to_upper(state.read(ctx, "token"))
-    if mode != "VAR" && mode != "VALUE" { state.fail(ctx, "PARSE requires VAR, VALUE or ARG"); return }
+    if mode != "VAR" && mode != "VALUE" { state.fail(ctx, "PARSE requires VAR, VALUE, PULL or ARG"); return }
     lex.next(ctx)
     inst = instruction(ctx, "parse")
     defer state.release_tree(&inst)
+    json.set(inst, "case", json.str(case_))
     if mode == "VAR" {
         if state.integer(ctx, "kind") != 1 || !template_name(state.read(ctx, "token")) { state.fail(ctx, "PARSE VAR requires a simple source variable") }
         json.set(inst, "mode", json.str("var"))
@@ -707,6 +728,19 @@ statement(ctx: ptr, depth: int, loop: int) {
             json.set(command, "value", expression(ctx, 1, 0, " ELSE $ADDRESS "))
             emit(ctx, state.take_ptr(&command))
         }
+    } else if (lex.keyword(ctx, "PUSH") || lex.keyword(ctx, "QUEUE")) && following(ctx) != "=" {
+        // PUSH puts a line on top of the external data queue, QUEUE at its
+        // bottom; with no expression, an empty line.
+        inst = instruction(ctx, string.to_lower(word))
+        defer state.release_tree(&inst)
+        lex.next(ctx)
+        if state.integer(ctx, "kind") == 0 || state.integer(ctx, "kind") == 4 || lex.keyword(ctx, "ELSE") { json.set(inst, "value", literal(ctx, values.string_value(""))) }
+        else { json.set(inst, "value", expression(ctx, 1, 0, " ELSE ")) }
+        emit(ctx, state.take_ptr(&inst))
+    } else if lex.keyword(ctx, "PULL") && following(ctx) != "=" {
+        // PULL is PARSE UPPER PULL (classic Rexx; RexxJS keeps the case).
+        lex.next(ctx)
+        pull_statement_(ctx, "upper")
     } else {
         if lex.keyword(ctx, "LET") { lex.next(ctx); token = state.read(ctx, "token") }
         if state.integer(ctx, "kind") == 1 && following(ctx) == "=" {

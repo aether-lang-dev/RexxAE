@@ -137,6 +137,11 @@ CASES = [
      ['0.3333333333333333', '18446744073709552000', '1e+21', '1e-7', '0.000001', '-0.6666666666666666', '0.30000000000000004',
       '123.456', '1e+301', '3.3333333333333335e-11', '100', '1004.9999999999999'], [], 0),
     ('symbol_of_a_set_variable', "x = 1\nLET a = SYMBOL('x')\nLET b = SYMBOL('y')\nSAY a b", ['VAR LIT'], [], 0),
+    ('queue_fifo_push_lifo', "QUEUE 'A'\nQUEUE 'B'\nPUSH 'C'\nPULL x\nPULL y\nPULL z\nSAY x y z", ['C A B'], [], 0),
+    ('pull_empty_queue', "PULL x\nSAY '[' || x || ']'", ['[]'], [], 0),
+    ('stack_functions', "LET a = STACK_PUSH('one')\nLET b = STACK_QUEUE('two')\nLET p = STACK_PEEK()\nLET c = STACK_PULL()\n"
+                        "LET d = STACK_PULL()\nLET e = STACK_PULL()\nSAY a b p c d '[' || e || ']'", ['1 2 one one two []'], [], 0),
+    ('stack_size_and_clear', "PUSH 'X'\nQUEUE 'Y'\nLET n = STACK_SIZE()\nLET c = STACK_CLEAR()\nLET m = STACK_SIZE()\nSAY n c m", ['2 2 0'], [], 0),
     ('power_groups_left_to_right', "LET a = 2 ** 3 ** 2\nSAY a", ['64'], [], 0),
 ]
 

@@ -4,18 +4,55 @@
 // a way that looks like a bug; those are recorded in
 // tests/known_differences.json and docs/rexxjs-suggestions.md.
 import std.string
+import std.map
 import std.json
 import std.math
 import src.state
 import src.values
 import src.variables
 
-exports(known, call)
+exports(known, call, stack_push, stack_queue, stack_pull, stack_size)
 
-const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS "
+const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS STACK_PUSH STACK_PULL STACK_QUEUE STACK_SIZE STACK_PEEK STACK_CLEAR "
 
 known(name: string) -> bool {
     return string.contains(LIBRARY_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
+}
+
+// The external data queue (PUSH, QUEUE, PULL and the STACK_ functions): one
+// per context, its lines under q:<n> for n from stack_lo up to stack_hi, the
+// top at stack_hi - 1. Every operation is constant time; QUEUE at the bottom
+// does not move the other lines.
+stack_slot_(n: int) -> string { return string.concat("q:", string.from_int(n)) }
+stack_size(ctx: ptr) -> int { return state.integer(ctx, "stack_hi") - state.integer(ctx, "stack_lo") }
+stack_push(ctx: ptr, line: string) -> int {
+    hi = state.integer(ctx, "stack_hi")
+    state.write(ctx, stack_slot_(hi), line)
+    state.number(ctx, "stack_hi", hi + 1)
+    return stack_size(ctx)
+}
+stack_queue(ctx: ptr, line: string) -> int {
+    lo = state.integer(ctx, "stack_lo") - 1
+    state.write(ctx, stack_slot_(lo), line)
+    state.number(ctx, "stack_lo", lo)
+    return stack_size(ctx)
+}
+// The top line, removed; "" when the queue is empty.
+stack_pull(ctx: ptr) -> string {
+    if stack_size(ctx) <= 0 { return "" }
+    hi = state.integer(ctx, "stack_hi") - 1
+    key = stack_slot_(hi)
+    line = state.read(ctx, key)
+    map.map_remove(ctx, key)
+    state.number(ctx, "stack_hi", hi)
+    return line
+}
+stack_clear_(ctx: ptr) -> int {
+    count = stack_size(ctx)
+    while stack_size(ctx) > 0 { stack_pull(ctx) }
+    state.number(ctx, "stack_lo", 0)
+    state.number(ctx, "stack_hi", 0)
+    return count
 }
 
 argument_(args: ptr, i: int) -> ptr { return json.json_array_get_raw(args, i) }
@@ -204,6 +241,21 @@ call(ctx: ptr, name: string, args: ptr) -> ptr {
         }
         if name == "AND" { return values.boolean(all) }
         return values.boolean(any)
+    }
+    if string.starts_with(name, "STACK_") != 0 {
+        // RexxJS's STACK_ functions; values go on as text (String(value || '')).
+        if name == "STACK_PUSH" || name == "STACK_QUEUE" {
+            line = ""
+            if count > 0 && js_truthy_(argument_(args, 0)) { line = values.text(argument_(args, 0)) }
+            size = 0
+            if name == "STACK_PUSH" { size = stack_push(ctx, line) } else { size = stack_queue(ctx, line) }
+            return values.numeric(string.from_int(size))
+        }
+        if name == "STACK_PULL" { return values.string_value(stack_pull(ctx)) }
+        if name == "STACK_SIZE" { return values.numeric(string.from_int(stack_size(ctx))) }
+        if name == "STACK_CLEAR" { return values.numeric(string.from_int(stack_clear_(ctx))) }
+        if stack_size(ctx) <= 0 { return values.string_value("") }
+        return values.string_value(state.read(ctx, stack_slot_(state.integer(ctx, "stack_hi") - 1)))
     }
     if name == "IFS" {
         // IFS(test1, value1, test2, value2, ..., [default]): the value after

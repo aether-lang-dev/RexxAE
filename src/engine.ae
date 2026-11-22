@@ -12,6 +12,7 @@ import src.variables
 import src.templates
 import src.evaluate
 import src.builtins
+import src.library
 import std.sync
 import std.mem
 import std.host
@@ -349,6 +350,8 @@ execute_(ctx: ptr, inst: ptr, pc: int) -> int {
             if value == null { return pc }
             input = values.text(value)
             json.json_free(value)
+        } else if mode == "pull" {
+            input = library.stack_pull(ctx)
         } else {
             name = state.text(inst, "name")
             value = state.load(ctx, variable_key_(name))
@@ -357,7 +360,18 @@ execute_(ctx: ptr, inst: ptr, pc: int) -> int {
             input = templates.input_text(value, fallback)
             json.json_free(value)
         }
+        case_ = state.text(inst, "case")
+        if case_ == "upper" { input = string.to_upper(input) }
+        else if case_ == "lower" { input = string.to_lower(input) }
         templates.apply(ctx, input, state.field(inst, "template"))
+        return pc + 1
+    }
+    if op == "push" || op == "queue" {
+        value = evaluate.run(ctx, state.field(inst, "value"), 0)
+        if value == null { return pc }
+        line = values.text(value)
+        json.json_free(value)
+        if op == "push" { library.stack_push(ctx, line) } else { library.stack_queue(ctx, line) }
         return pc + 1
     }
     if op == "arg" {

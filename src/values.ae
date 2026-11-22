@@ -1,6 +1,7 @@
 // Owned typed values. Containers own tagged child values, not borrowed
 // pointers. Contexts serialize values so replacing a variable frees storage.
 import std.json
+import std.math
 import std.string
 import std.strbuilder
 import src.state
@@ -37,13 +38,120 @@ type_name(value: ptr) -> string {
     if k == 4 { return "array" }
     return "object"
 }
+// JavaScript's Number.prototype.toString, which RexxJS prints: the shortest
+// decimal that reads back as the same double, laid out as JavaScript lays it
+// out (plain below 1e21 and from 1e-6, an exponent outside). std.string's
+// from_double gives 17 significant digits (0.33333333333333331 for 1/3);
+// this trims them to the fewest that round-trip (0.3333333333333333).
 number_text(value: float) -> string {
     if value == 0.0 { return "0" }
-    result = string.from_double(value)
-    if result == "nan" || result == "-nan" { return "NaN" }
-    if result == "inf" { return "Infinity" }
-    if result == "-inf" { return "-Infinity" }
-    return result
+    s = string.from_double(value)
+    if s == "NaN" || s == "nan" || s == "-nan" { return "NaN" }
+    if s == "Infinity" || s == "inf" { return "Infinity" }
+    if s == "-Infinity" || s == "-inf" { return "-Infinity" }
+    n = string.length(s)
+    i = 0
+    negative = false
+    if string.char_at_n(s, n, 0) == 45 { negative = true; i = 1 }
+    // The digits of the mantissa without its point, and where the point is:
+    // value = 0.DIGITS * 10^point.
+    raw = strbuilder.new(24)
+    defer state.release_builder(&raw)
+    point = -1
+    count = 0
+    while i < n && string.char_at_n(s, n, i) != 101 && string.char_at_n(s, n, i) != 69 {
+        c = string.char_at_n(s, n, i)
+        if c == 46 { point = count } else { strbuilder.append_byte(raw, c); count = count + 1 }
+        i = i + 1
+    }
+    if point < 0 { point = count }
+    if i < n { point = point + string.string_get_int(string.substring_n(s, n, i + 1, n)) }
+    digits = strbuilder.finish(state.take_ptr(&raw))
+    // Leading and trailing zeros carry nothing.
+    first = 0
+    while first < count - 1 && string.char_at_n(digits, count, first) == 48 { first = first + 1; point = point - 1 }
+    last = count
+    while last > first + 1 && string.char_at_n(digits, count, last - 1) == 48 { last = last - 1 }
+    digits = string.substring_n(digits, count, first, last)
+    count = last - first
+    // The fewest digits, rounded half up from the 17, that read back the same.
+    best = digits
+    best_point = point
+    p = 1
+    while p < count {
+        candidate, candidate_point = rounded_digits_(digits, count, p, point)
+        probe = "0.${candidate}e${candidate_point}"
+        if string.string_try_double(probe) != 0 && string.string_get_double(probe) == math.abs_float(value) {
+            best = candidate
+            best_point = candidate_point
+            break
+        }
+        p = p + 1
+    }
+    return js_layout_(negative, best, best_point)
+}
+
+// DIGITS rounded half up to `keep` places, without trailing zeros, and the
+// point moved by one where the carry runs off the front (999 to 1).
+rounded_digits_(digits: string, count: int, keep: int, point: int) -> (string, int) {
+    out = strbuilder.new(keep + 1)
+    defer state.release_builder(&out)
+    carry = 0
+    if string.char_at_n(digits, count, keep) >= 53 { carry = 1 }
+    // Built from the right, then reversed: a carry runs leftwards.
+    reversed = strbuilder.new(keep + 1)
+    defer state.release_builder(&reversed)
+    j = keep - 1
+    while j >= 0 {
+        d = string.char_at_n(digits, count, j) - 48 + carry
+        if d == 10 { d = 0; carry = 1 } else { carry = 0 }
+        strbuilder.append_byte(reversed, 48 + d)
+        j = j - 1
+    }
+    if carry == 1 { strbuilder.append_byte(reversed, 49); point = point + 1 }
+    backwards = strbuilder.finish(state.take_ptr(&reversed))
+    m = string.length(backwards)
+    // Skip the trailing zeros (leading in reverse), then copy the rest back.
+    k = 0
+    while k < m - 1 && string.char_at_n(backwards, m, k) == 48 { k = k + 1 }
+    j = m - 1
+    while j >= k {
+        strbuilder.append_byte(out, string.char_at_n(backwards, m, j))
+        j = j - 1
+    }
+    return strbuilder.finish(state.take_ptr(&out)), point
+}
+
+// Number.prototype.toString's layout of 0.DIGITS * 10^point.
+js_layout_(negative: bool, digits: string, point: int) -> string {
+    k = string.length(digits)
+    out = strbuilder.new(k + 24)
+    defer state.release_builder(&out)
+    if negative { strbuilder.append_byte(out, 45) }
+    if k <= point && point <= 21 {
+        strbuilder.append(out, digits)
+        z = point - k
+        while z > 0 { strbuilder.append_byte(out, 48); z = z - 1 }
+    } else if 0 < point && point <= 21 {
+        strbuilder.append(out, string.substring_n(digits, k, 0, point))
+        strbuilder.append_byte(out, 46)
+        strbuilder.append(out, string.substring_n(digits, k, point, k))
+    } else if -6 < point && point <= 0 {
+        strbuilder.append(out, "0.")
+        z = -point
+        while z > 0 { strbuilder.append_byte(out, 48); z = z - 1 }
+        strbuilder.append(out, digits)
+    } else {
+        strbuilder.append_byte(out, string.char_at_n(digits, k, 0))
+        if k > 1 {
+            strbuilder.append_byte(out, 46)
+            strbuilder.append(out, string.substring_n(digits, k, 1, k))
+        }
+        e = point - 1
+        if e >= 0 { strbuilder.append(out, "e+") } else { strbuilder.append(out, "e-"); e = -e }
+        strbuilder.append_int(out, e)
+    }
+    return strbuilder.finish(state.take_ptr(&out))
 }
 text(value: ptr) -> string {
     k = kind(value)

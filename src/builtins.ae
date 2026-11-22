@@ -7,6 +7,7 @@ import std.strbuilder
 import std.math
 import std.mem
 import src.state
+import src.values
 
 exports(known, invoke, parameter_index, result_type, number_prefix)
 
@@ -94,14 +95,7 @@ integer(text: string, fallback: int) -> int {
     return string.string_get_int(prefix)
 }
 
-formatted(value: float) -> string {
-    s = string.from_double(value)
-    if s == "nan" || s == "-nan" { return "NaN" }
-    if s == "inf" { return "Infinity" }
-    if s == "-inf" { return "-Infinity" }
-    if value == 0.0 { return "0" }
-    return s
-}
+formatted(value: float) -> string { return values.number_text(value) }
 
 ascii(s: string) -> bool {
     n = string.length(s)

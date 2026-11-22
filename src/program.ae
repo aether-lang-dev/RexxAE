@@ -203,8 +203,9 @@ expression(ctx: ptr, minimum: int, depth: int, stops: string) -> ptr {
         if p == 0 || p < minimum { break }
         if address_terms && !implicit && op != "||" { break }
         if !implicit { lex.next(ctx) }
+        // Every binary operator, ** included, groups left to right
+        // (2 ** 3 ** 2 is 64, as in classic Rexx and RexxJS).
         next_min = p + 1
-        if op == "**" { next_min = p }
         right = expression(ctx, next_min, depth + 1, stops)
         defer state.release_tree(&right)
         combined = node(ctx, "binary")
@@ -282,13 +283,26 @@ do_statement(ctx: ptr, depth: int, outer_loop: int) {
             }
             json.set(header, "items", state.take_ptr(&items))
         } else {
+            // DO i = first TO last [BY step] [FOR count] [WHILE|UNTIL condition];
+            // TO, BY and FOR in any order, each at most once (classic Rexx).
             mode = "range"
             lex.next(ctx)
-            json.set(header, "first", expression(ctx, 1, 0, " TO "))
-            if !lex.keyword(ctx, "TO") { state.fail(ctx, "expected TO in DO range") }
-            else { lex.next(ctx) }
-            json.set(header, "last", expression(ctx, 1, 0, " BY "))
-            if lex.keyword(ctx, "BY") { lex.next(ctx); json.set(header, "step", expression(ctx, 1, 0, "")) }
+            stops = " TO BY FOR WHILE UNTIL "
+            json.set(header, "first", expression(ctx, 1, 0, stops))
+            while state.read(ctx, "error") == "" && (lex.keyword(ctx, "TO") || lex.keyword(ctx, "BY") || lex.keyword(ctx, "FOR")) {
+                field = "last"
+                if lex.keyword(ctx, "BY") { field = "step" }
+                if lex.keyword(ctx, "FOR") { field = "for" }
+                if state.field(header, field) != null { state.fail(ctx, string.concat(string.to_upper(state.read(ctx, "token")), " appears twice in a DO header")) }
+                lex.next(ctx)
+                json.set(header, field, expression(ctx, 1, 0, stops))
+            }
+            if state.field(header, "last") == null { state.fail(ctx, "expected TO in DO range") }
+            if lex.keyword(ctx, "WHILE") || lex.keyword(ctx, "UNTIL") {
+                json.set(header, "test", json.str(string.to_lower(state.read(ctx, "token"))))
+                lex.next(ctx)
+                json.set(header, "condition", expression(ctx, 1, 0, ""))
+            }
         }
     } else { json.set(header, "count", expression(ctx, 1, 0, "")) }
     json.set(header, "mode", json.str(mode))

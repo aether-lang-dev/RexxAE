@@ -114,7 +114,7 @@
    "2"
   ],
   "corpus": " FOR \\d",
-  "note": "RexxJS ignores FOR and runs to TO (prints 1 to 10); suggested RexxJS fix."
+  "note": "RexxJS ignores FOR and runs to TO (tests/known_differences.json); suggested RexxJS fix."
  },
  {
   "area": "Instructions",
@@ -125,7 +125,7 @@
    "2"
   ],
   "corpus": "TO \\S+ (WHILE|UNTIL) ",
-  "note": "RexxJS ignores the WHILE and runs to TO; suggested RexxJS fix."
+  "note": "RexxJS ignores WHILE, and reads UNTIL into the TO expression (tests/known_differences.json); suggested RexxJS fix."
  },
  {
   "area": "Instructions",
@@ -701,6 +701,25 @@
   "corpus": "\\+ \\d \\*"
  },
  {
+  "area": "Operators",
+  "feature": "** before * and /",
+  "probe": "LET r = 2 * 3 ** 2\nSAY r",
+  "expect": [
+   "18"
+  ],
+  "corpus": "\\* \\d+ \\*\\*",
+  "note": "RexxJS gives ** a lower precedence than * and / (36); suspected RexxJS bug (tests/known_differences.json, docs/rexxjs-suggestions.md)."
+ },
+ {
+  "area": "Operators",
+  "feature": "** groups left to right",
+  "probe": "LET r = 2 ** 3 ** 2\nSAY r",
+  "expect": [
+   "64"
+  ],
+  "corpus": "\\*\\* \\d+ \\*\\*"
+ },
+ {
   "area": "Special variables",
   "feature": "RC",
   "probe": "ADDRESS APP 'x'\nSAY RC",
@@ -980,8 +999,7 @@
   "expect": [
    "18446744073709552000"
   ],
-  "corpus": "\\*\\* \\d\\d",
-  "note": "RexxAE printed %.17g text (1.8446744073709552e+19) where JavaScript prints 18446744073709552000."
+  "corpus": "\\*\\* \\d\\d"
  },
  {
   "area": "Numbers and arithmetic",

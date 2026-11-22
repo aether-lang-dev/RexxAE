@@ -129,6 +129,14 @@ CASES = [
     ('loop_variants', "LET n = 0\nDO 2\nn = n + 1\nEND\nDO WHILE n < 4\nn = n + 1\nEND\nDO UNTIL n = 5\nn = n + 1\nEND\nDO item OVER [n, 6]\nSAY item\nEND", ['5', '6'], [], 0),
     ('inner_loop', "DO i = 1 TO 3\nDO FOREVER\nIF i = 2 THEN LEAVE\nSAY i\nLEAVE\nEND\nIF i = 2 THEN ITERATE\nSAY 'after'\nEND", ['1', 'after', '3', 'after'], [], 0),
     ('quoted_exit', "'EXIT'", ['EXIT'], [], 0),
+    # Numbers print as JavaScript prints a double: the shortest text that
+    # reads back the same, plain from 1e-6 to below 1e21.
+    ('number_text', "LET a = 1 / 3\nSAY a\nLET a = 2 ** 64\nSAY a\nLET a = 1e21 * 1\nSAY a\nLET a = 1 / 10000000\nSAY a\n"
+                    "LET a = 1 / 1000000\nSAY a\nLET a = -2 / 3\nSAY a\nLET a = 0.1 * 3\nSAY a\nLET a = 123.456 * 1\nSAY a\n"
+                    "LET a = 10 ** 300 * 10\nSAY a\nLET a = 1 / 3 / 10000000000\nSAY a\nLET a = 100 * 1\nSAY a\nLET a = 1.005 * 1000\nSAY a",
+     ['0.3333333333333333', '18446744073709552000', '1e+21', '1e-7', '0.000001', '-0.6666666666666666', '0.30000000000000004',
+      '123.456', '1e+301', '3.3333333333333335e-11', '100', '1004.9999999999999'], [], 0),
+    ('power_groups_left_to_right', "LET a = 2 ** 3 ** 2\nSAY a", ['64'], [], 0),
 ]
 
 for name, source, output in json.loads(Path(__file__).with_name('routine_cases.json').read_text()):
@@ -270,6 +278,20 @@ class EngineTests(unittest.TestCase):
         for name, source, output, commands, code in CASES:
             with self.subTest(name=name):
                 self.assertEqual(run(source), dict(output=output, commands=commands, exit=code))
+
+    def test_do_conditions_wait_on_the_host_once_each(self):
+        # A WHILE or UNTIL that calls the host suspends the loop's step and
+        # resumes it without stepping the counter twice or asking twice.
+        for budget in [1, 2, 100]:
+            with self.subTest(budget=budget):
+                answer = run(dict(source="DO i = 1 TO 5 WHILE TESTHOST(i)\nSAY i\nEND\nSAY 'after' i",
+                                  functions=[['TESTHOST', 1, 1]], replies=[True, True, False]), budget)
+                self.assertEqual(answer['output'], ['1', '2', 'after 3'])
+                self.assertEqual(answer['calls'], [['TESTHOST', [1]], ['TESTHOST', [2]], ['TESTHOST', [3]]])
+                answer = run(dict(source="DO i = 1 TO 5 UNTIL TESTHOST(i)\nSAY i\nEND",
+                                  functions=[['TESTHOST', 1, 1]], replies=[False, True]), budget)
+                self.assertEqual(answer['output'], ['1', '2'])
+                self.assertEqual(answer['calls'], [['TESTHOST', [1]], ['TESTHOST', [2]]])
 
     def test_reply_and_pending_command(self):
         ctx = create(b"LET cmd = 'work'\nADDRESS APP cmd\nSAY RC RESULT ERRORTEXT")

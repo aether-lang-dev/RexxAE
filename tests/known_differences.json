@@ -90,6 +90,67 @@
     "reason": "RexxAE owns copied values; RexxJS shares object identity across variable assignment. This difference now has an observable compound-write example."
   },
   {
+    "name": "power_binds_tighter_than_multiply",
+    "source": "LET a = 2 * 3 ** 2\nSAY a",
+    "native_output": [
+      "18"
+    ],
+    "reference_output": [
+      "36"
+    ],
+    "reason": "Classic Rexx evaluates ** before * and / (2 * 3 ** 2 is 18). RexxJS gives ** a lower precedence than * and / (36); a suspected RexxJS bug, in docs/rexxjs-suggestions.md."
+  },
+  {
+    "name": "do_for_count",
+    "source": "DO i = 1 TO 10 FOR 2\nSAY i\nEND",
+    "native_output": [
+      "1",
+      "2"
+    ],
+    "reference_output": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10"
+    ],
+    "reason": "Classic Rexx stops a controlled loop after FOR count iterations. RexxJS ignores FOR and runs to TO; a suspected RexxJS bug (docs/rexxjs-suggestions.md)."
+  },
+  {
+    "name": "do_range_while",
+    "source": "DO i = 1 TO 5 WHILE i < 3\nSAY i\nEND",
+    "native_output": [
+      "1",
+      "2"
+    ],
+    "reference_output": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "reason": "Classic Rexx tests WHILE before each iteration of a controlled loop. RexxJS ignores the WHILE; a suspected RexxJS bug (docs/rexxjs-suggestions.md). RexxAE used to misparse it as part of the TO expression and print 1 and 0."
+  },
+  {
+    "name": "do_range_until",
+    "source": "DO i = 1 TO 5 UNTIL i = 2\nSAY i\nEND",
+    "native_output": [
+      "1",
+      "2"
+    ],
+    "reference_output": [
+      "1",
+      "0"
+    ],
+    "reason": "Classic Rexx tests UNTIL after each iteration of a controlled loop. RexxJS reads UNTIL i = 2 into the TO expression (1, then 0); a suspected RexxJS bug (docs/rexxjs-suggestions.md)."
+  },
+  {
     "name": "extension_cron_valid",
     "kind": "rexxae_extension",
     "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",

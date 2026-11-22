@@ -164,7 +164,18 @@ loop_begin_(ctx: ptr, inst: ptr, pc: int) -> int {
     json.set(frame, "end", json.from_int(end))
     json.set(frame, "mode", json.str(mode))
     json.set(frame, "name", json.str(name))
-    if name != "" { json.set(frame, "old", json.str(state.read(ctx, variable_key_(name)))) }
+    if name != "" {
+        // The counter's value before the loop, kept in the instruction's
+        // cache: a FOR or WHILE waiting on the host re-runs this instruction
+        // after the counter has been written, which must not become "old".
+        cache = map.map_get_raw(ctx, "cache")
+        saved = state.read(cache, "loop_old")
+        if saved == "" {
+            saved = string.concat("=", state.read(ctx, variable_key_(name)))
+            state.write(cache, "loop_old", saved)
+        }
+        json.set(frame, "old", json.str(string.substring(saved, 1, string.length(saved))))
+    }
     if mode == "while" {
         condition = evaluate.run(ctx, state.field(inst, "condition"), 0)
         if condition == null { return pc }
@@ -205,7 +216,23 @@ loop_begin_(ctx: ptr, inst: ptr, pc: int) -> int {
         current = values.numeric(values.number_text(start))
         state.save(ctx, variable_key_(name), current)
         json.json_free(current)
-        if (step > 0.0 && start > finish) || (step < 0.0 && start < finish) {
+        done = (step > 0.0 && start > finish) || (step < 0.0 && start < finish)
+        if !done && state.field(inst, "for") != null {
+            count = evaluate.run(ctx, state.field(inst, "for"), 0)
+            if count == null { return pc }
+            text = values.text(count)
+            json.json_free(count)
+            if string.string_try_int(text) == 0 || string.string_get_int(text) < 0 { state.fail(ctx, "DO FOR requires a whole number of zero or more"); return pc }
+            json.set(frame, "left", json.from_int(string.string_get_int(text)))
+            done = string.string_get_int(text) == 0
+        }
+        if !done && state.text(inst, "test") == "while" {
+            condition = evaluate.run(ctx, state.field(inst, "condition"), 0)
+            if condition == null { return pc }
+            done = !values.truth(condition)
+            json.json_free(condition)
+        }
+        if done {
             old = state.text(frame, "old")
             if old != "" { state.write(ctx, variable_key_(name), old) }
             return end
@@ -257,6 +284,19 @@ loop_next_(ctx: ptr, pc: int) -> int {
         json.json_free(condition)
         if done { pop_loop_(ctx); return end }
     } else if mode == "range" {
+        // UNTIL is tested at the end of an iteration, before the counter
+        // steps; FOR and WHILE after it steps. A test waiting on the host
+        // re-runs this instruction: nothing is kept until the frame is saved.
+        header = state.load(ctx, string.concat("p:", string.from_int(head)))
+        defer json.json_free(header)
+        test = state.text(header, "test")
+        if test == "until" {
+            condition = evaluate.run(ctx, state.field(header, "condition"), 0)
+            if condition == null { return pc }
+            done = values.truth(condition)
+            json.json_free(condition)
+            if done { pop_loop_(ctx); return end }
+        }
         next = json.json_get_number(state.field(frame, "current")) + json.json_get_number(state.field(frame, "step"))
         last = json.json_get_number(state.field(frame, "last"))
         step = json.json_get_number(state.field(frame, "step"))
@@ -266,6 +306,18 @@ loop_next_(ctx: ptr, pc: int) -> int {
         state.save(ctx, variable_key_(state.text(frame, "name")), current)
         json.json_free(current)
         if past { pop_loop_(ctx); return end }
+        if state.field(frame, "left") != null {
+            left = state.index(frame, "left") - 1
+            if left <= 0 { pop_loop_(ctx); return end }
+            json.set(frame, "left", json.from_int(left))
+        }
+        if test == "while" {
+            condition = evaluate.run(ctx, state.field(header, "condition"), 0)
+            if condition == null { return pc }
+            going = values.truth(condition)
+            json.json_free(condition)
+            if !going { pop_loop_(ctx); return end }
+        }
     } else if mode == "repeat" || mode == "over" {
         index = state.index(frame, "index") + 1
         if index >= state.index(frame, "size") { pop_loop_(ctx); return end }

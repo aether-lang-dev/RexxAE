@@ -1,12 +1,12 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 519,
+ "parityPrograms": 521,
  "counts": {
-  "in both, tested equal by parity": 117,
-  "RexxJS only": 220,
+  "in both, tested equal by parity": 121,
+  "RexxJS only": 219,
   "RexxAE-specific (embedding)": 17,
   "in both, known to differ": 13,
-  "in both, not covered by a parity program": 13,
+  "in both, not covered by a parity program": 12,
   "in neither (classic Rexx)": 21,
   "host-specific to RexxJS, not tracked": 133
  },
@@ -2140,18 +2140,18 @@
   {
    "area": "Instructions",
    "feature": "DO i = a TO b FOR n",
-   "note": "RexxJS ignores FOR and runs to TO (prints 1 to 10); suggested RexxJS fix.",
-   "class": "RexxJS only",
+   "note": "RexxJS ignores FOR and runs to TO (tests/known_differences.json); suggested RexxJS fix.",
+   "class": "in both, known to differ",
    "probe": "DO i = 1 TO 10 FOR 2\nSAY i\nEND",
-   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\"]; RexxAE error: invalid range values in DO loop"
+   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\"]"
   },
   {
    "area": "Instructions",
    "feature": "DO i = a TO b WHILE cond (controlled loop with a condition)",
-   "note": "RexxJS ignores the WHILE and runs to TO; suggested RexxJS fix.",
+   "note": "RexxJS ignores WHILE, and reads UNTIL into the TO expression (tests/known_differences.json); suggested RexxJS fix.",
    "class": "in both, known to differ",
    "probe": "DO i = 1 TO 5 WHILE i < 3\nSAY i\nEND",
-   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\"]; RexxAE said [\"1\", \"0\"]"
+   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\"]"
   },
   {
    "area": "Instructions",
@@ -2493,7 +2493,7 @@
    "area": "Operators",
    "feature": "** power",
    "note": "",
-   "class": "in both, not covered by a parity program",
+   "class": "in both, tested equal by parity",
    "probe": "LET r = 2 ** 10\nSAY r",
    "observed": ""
   },
@@ -2647,6 +2647,22 @@
    "note": "",
    "class": "in both, tested equal by parity",
    "probe": "LET r = 2 + 3 * 4\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "** before * and /",
+   "note": "RexxJS gives ** a lower precedence than * and / (36); suspected RexxJS bug (tests/known_differences.json, docs/rexxjs-suggestions.md).",
+   "class": "in both, known to differ",
+   "probe": "LET r = 2 * 3 ** 2\nSAY r",
+   "observed": "RexxJS said [\"36\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "** groups left to right",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 2 ** 3 ** 2\nSAY r",
    "observed": ""
   },
   {
@@ -2877,9 +2893,9 @@
    "area": "Numbers and arithmetic",
    "feature": "Decimal results print as the shortest round-trip double",
    "note": "Both engines use IEEE doubles (TODO.md); classic Rexx gives 0.333333333 at NUMERIC DIGITS 9.",
-   "class": "in both, known to differ",
+   "class": "in both, tested equal by parity",
    "probe": "LET r = 1 / 3\nSAY r",
-   "observed": "RexxAE said [\"0.33333333333333331\"]"
+   "observed": ""
   },
   {
    "area": "Numbers and arithmetic",
@@ -2892,10 +2908,10 @@
   {
    "area": "Numbers and arithmetic",
    "feature": "Large integers print without an exponent below 1e21",
-   "note": "RexxAE printed %.17g text (1.8446744073709552e+19) where JavaScript prints 18446744073709552000.",
-   "class": "in both, known to differ",
+   "note": "",
+   "class": "in both, tested equal by parity",
    "probe": "LET r = 2 ** 64\nSAY r",
-   "observed": "RexxAE said [\"1.8446744073709552e+19\"]"
+   "observed": ""
   },
   {
    "area": "Numbers and arithmetic",

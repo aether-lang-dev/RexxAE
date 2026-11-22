@@ -1,9 +1,9 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 552,
+ "parityPrograms": 555,
  "counts": {
-  "in both, tested equal by parity": 131,
-  "RexxJS only": 205,
+  "in both, tested equal by parity": 133,
+  "RexxJS only": 203,
   "in both, known to differ": 16,
   "RexxAE-specific (embedding)": 17,
   "in both, not covered by a parity program": 13,
@@ -2269,10 +2269,10 @@
   {
    "area": "Instructions",
    "feature": "EXIT n UNLESS condition, message (RexxJS)",
-   "note": "",
-   "class": "RexxJS only",
+   "note": "RexxAE evaluates the message as an expression; RexxJS prints its source text unless it contains || (tests/known_differences.json).",
+   "class": "in both, tested equal by parity",
    "probe": "EXIT 3 UNLESS 0, 'boom'",
-   "observed": "RexxAE error: unexpected token or unsupported syntax"
+   "observed": ""
   },
   {
    "area": "Instructions",
@@ -2301,10 +2301,10 @@
   {
    "area": "Instructions",
    "feature": "TRACE option (accepted; trace output is a diagnostic)",
-   "note": "",
-   "class": "RexxJS only",
+   "note": "Accepted and checked by both; neither puts trace output among SAY output (RexxAE produces none). RexxJS sends TRACE ?R to the default ADDRESS environment.",
+   "class": "in both, tested equal by parity",
    "probe": "TRACE O\nSAY 'ok'",
-   "observed": "RexxAE error: unsupported statement (expected assignment)"
+   "observed": ""
   },
   {
    "area": "Instructions",

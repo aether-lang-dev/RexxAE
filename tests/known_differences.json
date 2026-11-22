@@ -231,6 +231,17 @@
     "reason": "Classic PARSE UPPER VAR; RexxJS sends the clause to the default ADDRESS environment. A suggested RexxJS addition."
   },
   {
+    "name": "exit_unless_message_expression",
+    "source": "x = 5\nEXIT UNLESS x > 9, 'x is' x\nSAY 'no'",
+    "native_output": [
+      "x is 5"
+    ],
+    "reference_output": [
+      "'x is' x"
+    ],
+    "reason": "RexxAE evaluates EXIT UNLESS's message as an expression. RexxJS evaluates it only when it contains ||, and otherwise prints its source text. A suspected RexxJS bug."
+  },
+  {
     "name": "extension_cron_valid",
     "kind": "rexxae_extension",
     "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",

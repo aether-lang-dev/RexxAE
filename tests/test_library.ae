@@ -69,6 +69,22 @@ main() {
             spec.assert_str_eq(said("LET v = IFS(1, JSON_PARSE('[1, 2]'))\nSAY TYPEOF(v) ARRAY_LENGTH(v)"), "object 2", "a typed value passes through")
         }
     }
+    spec.describe(fw, "EXIT UNLESS and TRACE") {
+        spec.it("says the message and exits with the code only when the condition is false") callback {
+            spec.assert_str_eq(said("x = 5\nEXIT UNLESS x > 9, 'x is' x\nSAY 'no'"), "x is 5", "an expression message, code 0")
+            spec.assert_str_eq(said("EXIT UNLESS 1, 'no'\nSAY 'yes'"), "yes", "true goes on")
+            spec.assert_str_eq(said("DO i = 1 TO 3\nEXIT UNLESS i < 2, 'stop at' i\nSAY i\nEND"), "1 stop at 2", "inside a loop")
+        }
+        spec.it("rejects a malformed EXIT UNLESS") callback {
+            spec.assert_true(string.starts_with(said("EXIT UNLESS 1 'no comma'"), "ERROR") != 0, "no comma")
+            spec.assert_true(string.starts_with(said("EXIT x UNLESS 1, 'm'"), "ERROR") != 0, "a code that is not a number")
+        }
+        spec.it("accepts TRACE options and rejects unknown ones") callback {
+            spec.assert_str_eq(said("TRACE ?R\nTRACE 'n'\nTRACE NORMAL\nTRACE\nSAY 'ok'"), "ok", "accepted")
+            spec.assert_true(string.starts_with(said("TRACE Q"), "ERROR") != 0, "Q")
+            spec.assert_str_eq(said("trace = 1\nSAY trace"), "1", "trace = 1 assigns")
+        }
+    }
     spec.describe(fw, "the external data queue") {
         spec.it("PUSH is last in first out, QUEUE first in first out") callback {
             spec.assert_str_eq(said("QUEUE 'a'\nQUEUE 'b'\nPUSH 'c'\nPUSH 'd'\nPARSE PULL w\nPARSE PULL x\nPARSE PULL y\nPARSE PULL z\nSAY w x y z"), "d c a b", "order")

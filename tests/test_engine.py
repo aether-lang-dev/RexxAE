@@ -142,6 +142,9 @@ CASES = [
     ('stack_functions', "LET a = STACK_PUSH('one')\nLET b = STACK_QUEUE('two')\nLET p = STACK_PEEK()\nLET c = STACK_PULL()\n"
                         "LET d = STACK_PULL()\nLET e = STACK_PULL()\nSAY a b p c d '[' || e || ']'", ['1 2 one one two []'], [], 0),
     ('stack_size_and_clear', "PUSH 'X'\nQUEUE 'Y'\nLET n = STACK_SIZE()\nLET c = STACK_CLEAR()\nLET m = STACK_SIZE()\nSAY n c m", ['2 2 0'], [], 0),
+    ('exit_unless_false', "x = 5\nEXIT 3 UNLESS x > 9, 'too small'\nSAY 'not reached'", ['too small'], [], 3),
+    ('exit_unless_true', "x = 50\nEXIT 3 UNLESS x > 9, 'too small'\nSAY 'went on'", ['went on'], [], 0),
+    ('trace_accepted', "TRACE R\nTRACE O\nTRACE OFF\nSAY 'traced'", ['traced'], [], 0),
     ('power_groups_left_to_right', "LET a = 2 ** 3 ** 2\nSAY a", ['64'], [], 0),
 ]
 

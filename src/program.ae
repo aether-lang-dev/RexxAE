@@ -424,6 +424,60 @@ parse_template(ctx: ptr, delimiters: bool) -> ptr {
     return state.take_ptr(&tokens)
 }
 
+// Whether this EXIT clause is RexxJS's EXIT [code] UNLESS condition, message.
+unless_follows_(ctx: ptr) -> bool {
+    source = state.read(ctx, "source")
+    tail = string.substring(source, state.integer(ctx, "pos"), string.length(source))
+    look = lex.new(tail)
+    defer release_lexer_(&look)
+    found = false
+    steps = 0
+    while steps < 3 && state.integer(look, "kind") != 0 && state.integer(look, "kind") != 4 {
+        if lex.keyword(look, "UNLESS") { found = true; break }
+        lex.next(look)
+        steps = steps + 1
+    }
+    free_lexer(state.take_ptr(&look))
+    return found
+}
+
+// EXIT [code] UNLESS condition, message (RexxJS): when the condition is
+// false, SAY the message and EXIT with the code (0 by default). Built from
+// the instructions IF uses: a branch past the exit on a true condition.
+exit_unless_(ctx: ptr) {
+    lex.next(ctx)
+    code = literal(ctx, values.numeric("0"))
+    defer state.release_tree(&code)
+    if !lex.keyword(ctx, "UNLESS") {
+        if state.integer(ctx, "kind") != 1 || string.string_try_int(state.read(ctx, "token")) == 0 { state.fail(ctx, "EXIT UNLESS takes a whole-number code"); return }
+        json.json_free(state.take_ptr(&code))
+        code = literal(ctx, values.numeric(state.read(ctx, "token")))
+        lex.next(ctx)
+    }
+    if !lex.keyword(ctx, "UNLESS") { state.fail(ctx, "expected UNLESS"); return }
+    lex.next(ctx)
+    branch = instruction(ctx, "branch")
+    defer state.release_tree(&branch)
+    unless = node(ctx, "unary")
+    defer state.release_tree(&unless)
+    json.set(unless, "operator", json.str("\\"))
+    json.set(unless, "right", expression(ctx, 1, 0, ""))
+    json.set(branch, "condition", state.take_ptr(&unless))
+    if !lex.symbol(ctx, ",") { state.fail(ctx, "EXIT UNLESS needs a comma between the condition and the message"); return }
+    lex.next(ctx)
+    say = instruction(ctx, "say")
+    defer state.release_tree(&say)
+    json.set(say, "value", expression(ctx, 1, 0, " ELSE "))
+    finish = instruction(ctx, "exit")
+    defer state.release_tree(&finish)
+    json.set(finish, "value", state.take_ptr(&code))
+    // branch skips when its condition is false: the negated condition.
+    branch_pc = emit(ctx, state.take_ptr(&branch))
+    emit(ctx, state.take_ptr(&say))
+    emit(ctx, state.take_ptr(&finish))
+    patch(ctx, branch_pc, "target", state.integer(ctx, "program_size"))
+}
+
 // PULL [template] and PARSE [UPPER|LOWER] PULL [template]: the top line of
 // the external data queue ("" when it is empty), parsed. With no template
 // the line is taken and dropped.
@@ -700,6 +754,22 @@ statement(ctx: ptr, depth: int, loop: int) {
         if loop < 0 { state.fail(ctx, "loop control requires an enclosing DO loop") }
         emit(ctx, instruction(ctx, string.to_lower(word)))
         lex.next(ctx)
+    } else if lex.keyword(ctx, "EXIT") && unless_follows_(ctx) {
+        exit_unless_(ctx)
+    } else if lex.keyword(ctx, "TRACE") && following(ctx) != "=" {
+        // TRACE is accepted and checked; RexxAE produces no trace output
+        // (RexxJS keeps its trace apart from SAY output too).
+        lex.next(ctx)
+        while lex.symbol(ctx, "?") || lex.symbol(ctx, "!") { lex.next(ctx) }
+        option = string.to_upper(state.read(ctx, "token"))
+        if state.integer(ctx, "kind") == 2 || state.integer(ctx, "kind") == 1 {
+            letters = option
+            while string.starts_with(letters, "?") != 0 || string.starts_with(letters, "!") != 0 { letters = string.substring(letters, 1, string.length(letters)) }
+            if letters != "OFF" && letters != "NORMAL" && (letters == "" || string.contains("ACEFILNOR", string.substring(letters, 0, 1)) == 0) {
+                state.fail(ctx, "TRACE option must be one of A C E F I L N O R, OFF or NORMAL")
+            }
+            lex.next(ctx)
+        }
     } else if state.integer(ctx, "kind") == 2 || lex.keyword(ctx, "SAY") || lex.keyword(ctx, "EXIT") {
         op = "command"
         if state.integer(ctx, "kind") == 1 && (word == "SAY" || word == "EXIT") { op = string.to_lower(word); lex.next(ctx) }

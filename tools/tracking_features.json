@@ -269,7 +269,8 @@
    "boom"
   ],
   "exit": 3,
-  "corpus": "UNLESS"
+  "corpus": "UNLESS",
+  "note": "RexxAE evaluates the message as an expression; RexxJS prints its source text unless it contains || (tests/known_differences.json)."
  },
  {
   "area": "Instructions",
@@ -306,7 +307,8 @@
   "expect": [
    "ok"
   ],
-  "corpus": "(?m)^TRACE "
+  "corpus": "(?m)^TRACE ",
+  "note": "Accepted and checked by both; neither puts trace output among SAY output (RexxAE produces none). RexxJS sends TRACE ?R to the default ADDRESS environment."
  },
  {
   "area": "Instructions",

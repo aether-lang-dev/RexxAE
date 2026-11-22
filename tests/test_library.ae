@@ -18,10 +18,13 @@ said(source: string) -> string {
             if strbuilder.length(out) > 0 { strbuilder.append_byte(out, 32) }
             strbuilder.append(out, string.from_cstr(engine.rexxae_text(ctx)))
         }
-        if status == 2 || status == 4 { return "unexpected host request" }
+        if status == 2 || status == 4 { strbuilder.free(out); return "unexpected host request" }
         count = count + 1
     }
-    if status == -1 { return "ERROR ${string.from_cstr(engine.rexxae_error(ctx))}" }
+    if status == -1 {
+        strbuilder.free(out)
+        return "ERROR ${string.from_cstr(engine.rexxae_error(ctx))}"
+    }
     return strbuilder.finish(out)
 }
 

@@ -482,7 +482,7 @@ and OS containment of a memory-safety failure.
 
 ## Verification and references
 
-On the supported core compiler, `make test` runs 430 native std.spec cases
+On the supported core compiler, `make test` runs 527 native std.spec cases
 in `make spec` (including 26 in each binary variant, 23 cron and 20 logging
 specs) and 45 containment specs, ctypes protocol checks, twelve Python
 session/console tests, both C examples (commands; logging with a host clock) and the Python host harness. `make parity`

@@ -21,8 +21,21 @@
 // steps of BUDGET instructions (child.poll) or instead of a reply to a call
 // (child.call_host), so a script that loops forever or waits forever on the
 // host stops within one step.
+//
+// EXPORT('label') (the worker's own function) names a label for the host to
+// call once the script has ended. A script that exported labels and ended
+// with EXIT 0 (or by running off its end) sends READY and the names instead
+// of DONE, and serves: each INVOKE enters the label through the engine's
+// rexxae_call, in the same context, so the label runs with the script's
+// variables as it left them, its arguments the INVOKE's (any number, any
+// JSON value), and the step loop below runs it as it runs the script. What
+// the label RETURNs (or EXITs) goes back as RETURN; an error in it is RAISE
+// with RexxAE's message, after which the context may be called again; END
+// ends the worker with DONE 0; a CANCEL during an invocation ends it. The
+// names are fixed at READY: EXPORT inside an invocation fails.
 
 import std.guest.child
+import std.list
 import std.string
 import src.engine
 
@@ -52,28 +65,91 @@ main() {
         }
         i = i + 1
     }
+    // EXPORT(name) is the worker's own: the script names a label for the
+    // host to call once the script has ended (std.guest's READY and INVOKE).
+    if child.is_mounted(h, "EXPORT") || engine.rexxae_register_function(ctx, "EXPORT", 1, 1) != 0 {
+        child.error(h, "cannot mount EXPORT: the worker keeps that name for itself")
+        exit(1)
+    }
+    exported = list.new()
 
     // From here on it grants itself nothing: no files, no network, no
     // processes, with no platform path anywhere.
     child.run(h) callback {
-        run_script(ctx, h)
+        status = run_script(ctx, h, exported)
+        if status == 0 && list.size(exported) > 0 && engine.rexxae_exit_code(ctx) == 0 {
+            serve_labels(ctx, h, exported)
+        } else if status == 0 {
+            child.done(h, engine.rexxae_exit_code(ctx))
+        } else if status == -1 {
+            child.error(h, string.from_cstr(engine.rexxae_error(ctx)))
+        }
     }
+    list.free(exported)
     exit(0)
 }
 
-// The script, BUDGET instructions at a time, answering each event.
-run_script(ctx: ptr, h: *child.Host) {
+// The script ended and EXPORTed labels: READY, then each INVOKE is a call of
+// the label in the same context (rexxae_call), run to its end by run_script,
+// until END or a cancel. (Not named serve: an unqualified call inside
+// child.run's callback block resolves to child's own serve.)
+serve_labels(ctx: ptr, h: *child.Host, exported: ptr) {
+    names = "["
+    k = 0
+    while k < list.size(exported) {
+        n, _ = list.get_string(exported, k)
+        names = if k == 0 { "${names}${child.json_string(n)}" } else { "${names},${child.json_string(n)}" }
+        k = k + 1
+    }
+    child.ready(h, "${names}]")
+    while true {
+        inv = child.serve(h)
+        if inv.kind == "END" {
+            child.done(h, 0)
+            return
+        }
+        if inv.kind != "INVOKE" {
+            child.error(h, "cancelled by host: ${inv.args}")
+            return
+        }
+        rc = engine.rexxae_call(ctx, inv.name, inv.args)
+        if rc == -2 {
+            child.raised(h, "no label ${inv.name}")
+            continue
+        }
+        if rc != 0 {
+            child.raised(h, "the arguments are not a JSON array")
+            continue
+        }
+        // null: EXPORT is refused from here on, the names being fixed.
+        status = run_script(ctx, h, null)
+        if status == -2 { return }
+        if status == 0 {
+            v = engine.rexxae_result_json(ctx)
+            // A value too large for the host's frame is not sent: raised
+            // instead, and the worker serves on.
+            rerr = child.returned(h, if v == null { "null" } else { string.from_cstr(v) })
+            if rerr != "" { child.raised(h, rerr) }
+        } else {
+            child.raised(h, string.from_cstr(engine.rexxae_error(ctx)))
+        }
+    }
+}
+
+// The script, BUDGET instructions at a time, answering each event, to its
+// end: 0 (done), -1 (an error) or -2 (cancelled: the ERROR has been sent).
+run_script(ctx: ptr, h: *child.Host, exported: ptr) -> int {
     level = h.log_level
     cancelled = 0
     while true {
         status = engine.rexxae_step(ctx, BUDGET)
-        if status == 0 {
-            child.done(h, engine.rexxae_exit_code(ctx))
-            return
-        }
+        if status == 0 { return 0 }
         if status == -1 {
-            child.error(h, string.from_cstr(engine.rexxae_error(ctx)))
-            return
+            if h.cancel != "" {
+                child.error(h, string.from_cstr(engine.rexxae_error(ctx)))
+                return -2
+            }
+            return -1
         }
         if status == 1 {
             child.say(h, string.from_cstr(engine.rexxae_text(ctx)))
@@ -87,6 +163,18 @@ run_script(ctx: ptr, h: *child.Host) {
             child.log(h, engine.rexxae_log_level(ctx), tags, string.from_cstr(engine.rexxae_text(ctx)))
         } else if status == 4 {
             name = string.from_cstr(engine.rexxae_function(ctx))
+            if name == "EXPORT" {
+                label = string.from_cstr(engine.rexxae_argument_text(ctx, 0))
+                if exported == null {
+                    engine.rexxae_reply_value(ctx, "null", "EXPORT: the exports are fixed once the script has ended")
+                } else if engine.rexxae_has_label(ctx, label) == 0 {
+                    engine.rexxae_reply_value(ctx, "null", "EXPORT: no label ${label}")
+                } else {
+                    if !listed(exported, label) { list.add(exported, label) }
+                    engine.rexxae_reply_value(ctx, "true", "")
+                }
+                continue
+            }
             r = child.call_host(h, name, string.from_cstr(engine.rexxae_arguments_json(ctx)))
             if r.kind == "VALUE" {
                 if engine.rexxae_reply_value(ctx, r.text, "") != 0 {
@@ -107,4 +195,14 @@ run_script(ctx: ptr, h: *child.Host) {
             engine.rexxae_set_log_level(ctx, level)
         }
     }
+}
+
+fn listed(names: ptr, name: string) -> bool {
+    i = 0
+    while i < list.size(names) {
+        n, _ = list.get_string(names, i)
+        if n == name { return true }
+        i = i + 1
+    }
+    return false
 }

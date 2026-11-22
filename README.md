@@ -342,6 +342,33 @@ waits for its answer). `guest.next` returns a `LOG` event with `code` the
 level, `name` `TRACE`..`FATAL`, `text` the message and `tags` the JSON
 object. The worker sends nothing for messages below the threshold.
 
+**Exported labels.** A script names labels for the host to call once it has
+ended with `EXPORT('label')` (the worker's own function; a host cannot mount a
+function called `EXPORT`). A script that exported labels and ended with `EXIT
+0` sends `READY ["label",...]` instead of `DONE` and serves: the host's
+`guest.invoke(&g, "label", "[args]")` reaches the label through the engine's
+`rexxae_call`, in the same context, so the label runs with the script's
+variables as it left them and its arguments are the `INVOKE`'s, any number of
+any JSON value. What it `RETURN`s (or `EXIT`s) goes back as `RETURN`; an error
+in it is `RAISE` with RexxAE's message, and the worker serves on; `guest.end`
+ends it with `DONE 0`; a `CANCEL` or deadline during an invocation ends it.
+The names are fixed at `READY`. With a call of its own into the engine there
+is no generated serving loop: nothing of the worker's is in the script's
+namespace, and a failed label needs no recompile.
+
+```rexx
+seen = 0
+LET ok = EXPORT('on_txn')         /* notify, then fetch: on_txn("123456")   */
+LET ok = EXPORT('total')          /* a direct call: total(items, 0.2)        */
+EXIT 0
+ON_TXN:
+  LET d = txn_details(ARG(1))     /* a mounted host function, mid-invocation */
+  seen = seen + 1
+  RETURN seen d.kind d.amount
+TOTAL:
+  RETURN ARG(1) * (1 + ARG(2))
+```
+
 **Deadlines.** `guest.next(&g)` waits at most `g.deadline_ms` (5 s by
 default) for the worker's next frame. When that passes the host sends
 `CANCEL`; the worker, which looks for one between steps of 1000
@@ -357,8 +384,12 @@ kill goes to the one audit log, with what the worker reported.
 events at a threshold (off by default, changed while a call waits, a
 malformed LOGLEVEL refused), a file granted and one denied, the lockdown
 probes, a loop cancelled by the deadline, a script waiting on a reply
-cancelled, a silent guest killed, an oversize frame refused, and the
-deprecated `rexxworker` alias. Build it with an Aether tree that has
+cancelled, a silent guest killed, an oversize frame refused, exported labels
+served with the script's state (notify then fetch, ten typed arguments, a
+host refusal as `RAISE`, `END`), `DONE` unchanged with no exports, `EXPORT` of
+no label and inside an invocation refused, a loop in an export cancelled, and
+the deprecated `rexxworker` alias. `tests/test_call.ae` (`make spec`) holds
+`rexxae_call` itself. Build it with an Aether tree that has
 `std.guest` (`make worker-test AE=/path/to/aether/build/ae
 AETHER_HOME=/path/to/aether`). On Linux the specs run contained; elsewhere
 they check that `launch` refuses and run the rest uncontained.

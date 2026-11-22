@@ -107,9 +107,10 @@ containment: build/test_containment build/test_containment_shared build/test_tru
 	./build/test_trusted_service
 	python3 tools/check_containment.py --ae $(AE)
 
-spec: build/test_require build/test_session build/test_cron build/test_logging build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
+spec: build/test_require build/test_session build/test_call build/test_cron build/test_logging build/test_parse build/test_select build/test_routines build/test_functions build/test_execution build/test_function_fixtures build/test_typed build/test_binary_import build/test_binary_shared
 	./build/test_require
 	./build/test_session
+	./build/test_call
 	./build/test_cron
 	./build/test_logging
 	./build/test_functions
@@ -147,6 +148,7 @@ check-inventory:
 memcheck: all spec build/test_containment build/test_containment_shared build/test_trusted_service
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_require
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_session
+	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_call
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/counter
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/logging
 	valgrind --leak-check=full --errors-for-leak-kinds=definite --error-exitcode=99 ./build/test_cron

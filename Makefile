@@ -34,6 +34,12 @@ endif
 CALC_AE ?= $(AE)
 CC ?= cc
 REXXJS ?= ../RexxJS
+# The RexxJS commit `make parity` was last green against (RexxJS's main is the
+# reference: track its current head). To move it: `git -C ../RexxJS pull
+# --ff-only`, `make parity`, then record the commit parity prints here and in
+# README.md "Verification and references".
+REXXJS_GREEN := 30fce5c60b9d6000e4a1b0892bc9bb1d25517f69
+export REXXJS_GREEN
 AETHER_CACHE_DIR ?= $(abspath build/cache)
 export AETHER_CACHE_DIR
 UNAME_S := $(shell uname -s)

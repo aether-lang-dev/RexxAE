@@ -2,6 +2,7 @@
 import argparse
 import ctypes
 import json
+import os
 from pathlib import Path
 import subprocess
 import threading
@@ -183,6 +184,21 @@ for name, expression, expected in json.loads(Path(__file__).with_name('function_
     CASES.append(('function_' + name, 'LET ANSWER = ' + expression + '\nSAY ANSWER', [expected], [], 0))
 
 
+def reference_revision(root):
+    """The RexxJS commit compared against, and how it stands to the last green one."""
+    try:
+        head = subprocess.run(['git', '-C', root, 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return '(not a git checkout: commit unknown)'
+    dirty = subprocess.run(['git', '-C', root, 'status', '--porcelain', '--untracked-files=no'],
+                           capture_output=True, text=True).stdout.strip()
+    note = head + (' with local changes' if dirty else '')
+    green = os.environ.get('REXXJS_GREEN', '')
+    if green and green != head:
+        note += f' (last green: {green[:7]}; record the new commit in the Makefile when this passes)'
+    return note
+
+
 def parity_programs():
     programs = [(c[0], c[1]) for c in CASES] + HOST_CASES
     # A deterministic boundary matrix supplements the named golden cases.
@@ -352,7 +368,7 @@ class EngineTests(unittest.TestCase):
         for (name, source), expected in zip(programs, reference):
             with self.subTest(name=name):
                 self.assertEqual(run(source), expected)
-        print(f'Compared {len(programs)} programs against RexxJS')
+        print(f'Compared {len(programs)} programs against RexxJS {reference_revision(args.oracle)}')
 
 
 class CancelTests(unittest.TestCase):

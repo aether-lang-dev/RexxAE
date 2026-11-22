@@ -476,7 +476,11 @@ in `make spec` (including 26 in each binary variant, 23 cron and 20 logging
 specs) and 45 containment specs, ctypes protocol checks, twelve Python
 session/console tests, both C examples (commands; logging with a host clock) and the Python host harness. `make parity`
 compares 519 programs, including host-call arguments/results, with RexxJS
-`30fce5c`. The dated standalone/vendor audit records the same results; its
+`30fce5c`, RexxJS's current `main`. RexxAE tracks RexxJS's current head:
+`make parity` prints the RexxJS commit it compared against, and the Makefile's
+`REXXJS_GREEN` records the commit it was last green against. To move it:
+`git -C ../RexxJS pull --ff-only && make parity`, then record the printed
+commit in `REXXJS_GREEN` and here. The dated standalone/vendor audit records the same results; its
 additional 28 boundary probes match 16 and remain separate from strict parity.
 Ten documented differences (seven compatibility differences and three
 RexxAE extensions) remain separately asserted and are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers

@@ -76,7 +76,8 @@ explicitly separate host adapter requires effects. Scripts reach application
 commands through the embedding API. Future native functions, modules and
 typed values must preserve explicit host authority.
 
-RexxJS 8317bd1 is the current reference. PROCEDURE/EXPOSE isolates script variables and
+RexxJS's current `main` is the reference; the Makefile's `REXXJS_GREEN` names
+the commit parity was last green against (README.md says how to move it). PROCEDURE/EXPOSE isolates script variables and
 restores argv for PROCEDURE calls; plain calls still share. Never snapshot or
 restore host registries, grants, program instructions or other private state
 as procedure variables. Exercise CALL
@@ -162,8 +163,9 @@ roadmap when citing it as a precedent.
 
 ## Updated reference audit
 
-RexxJS 8317bd1 is the current target; spreadsheet c19848d vendors b3d5e4e.
-The shared core source files match. docs/reference-update.md records current
+RexxJS's current `main` is the target (`REXXJS_GREEN` in the Makefile);
+spraedsheet vendors RexxJS through a `../RexxJS` link, so the shared core
+source files match. docs/reference-update.md records current
 gaps; docs/reference-audit.json retains the dated measurements. README.md
 contains validation totals. Variable-led ADDRESS clauses use the normal host
 request path. Assigned CALL expressions need a reference

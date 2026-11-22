@@ -1,0 +1,1240 @@
+[
+ {
+  "area": "Instructions",
+  "feature": "SAY of a literal and blank concatenation",
+  "probe": "SAY 'a' 'b'",
+  "expect": [
+   "a b"
+  ],
+  "corpus": "(?m)^SAY '"
+ },
+ {
+  "area": "Instructions",
+  "feature": "SAY evaluates an arithmetic expression",
+  "probe": "LET n = 5\nSAY n * 2",
+  "expect": [
+   "10"
+  ],
+  "corpus": "(?m)^SAY [^'\\n]*\\s[-+*/]\\s",
+  "note": "RexxJS prints the expression's text ('5 * 2'): its SAY does not evaluate operators unless the clause has a function call. Classic Rexx evaluates; suggested RexxJS fix."
+ },
+ {
+  "area": "Instructions",
+  "feature": "LET assignment",
+  "probe": "LET x = 2\nSAY x",
+  "expect": [
+   "2"
+  ],
+  "corpus": "(?m)^LET \\w+ = "
+ },
+ {
+  "area": "Instructions",
+  "feature": "Plain assignment (name = expression)",
+  "probe": "x = 2\nSAY x",
+  "expect": [
+   "2"
+  ],
+  "corpus": "(?m)^[A-Za-z_][\\w.]* = "
+ },
+ {
+  "area": "Instructions",
+  "feature": "IF THEN with ELSE on the next line",
+  "probe": "IF 0 THEN SAY 'a'\nELSE SAY 'b'",
+  "expect": [
+   "b"
+  ],
+  "corpus": "(?m)^ELSE "
+ },
+ {
+  "area": "Instructions",
+  "feature": "IF THEN DO ... END",
+  "probe": "IF 1 THEN DO\nSAY 'a'\nSAY 'b'\nEND",
+  "expect": [
+   "a",
+   "b"
+  ],
+  "corpus": "THEN DO\\n"
+ },
+ {
+  "area": "Instructions",
+  "feature": "ELSE IF chain",
+  "probe": "IF 0 THEN SAY 'a'\nELSE IF 1 THEN SAY 'b'\nELSE SAY 'c'",
+  "expect": [
+   "b"
+  ],
+  "corpus": "ELSE IF "
+ },
+ {
+  "area": "Instructions",
+  "feature": "IF ... ENDIF block (RexxJS form, no DO)",
+  "probe": "IF 0 THEN\nSAY 'a'\nELSE\nSAY 'b'\nENDIF",
+  "expect": [
+   "b"
+  ],
+  "corpus": "ENDIF"
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO n (repeat count)",
+  "probe": "DO 2\nSAY 'r'\nEND",
+  "expect": [
+   "r",
+   "r"
+  ],
+  "corpus": "(?m)^DO \\d+$"
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO i = a TO b",
+  "probe": "DO i = 1 TO 3\nSAY i\nEND",
+  "expect": [
+   "1",
+   "2",
+   "3"
+  ],
+  "corpus": "DO \\w+ = \\S+ TO "
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO i = a TO b BY c",
+  "probe": "DO i = 5 TO 1 BY -2\nSAY i\nEND",
+  "expect": [
+   "5",
+   "3",
+   "1"
+  ],
+  "corpus": " BY "
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO i = a TO b FOR n",
+  "probe": "DO i = 1 TO 10 FOR 2\nSAY i\nEND",
+  "expect": [
+   "1",
+   "2"
+  ],
+  "corpus": " FOR \\d",
+  "note": "RexxJS ignores FOR and runs to TO (prints 1 to 10); suggested RexxJS fix."
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO i = a TO b WHILE cond (controlled loop with a condition)",
+  "probe": "DO i = 1 TO 5 WHILE i < 3\nSAY i\nEND",
+  "expect": [
+   "1",
+   "2"
+  ],
+  "corpus": "TO \\S+ (WHILE|UNTIL) ",
+  "note": "RexxJS ignores the WHILE and runs to TO; suggested RexxJS fix."
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO WHILE",
+  "probe": "n = 0\nDO WHILE n < 2\nn = n + 1\nEND\nSAY n",
+  "expect": [
+   "2"
+  ],
+  "corpus": "DO WHILE "
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO UNTIL",
+  "probe": "n = 0\nDO UNTIL n = 2\nn = n + 1\nEND\nSAY n",
+  "expect": [
+   "2"
+  ],
+  "corpus": "DO UNTIL "
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO FOREVER with LEAVE",
+  "probe": "n = 0\nDO FOREVER\nn = n + 1\nIF n = 3 THEN LEAVE\nEND\nSAY n",
+  "expect": [
+   "3"
+  ],
+  "corpus": "DO FOREVER"
+ },
+ {
+  "area": "Instructions",
+  "feature": "DO v OVER array (RexxJS)",
+  "probe": "LET a = JSON_PARSE('[1,2]')\nDO v OVER a\nSAY v\nEND",
+  "expect": [
+   "1",
+   "2"
+  ],
+  "corpus": " OVER "
+ },
+ {
+  "area": "Instructions",
+  "feature": "ITERATE",
+  "probe": "DO i = 1 TO 3\nIF i = 2 THEN ITERATE\nSAY i\nEND",
+  "expect": [
+   "1",
+   "3"
+  ],
+  "corpus": "ITERATE"
+ },
+ {
+  "area": "Instructions",
+  "feature": "LEAVE name / ITERATE name (named loop)",
+  "probe": "DO i = 1 TO 5\nIF i = 3 THEN LEAVE i\nSAY i\nEND",
+  "expect": [
+   "1",
+   "2"
+  ],
+  "corpus": "LEAVE \\w"
+ },
+ {
+  "area": "Instructions",
+  "feature": "END name",
+  "probe": "DO i = 1 TO 2\nSAY i\nEND i",
+  "expect": [
+   "1",
+   "2"
+  ],
+  "corpus": "(?m)^END \\w"
+ },
+ {
+  "area": "Instructions",
+  "feature": "SELECT / WHEN / OTHERWISE",
+  "probe": "x = 2\nSELECT\nWHEN x = 1 THEN SAY 'one'\nWHEN x = 2 THEN SAY 'two'\nOTHERWISE SAY 'many'\nEND",
+  "expect": [
+   "two"
+  ],
+  "corpus": "SELECT"
+ },
+ {
+  "area": "Instructions",
+  "feature": "CALL label / RETURN value / RESULT",
+  "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf:\nRETURN 9",
+  "expect": [
+   "9"
+  ],
+  "corpus": "(?m)^CALL "
+ },
+ {
+  "area": "Instructions",
+  "feature": "Label followed by an instruction on the same line",
+  "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf: RETURN 9",
+  "expect": [
+   "9"
+  ],
+  "corpus": "(?m)^\\w+: \\S",
+  "note": "Classic Rexx allows an instruction after a label on its line. RexxAE rejects it (label must occupy its own clause); RexxJS gives RESULT null."
+ },
+ {
+  "area": "Instructions",
+  "feature": "Internal function call of a label: f(x)",
+  "probe": "LET r = sq(3)\nSAY r\nEXIT\nsq:\nARG n\nLET v = n * n\nRETURN v",
+  "expect": [
+   "9"
+  ],
+  "corpus": "=\\s*[a-z]\\w*\\(",
+  "note": "Classic Rexx calls an internal routine as a function. Neither engine does: RexxAE reports an unknown function; RexxJS sends the clause to the default ADDRESS environment."
+ },
+ {
+  "area": "Instructions",
+  "feature": "PROCEDURE EXPOSE",
+  "probe": "x = 1\ny = 2\nCALL f\nSAY x y\nEXIT\nf: PROCEDURE EXPOSE x\nx = 10\ny = 20\nRETURN",
+  "expect": [
+   "10 2"
+  ],
+  "corpus": "PROCEDURE EXPOSE"
+ },
+ {
+  "area": "Instructions",
+  "feature": "ARG instruction",
+  "probe": "CALL f 'a'\nEXIT\nf:\nARG v\nSAY v\nRETURN",
+  "expect": [
+   "A"
+  ],
+  "corpus": "(?m)^ARG ",
+  "note": "Classic ARG uppercases (it is PARSE UPPER ARG); both engines keep the case."
+ },
+ {
+  "area": "Instructions",
+  "feature": "EXIT with a return code",
+  "probe": "SAY 'ok'\nEXIT 2",
+  "expect": [
+   "ok"
+  ],
+  "exit": 2,
+  "corpus": "EXIT \\d"
+ },
+ {
+  "area": "Instructions",
+  "feature": "EXIT n UNLESS condition, message (RexxJS)",
+  "probe": "EXIT 3 UNLESS 0, 'boom'",
+  "expect": [
+   "boom"
+  ],
+  "exit": 3,
+  "corpus": "UNLESS"
+ },
+ {
+  "area": "Instructions",
+  "feature": "NOP",
+  "probe": "NOP\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "(?m)^NOP"
+ },
+ {
+  "area": "Instructions",
+  "feature": "DROP",
+  "probe": "x = 1\nDROP x\nSAY x",
+  "expect": [
+   "X"
+  ],
+  "corpus": "(?m)^DROP "
+ },
+ {
+  "area": "Instructions",
+  "feature": "SIGNAL label (transfer of control)",
+  "probe": "SIGNAL done\nSAY 'skipped'\ndone:\nSAY 'here'",
+  "expect": [
+   "here"
+  ],
+  "corpus": "(?m)^SIGNAL [A-Za-z]\\w*$",
+  "note": "RexxJS runs the label's clauses and then the skipped clauses too (here, skipped); suggested RexxJS fix."
+ },
+ {
+  "area": "Instructions",
+  "feature": "TRACE option (accepted; trace output is a diagnostic)",
+  "probe": "TRACE O\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "(?m)^TRACE "
+ },
+ {
+  "area": "Instructions",
+  "feature": "INTERPRET",
+  "probe": "x = 'hello'\nINTERPRET 'SAY x'",
+  "expect": [
+   "hello"
+  ],
+  "corpus": "INTERPRET "
+ },
+ {
+  "area": "Instructions",
+  "feature": "NO-INTERPRET (RexxJS: forbids INTERPRET afterwards)",
+  "probe": "NO-INTERPRET\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "NO[-_]INTERPRET"
+ },
+ {
+  "area": "Instructions",
+  "feature": "PUSH / PULL (LIFO; PULL uppercases)",
+  "probe": "PUSH 'a'\nPUSH 'b'\nPULL x\nSAY x",
+  "expect": [
+   "B"
+  ],
+  "corpus": "(?m)^(PUSH|PULL) ",
+  "note": "RexxJS's PULL does not uppercase (gives b); classic PULL is PARSE UPPER PULL. Suggested RexxJS fix."
+ },
+ {
+  "area": "Instructions",
+  "feature": "QUEUE / PULL (FIFO)",
+  "probe": "QUEUE 'A'\nQUEUE 'B'\nPULL x\nSAY x",
+  "expect": [
+   "A"
+  ],
+  "corpus": "(?m)^QUEUE "
+ },
+ {
+  "area": "Instructions",
+  "feature": "PULL from an empty queue",
+  "probe": "PULL x\nSAY '[' || x || ']'",
+  "expect": [
+   "[]"
+  ],
+  "note": "Classic Rexx reads a line from the default input stream here; both engines have no terminal, and give the empty string."
+ },
+ {
+  "area": "Instructions",
+  "feature": "PARSE PULL",
+  "probe": "PUSH 'Hello World'\nPARSE PULL a b\nSAY a b",
+  "expect": [
+   "Hello World"
+  ],
+  "corpus": "PARSE PULL"
+ },
+ {
+  "area": "Instructions",
+  "feature": "NUMERIC DIGITS",
+  "probe": "NUMERIC DIGITS 5\nLET r = 2 / 3\nSAY r",
+  "expect": [
+   "0.66667"
+  ],
+  "corpus": "NUMERIC DIGITS",
+  "note": "RexxJS accepts NUMERIC DIGITS and ignores it (prints 0.6666666666666666)."
+ },
+ {
+  "area": "Instructions",
+  "feature": "NUMERIC FUZZ",
+  "probe": "NUMERIC DIGITS 3\nNUMERIC FUZZ 1\nIF 100 = 101 THEN SAY 'eq'\nELSE SAY 'ne'",
+  "expect": [
+   "eq"
+  ],
+  "corpus": "NUMERIC FUZZ"
+ },
+ {
+  "area": "Instructions",
+  "feature": "NUMERIC FORM",
+  "probe": "NUMERIC DIGITS 3\nNUMERIC FORM ENGINEERING\nLET r = 12345 * 10\nSAY r",
+  "expect": [
+   "123E+3"
+  ],
+  "corpus": "NUMERIC FORM"
+ },
+ {
+  "area": "Instructions",
+  "feature": "Clause separator ;",
+  "probe": "SAY 'a'; SAY 'b'",
+  "expect": [
+   "a",
+   "b"
+  ],
+  "corpus": "; SAY"
+ },
+ {
+  "area": "Instructions",
+  "feature": "Continuation: a comma at the end of a line",
+  "probe": "SAY 'a',\n'b'",
+  "expect": [
+   "a b"
+  ],
+  "corpus": ",\\n",
+  "note": "RexxJS prints the two lines separately."
+ },
+ {
+  "area": "Instructions",
+  "feature": "Labels end the main program (RexxJS dialect)",
+  "probe": "SAY 'a'\nnext:\nSAY 'b'",
+  "expect": [
+   "a",
+   "b"
+  ],
+  "note": "Classic Rexx falls through a label (a, b). Both engines end the main program at the first label (a): RexxJS's dialect, kept."
+ },
+ {
+  "area": "Instructions",
+  "feature": "REQUIRE \"module\" [AS prefix]",
+  "corpus": "REQUIRE ",
+  "note": "In both; RexxAE passes it to a host-mounted resolver. tests/test_require_reference.py compares six REQUIRE/AS requests with RexxJS."
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS env 'command'",
+  "probe": "ADDRESS APP 'go'\nSAY RC",
+  "expect": [
+   "0"
+  ],
+  "corpus": "ADDRESS \\w+ '"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS env, then bare string commands",
+  "probe": "ADDRESS APP\n'cmd one'\nSAY RC",
+  "expect": [
+   "0"
+  ],
+  "corpus": "ADDRESS \\w+\\n'"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "Variable-led command after ADDRESS env",
+  "probe": "ADDRESS APP\nc = 'run'\nc 'now'\nSAY RC",
+  "expect": [
+   "0"
+  ],
+  "corpus": "ADDRESS \\w+ \\w+ \\|\\|"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS with no operand returns to the previous environment",
+  "probe": "ADDRESS APP 'a'\nADDRESS OTHER 'b'\nADDRESS\n'c'",
+  "expect": []
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS env with a heredoc command (RexxJS)",
+  "probe": "ADDRESS APP <<END\nhello\nEND",
+  "expect": [],
+  "corpus": "<<"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "RC after a command",
+  "probe": "ADDRESS APP 'x'\nSAY RC",
+  "expect": [
+   "0"
+  ],
+  "corpus": "SAY RC"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "RESULT after a command",
+  "probe": "ADDRESS APP 'x'\nSAY RESULT",
+  "expect": [
+   "host-result"
+  ],
+  "corpus": "RESULT"
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS to a remote URL (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "HTTP transport to a remote ADDRESS endpoint; in RexxAE a host mounts environments and owns transport."
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "ADDRESS SYSTEM / shell environments (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Runs operating-system commands through node; RexxAE has no OS effects without a host grant."
+ },
+ {
+  "area": "ADDRESS and environments",
+  "feature": "RETRY_ON_STALE ... END_RETRY (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Retries a block when a DOM element goes stale: browser-host only."
+ },
+ {
+  "area": "Operators",
+  "feature": "+ - * /",
+  "probe": "LET r = 2 + 3 * 4 - 6 / 2\nSAY r",
+  "expect": [
+   "11"
+  ],
+  "corpus": "\\d \\* \\d"
+ },
+ {
+  "area": "Operators",
+  "feature": "** power",
+  "probe": "LET r = 2 ** 10\nSAY r",
+  "expect": [
+   "1024"
+  ],
+  "corpus": "\\*\\*"
+ },
+ {
+  "area": "Operators",
+  "feature": "Prefix - and +",
+  "probe": "LET r = -(3)\nSAY r",
+  "expect": [
+   "-3"
+  ],
+  "corpus": "= -",
+  "note": "RexxJS leaves -(3) as text."
+ },
+ {
+  "area": "Operators",
+  "feature": "% (RexxJS: remainder)",
+  "probe": "LET r = 7 % 2\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": " % ",
+  "note": "Classic Rexx % is integer division (7 % 2 = 3). Both engines keep RexxJS's remainder meaning on purpose (TODO.md)."
+ },
+ {
+  "area": "Operators",
+  "feature": "// (RexxJS: a comment)",
+  "probe": "LET r = 7 // 2\nSAY r",
+  "expect": [
+   "7"
+  ],
+  "corpus": " // ",
+  "note": "Classic Rexx // is the remainder. Both engines keep RexxJS's comment meaning on purpose (TODO.md)."
+ },
+ {
+  "area": "Operators",
+  "feature": "Blank concatenation",
+  "probe": "LET r = 'a' 'b'\nSAY r",
+  "expect": [
+   "a b"
+  ],
+  "corpus": "' '"
+ },
+ {
+  "area": "Operators",
+  "feature": "Abuttal concatenation",
+  "probe": "LET r = 'a'\"b\"\nSAY r",
+  "expect": [
+   "ab"
+  ],
+  "corpus": "'\\\""
+ },
+ {
+  "area": "Operators",
+  "feature": "|| concatenation",
+  "probe": "LET r = 'a' || 'b'\nSAY r",
+  "expect": [
+   "ab"
+  ],
+  "corpus": "\\|\\|"
+ },
+ {
+  "area": "Operators",
+  "feature": "= and \\= (normal comparison)",
+  "probe": "LET r = 'abc' \\= 'abd'\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": "\\\\=",
+  "note": "RexxJS leaves a comparison of quoted strings in an assignment as text."
+ },
+ {
+  "area": "Operators",
+  "feature": "= ignores leading and trailing blanks",
+  "probe": "LET r = ' a ' = 'a'\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "note": "Classic Rexx strips blanks in a normal comparison (1). RexxAE compares exactly (0); RexxJS leaves the text."
+ },
+ {
+  "area": "Operators",
+  "feature": "= compares numbers numerically",
+  "probe": "LET r = 10 = '10.0'\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": "= '\\d"
+ },
+ {
+  "area": "Operators",
+  "feature": "<> and ><",
+  "probe": "LET r = 3 <> 4\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": "<>"
+ },
+ {
+  "area": "Operators",
+  "feature": "> < >= <=",
+  "probe": "LET r = 2 >= 1\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": ">="
+ },
+ {
+  "area": "Operators",
+  "feature": "\\< \\> (not less, not greater)",
+  "probe": "LET r = 2 \\< 1\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": "\\\\<"
+ },
+ {
+  "area": "Operators",
+  "feature": "== and \\== (strict comparison)",
+  "probe": "LET r = 'abc' \\== 'abd'\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": "==",
+  "note": "RexxJS leaves a strict comparison of quoted strings in an assignment as text."
+ },
+ {
+  "area": "Operators",
+  "feature": ">> << >>= <<= (strict ordering)",
+  "probe": "LET r = 'b' >> 'a'\nSAY r",
+  "expect": [
+   "1"
+  ],
+  "corpus": ">>"
+ },
+ {
+  "area": "Operators",
+  "feature": "& and | in an assignment",
+  "probe": "LET r = 1 & 0\nSAY r",
+  "expect": [
+   "0"
+  ],
+  "corpus": " & ",
+  "note": "RexxJS leaves 1 & 0 as text outside IF."
+ },
+ {
+  "area": "Operators",
+  "feature": "& and | in IF",
+  "probe": "IF 1 & 0 THEN SAY 'y'\nELSE SAY 'n'",
+  "expect": [
+   "n"
+  ],
+  "corpus": "IF .* & "
+ },
+ {
+  "area": "Operators",
+  "feature": "&& (exclusive or)",
+  "probe": "LET r = 1 && 1\nSAY r",
+  "expect": [
+   "0"
+  ],
+  "corpus": "&&",
+  "note": "RexxJS leaves the text in an assignment and reads && as and in IF."
+ },
+ {
+  "area": "Operators",
+  "feature": "\\ prefix not",
+  "probe": "IF \\ (1 = 2) THEN SAY 'y'",
+  "expect": [
+   "y"
+  ],
+  "corpus": "\\\\\\(",
+  "note": "RexxJS reports an unknown comparison operator."
+ },
+ {
+  "area": "Operators",
+  "feature": "Operator precedence",
+  "probe": "LET r = 2 + 3 * 4\nSAY r",
+  "expect": [
+   "14"
+  ],
+  "corpus": "\\+ \\d \\*"
+ },
+ {
+  "area": "Special variables",
+  "feature": "RC",
+  "probe": "ADDRESS APP 'x'\nSAY RC",
+  "expect": [
+   "0"
+  ],
+  "corpus": "\\bRC\\b"
+ },
+ {
+  "area": "Special variables",
+  "feature": "RESULT",
+  "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf:\nRETURN 4",
+  "expect": [
+   "4"
+  ],
+  "corpus": "\\bRESULT\\b"
+ },
+ {
+  "area": "Special variables",
+  "feature": "ERRORTEXT after a command (RexxJS)",
+  "probe": "ADDRESS APP 'x'\nLET e = ERRORTEXT\nSAY '[' || e || ']'",
+  "expect": [
+   "[]"
+  ],
+  "corpus": "ERRORTEXT",
+  "note": "RexxAE sets ERRORTEXT (empty after a successful command); RexxJS leaves it unset in this case."
+ },
+ {
+  "area": "Special variables",
+  "feature": "SIGL",
+  "probe": "CALL f\nEXIT\nf:\nSAY SIGL\nRETURN",
+  "expect": [
+   "1"
+  ],
+  "corpus": "SIGL",
+  "note": "Classic Rexx sets SIGL to the line of the CALL or SIGNAL; neither engine sets it.",
+  "both_wrong_means": "neither"
+ },
+ {
+  "area": "Special variables",
+  "feature": "Unset symbol is its own uppercase name",
+  "probe": "SAY abc",
+  "expect": [
+   "ABC"
+  ]
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE VAR with words",
+  "probe": "s = 'a b c'\nPARSE VAR s x y\nSAY y",
+  "expect": [
+   "b c"
+  ],
+  "corpus": "PARSE VAR"
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE VAR with a literal delimiter",
+  "probe": "s = 'a,b'\nPARSE VAR s x ',' y\nSAY y x",
+  "expect": [
+   "b a"
+  ],
+  "corpus": "PARSE VAR \\w+ \\w+ '"
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE placeholder .",
+  "probe": "s = 'a b c'\nPARSE VAR s x . z\nSAY x z",
+  "expect": [
+   "a c"
+  ],
+  "corpus": " \\. "
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE VALUE expr WITH template",
+  "probe": "PARSE VALUE 'a b c' WITH x y\nSAY x '|' y",
+  "expect": [
+   "a | b c"
+  ],
+  "corpus": "PARSE VALUE .* WITH",
+  "note": "RexxJS splits the quoted value wrongly (b | c'); suggested RexxJS fix."
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE ARG",
+  "probe": "CALL f 'a b'\nEXIT\nf:\nPARSE ARG x y\nSAY y x\nRETURN",
+  "expect": [
+   "b a"
+  ],
+  "corpus": "PARSE ARG",
+  "note": "Classic PARSE ARG x y splits one argument 'a b' into words; both engines put the whole argument in x."
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE UPPER VAR",
+  "probe": "s = 'Hello World'\nPARSE UPPER VAR s a b\nSAY a b",
+  "expect": [
+   "HELLO WORLD"
+  ],
+  "corpus": "PARSE UPPER"
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE LOWER VAR",
+  "probe": "s = 'Hello World'\nPARSE LOWER VAR s a b\nSAY a b",
+  "expect": [
+   "hello world"
+  ],
+  "corpus": "PARSE LOWER"
+ },
+ {
+  "area": "PARSE",
+  "feature": "Absolute positions in a template",
+  "probe": "s = 'abcdef'\nPARSE VAR s 1 a 3 b\nSAY a '|' b",
+  "expect": [
+   "ab | cdef"
+  ],
+  "corpus": "PARSE VAR \\w+ \\d"
+ },
+ {
+  "area": "PARSE",
+  "feature": "Relative positions in a template",
+  "probe": "s = 'abcdef'\nPARSE VAR s a 3 b +2 c\nSAY a '|' b '|' c",
+  "expect": [
+   "ab | cd | ef"
+  ],
+  "corpus": " \\+\\d"
+ },
+ {
+  "area": "PARSE",
+  "feature": "Variable pattern (name) in a template",
+  "probe": "s = 'k=v'\nd = '='\nPARSE VAR s k (d) v\nSAY k v",
+  "expect": [
+   "k v"
+  ],
+  "corpus": "\\(\\w+\\)"
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE SOURCE",
+  "probe": "PARSE SOURCE a b c\nSAY a",
+  "expect": [],
+  "corpus": "PARSE SOURCE",
+  "note": "Classic gives the system and invocation; neither engine has a fixed answer, so this probe only checks the clause is accepted."
+ },
+ {
+  "area": "PARSE",
+  "feature": "PARSE VERSION",
+  "probe": "PARSE VERSION v\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "PARSE VERSION"
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "SIGNAL ON ERROR (a failed command)",
+  "probe": "SIGNAL ON ERROR\nLET x = 1\nSAY 'after'\nEXIT\nERROR:\nSAY 'trapped'",
+  "expect": [
+   "after"
+  ],
+  "corpus": "SIGNAL ON ERROR"
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "SIGNAL ON ERROR traps a runtime error (RexxJS)",
+  "probe": "SIGNAL ON ERROR\nLET x = 1 / 0\nSAY 'after'\nEXIT\nERROR:\nSAY 'trapped'",
+  "expect": [
+   "trapped"
+  ],
+  "note": "RexxJS's ERROR condition also catches runtime errors, which classic Rexx raises as SYNTAX."
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "SIGNAL ON SYNTAX",
+  "probe": "SIGNAL ON SYNTAX\nLET x = 1 / 0\nEXIT\nSYNTAX:\nSAY 'trapped'",
+  "expect": [
+   "trapped"
+  ],
+  "corpus": "SIGNAL ON SYNTAX"
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "SIGNAL ON NOVALUE",
+  "probe": "SIGNAL ON NOVALUE\nSAY undefinedvar\nEXIT\nNOVALUE:\nSAY 'trapped'",
+  "expect": [
+   "trapped"
+  ],
+  "corpus": "NOVALUE"
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "SIGNAL ON HALT / FAILURE / LOSTDIGITS / NOTREADY",
+  "probe": "SIGNAL ON HALT\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "SIGNAL ON (HALT|FAILURE|LOSTDIGITS|NOTREADY)"
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "CALL ON condition",
+  "probe": "CALL ON ERROR\nSAY 'ok'",
+  "expect": [
+   "ok"
+  ],
+  "corpus": "CALL ON "
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "CONDITION() function",
+  "probe": "LET r = CONDITION()\nSAY '[' || r || ']'",
+  "expect": [
+   "[]"
+  ],
+  "corpus": "CONDITION\\("
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "ERRORTEXT(n) function",
+  "probe": "LET r = ERRORTEXT(42)\nSAY r",
+  "expect": [
+   "Arithmetic overflow/underflow"
+  ],
+  "corpus": "ERRORTEXT\\("
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "Division by zero is an error",
+  "probe": "LET r = 1 / 0\nSAY r",
+  "expect": null,
+  "note": "An error in both; RexxAE reports 'division by zero', RexxJS 'Division by zero'. The error tests pin RexxAE's text."
+ },
+ {
+  "area": "Conditions and errors",
+  "feature": "ERROR_* functions in a handler (RexxJS)",
+  "probe": "SIGNAL ON ERROR\nLET x = 1 / 0\nEXIT\nERROR:\nLET l = ERROR_LINE()\nSAY l",
+  "expect": [
+   "2"
+  ],
+  "corpus": "ERROR_LINE"
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "Integer arithmetic",
+  "probe": "LET r = 123456789012 + 1\nSAY r",
+  "expect": [
+   "123456789013"
+  ],
+  "corpus": "\\d{6}"
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "Decimal results print as the shortest round-trip double",
+  "probe": "LET r = 1 / 3\nSAY r",
+  "expect": [
+   "0.3333333333333333"
+  ],
+  "corpus": "1 / 3",
+  "note": "Both engines use IEEE doubles (TODO.md); classic Rexx gives 0.333333333 at NUMERIC DIGITS 9."
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "0.1 + 0.2",
+  "probe": "LET r = 0.1 + 0.2\nSAY r",
+  "expect": [
+   "0.30000000000000004"
+  ],
+  "corpus": "0\\.1 \\+ 0\\.2",
+  "note": "Doubles in both engines; classic Rexx gives 0.3."
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "Large integers print without an exponent below 1e21",
+  "probe": "LET r = 2 ** 64\nSAY r",
+  "expect": [
+   "18446744073709552000"
+  ],
+  "corpus": "\\*\\* \\d\\d",
+  "note": "RexxAE printed %.17g text (1.8446744073709552e+19) where JavaScript prints 18446744073709552000."
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "Exponent notation in literals",
+  "probe": "LET r = 1e3 + 1\nSAY r",
+  "expect": [
+   "1001"
+  ],
+  "corpus": "\\de\\d"
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "1e21 and above print with an exponent",
+  "probe": "LET r = 1e21 + 0\nSAY r",
+  "expect": [
+   "1e+21"
+  ]
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "Arithmetic on non-numeric text is an error",
+  "probe": "LET r = 1 + 'a'\nSAY r",
+  "expect": null,
+  "note": "An error in both engines."
+ },
+ {
+  "area": "Numbers and arithmetic",
+  "feature": "DIGITS() / FUZZ() / FORM() functions",
+  "probe": "LET r = DIGITS()\nSAY r",
+  "expect": [
+   "9"
+  ],
+  "corpus": "DIGITS\\("
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Compound variable with a constant tail",
+  "probe": "x.1 = 5\nSAY x.1",
+  "expect": [
+   "5"
+  ],
+  "corpus": "\\w\\.\\d = "
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Compound variable with a variable tail",
+  "probe": "i = 2\nx.i = 'two'\nSAY x.2",
+  "expect": [
+   "two"
+  ],
+  "corpus": "\\w\\.[a-z]\\w* = "
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Multi-level tails",
+  "probe": "a.b.c = 1\nSAY a.b.c",
+  "expect": [
+   "1"
+  ],
+  "corpus": "\\w\\.\\w+\\.\\w+"
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Unset compound is its derived name",
+  "probe": "SAY x.2",
+  "expect": [
+   "X.2"
+  ]
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Stem default: x. = value",
+  "probe": "x. = 0\nSAY x.5",
+  "expect": [
+   "0"
+  ],
+  "corpus": "(?m)^\\w+\\. = ",
+  "note": "Classic Rexx gives every unset x.tail the stem's value (0). Both engines give X.5.",
+  "both_wrong_means": "neither"
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Typed array element access a[1] (RexxJS)",
+  "probe": "LET a = JSON_PARSE('[10, 20]')\nLET r = a[1]\nSAY r",
+  "expect": [
+   "10"
+  ],
+  "corpus": "\\w\\[\\d\\]"
+ },
+ {
+  "area": "Stems and compound variables",
+  "feature": "Object property by dot path (RexxJS)",
+  "probe": "LET o = JSON_PARSE('{\"k\": 1}')\nSAY o.k",
+  "expect": [
+   "1"
+  ],
+  "corpus": "JSON_PARSE"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Doubled quotes inside a literal",
+  "probe": "SAY 'it''s'",
+  "expect": [
+   "it's"
+  ],
+  "corpus": "''"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Comments /* */ and --",
+  "probe": "SAY 'a' /* c */ 'b' -- d",
+  "expect": [
+   "a b"
+  ],
+  "corpus": "/\\*"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Nested /* /* */ */ comments",
+  "probe": "SAY 'a' /* x /* y */ z */ 'b'",
+  "expect": [
+   "a b"
+  ],
+  "corpus": "/\\* [^*]*/\\*",
+  "note": "Classic comments nest; RexxJS ends the comment at the first */."
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Hex and binary literals '41'x '0100 0001'b",
+  "probe": "SAY '41'x",
+  "expect": [
+   "A"
+  ],
+  "corpus": "'x\\b",
+  "note": "Neither engine has hex or binary string literals (no byte strings, TODO.md).",
+  "both_wrong_means": "neither"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Heredoc <<TAG (RexxJS)",
+  "probe": "LET s = <<EOT\nline1\nline2\nEOT\nSAY s",
+  "expect": [
+   "line1\nline2"
+  ],
+  "corpus": "<<\\w"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Interpolation {{x}} in double-quoted strings (RexxJS, SET_INTERPOLATION)",
+  "probe": "x = 5\nLET r = SET_INTERPOLATION('handlebars')\nSAY \"v {{x}}\"",
+  "expect": [
+   "v 5"
+  ],
+  "corpus": "\\{\\{"
+ },
+ {
+  "area": "Strings and literals",
+  "feature": "Pipe operator |> (RexxJS)",
+  "probe": "LET r = 'abc' |> UPPER\nSAY r",
+  "expect": [
+   "ABC"
+  ],
+  "corpus": "\\|>"
+ },
+ {
+  "area": "I/O and host",
+  "feature": "SAY delivers a line to the host",
+  "probe": "SAY 'x'",
+  "expect": [
+   "x"
+  ],
+  "corpus": "(?m)^SAY "
+ },
+ {
+  "area": "I/O and host",
+  "feature": "LINEIN / LINEOUT / CHARIN / CHAROUT / LINES / CHARS / STREAM",
+  "probe": "LET r = LINES()\nSAY r",
+  "expect": [
+   "0"
+  ],
+  "corpus": "LINE(IN|OUT)\\(",
+  "note": "Classic stream I/O. Neither engine has it; in RexxAE it would be host-mounted functions."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "Application functions mounted by the host",
+  "scope": "rexxae-embedding",
+  "reason": "rexxae_register_function: a script calls named host functions with typed JSON arguments; the host answers each request."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "No file, network or OS effects without a host grant",
+  "scope": "rexxae-embedding",
+  "reason": "The library build has no fs/net/os capability; tools/check_containment.py and make containment hold it."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "Host requests: COMMAND, FUNCTION, LOG events and suspension",
+  "scope": "rexxae-embedding",
+  "reason": "aether_rexxae_step returns a request and the engine suspends until the host replies; no callbacks into the host."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "EXPORT('label') and rexxae_call: the host calls a script's labels",
+  "scope": "rexxae-embedding",
+  "reason": "The worker serves exported labels over std.guest INVOKE; rexxae_call runs a label of a finished program."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "Cancellation from another thread (rexxae_cancel)",
+  "scope": "rexxae-embedding",
+  "reason": "The one thread-safe entry point; the script cannot catch it."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "Instruction budgets per step",
+  "scope": "rexxae-embedding",
+  "reason": "aether_rexxae_step(ctx, budget) returns RUNNABLE when the budget is spent."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "Sandboxed worker process (worker/, std.guest)",
+  "scope": "rexxae-embedding",
+  "reason": "A separate contained process for scripts; see README \"Worker process\"."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "LOG_TRACE .. LOG_FATAL and CRON_VALID / CRON_NEXT",
+  "scope": "rexxae-embedding",
+  "reason": "RexxAE extensions (docs/cron-and-logging.md); in RexxJS LOG is the logarithm."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "DOM, browser and Web workers (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Browser host features (dom-*.js, SHOW, JS_SHOW)."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "REQUIRE of npm and JavaScript libraries (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Loads JavaScript modules into the interpreter; RexxAE's REQUIRE goes to a host resolver and loads Rexx only."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "INTERPRET_JS / JS_SHOW (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Runs JavaScript; RexxAE has no JavaScript runtime by design."
+ },
+ {
+  "area": "I/O and host",
+  "feature": "CHECKPOINT (RexxJS)",
+  "scope": "rexxjs-host",
+  "reason": "Progress callbacks to a browser parent window."
+ }
+]

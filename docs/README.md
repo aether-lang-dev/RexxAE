@@ -23,6 +23,9 @@ supported toolchains and validation status.
 - [Containment](containment.md): authority boundaries, escape probes and limits.
 - [Compatibility baseline](compatibility-baseline.md) and
   [current gaps](reference-update.md): references and supported behavior.
+- [RexxJS tracking](rexxjs-tracking.md) (generated): every function and
+  language feature of the two engines, probed on both; and
+  [suggestions for RexxJS](rexxjs-suggestions.md).
 - [Aether integration status](aether-issues.md) and
   [stdlib requests](aether-stdlib-wishes.md): open dependencies and regressions.
 

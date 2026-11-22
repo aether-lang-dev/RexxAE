@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { builtinModules } = require('node:module');
 const here = path.resolve(__dirname, '..');
-const root = path.resolve(process.argv[2] || path.join(here, '../RexxJS'));
+// The real path: require.cache keys are real paths, and ../RexxJS is often a link.
+const root = fs.realpathSync(path.resolve(process.argv[2] || path.join(here, '../RexxJS')));
 const check = process.argv.includes('--check');
 const { RexxInterpreter } = require(path.join(root, 'core/src/interpreter.js'));
 const registry = new RexxInterpreter().builtInFunctions;

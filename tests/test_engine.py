@@ -12,6 +12,7 @@ import unittest
 parser = argparse.ArgumentParser()
 parser.add_argument('library')
 parser.add_argument('--oracle')
+parser.add_argument('--list-programs', action='store_true', help='print the parity programs as JSON and exit (tools/tracking.py reads them)')
 args = parser.parse_args()
 lib = ctypes.CDLL(str(Path(args.library).resolve()))
 P = ctypes.c_void_p
@@ -513,4 +514,7 @@ class LogTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    if args.list_programs:
+        print(json.dumps(parity_programs()))
+        raise SystemExit(0)
     unittest.main(argv=['test_engine.py'], verbosity=2)

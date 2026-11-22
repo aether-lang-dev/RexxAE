@@ -51,7 +51,7 @@ RPATH := @loader_path
 endif
 LIB := build/librexxae.$(LIBEXT)
 
-.PHONY: repl reference-audit containment all aether-lib binary-test test spec parity inventory check-inventory memcheck clean
+.PHONY: repl reference-audit containment all aether-lib binary-test test spec parity inventory check-inventory tracking check-tracking memcheck clean
 all: $(LIB) build/counter build/logging
 
 repl: $(LIB)
@@ -143,6 +143,15 @@ test: all spec containment
 parity: all build/test_require
 	python3 tests/test_require_reference.py $(LIB) $(REXXJS)
 	python3 tests/test_engine.py $(LIB) --oracle $(REXXJS)
+	python3 tools/tracking.py $(LIB) $(REXXJS) --check
+
+# docs/rexxjs-tracking.md: RexxJS and RexxAE against each other, every
+# feature probe run on both engines (tools/tracking.py says how it is read).
+tracking: all
+	python3 tools/tracking.py $(LIB) $(REXXJS)
+
+check-tracking: all
+	python3 tools/tracking.py $(LIB) $(REXXJS) --check
 
 # Characterizes migration gaps; parity above remains a strict equality check.
 reference-audit: all

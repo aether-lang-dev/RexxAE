@@ -1,0 +1,3277 @@
+{
+ "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
+ "parityPrograms": 519,
+ "counts": {
+  "in both, tested equal by parity": 117,
+  "RexxJS only": 220,
+  "RexxAE-specific (embedding)": 17,
+  "in both, known to differ": 13,
+  "in both, not covered by a parity program": 13,
+  "in neither (classic Rexx)": 21,
+  "host-specific to RexxJS, not tracked": 133
+ },
+ "functions": [
+  {
+   "name": "ABBREV",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ABS",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "AND",
+   "library": "logic-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARG",
+   "library": "interpreter-builtin-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_AVERAGE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_CONCAT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_FILTER",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_FIND",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_FLATTEN",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_GET",
+   "library": "array-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_INCLUDES",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_INDEXOF",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_JOIN",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_LENGTH",
+   "library": "array-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_MAP",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_MAX",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_MIN",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_POP",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_PUSH",
+   "library": "array-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_REDUCE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_REVERSE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_SET",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_SHIFT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_SLICE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_SORT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_SUM",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_UNIQUE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ARRAY_UNSHIFT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "AVERAGE",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "BASE64_DECODE",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "BASE64_ENCODE",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "CENTER",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "CHECK_TYPES",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "COPIES",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "COPY",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "CORRELATION_MATRIX",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "CSV_TO_JSON",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATA_FILTER",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATA_GROUP_BY",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATA_SORT",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATATYPE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_ADD",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_AGE",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_CREATE",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_DIFF",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_FORMAT",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_IS_BUSINESS_DAY",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_IS_WEEKEND",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_NEXT_BUSINESS_DAY",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_PARSE",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_PARSE_DETAILS",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_QUARTER",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_SUB",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_SUBTRACT",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_VALID",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DATE_WEEK_NUMBER",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DBINOM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DCHISQ",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DELWORD",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "DEXP",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DISTINCT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DNORM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DPOIS",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "DUNIF",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ENDS_WITH",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "ERROR_COMMAND",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_DETAILS",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_FUNCTION",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_LINE",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_MESSAGE",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_STACK",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_TIMESTAMP",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "ERROR_VARIABLES",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "EXTRACT_KEYWORDS",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "FILTER",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "FORECAST",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "FUNCTIONS",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "GROUP_BY",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HASH_MD5",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HASH_SHA1",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HASH_SHA256",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HASH_SHA384",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HASH_SHA512",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "HMAC_SHA256",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IF",
+   "library": "logic-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "IFS",
+   "library": "logic-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "INCLUDES",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "INDEX",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "INDEXOF",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "INFO",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "INT",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "INTERPRET",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_ALPHA",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_ALPHANUMERIC",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_CREDIT_CARD",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_DATE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_EMAIL",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_EMPTY",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_INTEGER",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_IP",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_LENGTH",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_LOWERCASE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_MAC_ADDRESS",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_NEGATIVE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_NOT_EMPTY",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_NUMBER",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_NUMERIC",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_PATTERN",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_PHONE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_POSITIVE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_POSTAL_CODE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_RANGE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_TIME",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_UPPERCASE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_URL",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "IS_ZIP_CODE",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JOIN",
+   "library": "array-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "JSON_DELETE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_FLATTEN",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_GET",
+   "library": "json-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "JSON_HAS",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_KEYS",
+   "library": "json-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "JSON_MERGE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_PARSE",
+   "library": "json-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "JSON_SET",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_STRINGIFY",
+   "library": "json-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "JSON_TO_CSV",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_VALID",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSON_VALUES",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_ADD_LINE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_COUNT",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_DISTINCT",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_FILTER",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_GET_LINE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_MAP",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_MERGE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_PARSE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_SLICE",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_SORT",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_STRINGIFY",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JSONL_VALID",
+   "library": "json-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "JWT_DECODE",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "LEFT",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "LENGTH",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "LOWER",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MAP",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MATCHES_PATTERN",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MATH_ABS",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_ADD",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_ANGLE_2D",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_AVERAGE",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_CEIL",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_CLAMP",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_COS",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_DISTANCE_2D",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_FACTORIAL",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_FLOOR",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_GCD",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_LCM",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_LOG",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_MAX",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_MIN",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_MULTIPLY",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_PERCENTAGE",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_POWER",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_RANDOM",
+   "library": "math-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MATH_RANDOM_INT",
+   "library": "math-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MATH_ROUND",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_SIN",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_SQRT",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_SUM",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MATH_TAN",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MAX",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MEDIAN",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MIN",
+   "library": "math-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "MODE",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "MODERN_SPLIT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "NANOID",
+   "library": "random-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "NOT",
+   "library": "logic-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "NOW",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "NOW_TIMESTAMP",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "OR",
+   "library": "logic-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PAD_END",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "PAD_START",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "PASSWORD_HASH",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PASSWORD_VERIFY",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PCHISQ",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PERCENTILE",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PEXP",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "PNORM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "POS",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "PUNIF",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "QEXP",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "QNORM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "QUNIF",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RANDOM_BYTES",
+   "library": "random-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RANDOM_HEX",
+   "library": "random-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RANDOM_INT",
+   "library": "random-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RANDOM_STRING",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RBINOM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RCHISQ",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REDUCE",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REGEX_MATCH",
+   "library": "regex-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REGEX_REPLACE",
+   "library": "regex-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REGEX_SPLIT",
+   "library": "regex-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REGEX_TEST",
+   "library": "regex-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REGRESSION",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REPEAT",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "REQUIRE",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "REVERSE",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "REXP",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RIGHT",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "RNORM",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RPOIS",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "RUNIF",
+   "library": "probability-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SELECT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SENTIMENT_ANALYSIS",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SET_INTERPOLATION",
+   "library": "interpolation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SLUG",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SPACE",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SPLIT",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_CLEAR",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_PEEK",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_PULL",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_PUSH",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_QUEUE",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STACK_SIZE",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STARTS_WITH",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "STDEV",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "STRIP",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SUBROUTINES",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SUBSTR",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SUBSTRING",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SUBWORD",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "SUMMARY",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "SYMBOL",
+   "library": "interpreter-builtin-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "TIME",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "TIME_FORMAT",
+   "library": "date-time-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "TRANSLATE",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "TRIM",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "TRIM_END",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "TRIM_START",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "TYPEOF",
+   "library": "interpreter-builtin-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "UPPER",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "URL_DECODE",
+   "library": "url-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "URL_ENCODE",
+   "library": "url-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "URL_PARSE",
+   "library": "url-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "URL_SAFE_BASE64",
+   "library": "cryptography-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "UUID",
+   "library": "random-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "VALIDATE_ALL",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "VALIDATE_ANY",
+   "library": "validation-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "VALIDATE_SCHEMA",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "VAR",
+   "library": "statistics-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "VERIFY",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "WORD",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "WORD_FREQUENCY",
+   "library": "array-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "WORDPOS",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "WORDS",
+   "library": "string-functions.js",
+   "class": "in both, tested equal by parity",
+   "note": ""
+  },
+  {
+   "name": "XML_TO_JSON",
+   "library": "data-functions.js",
+   "class": "RexxJS only",
+   "note": ""
+  },
+  {
+   "name": "CRON_NEXT",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "CRON_VALID",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "EXPORT",
+   "library": "RexxAE worker",
+   "class": "RexxAE-specific (embedding)",
+   "note": "the worker's own function: names a label the host may call"
+  },
+  {
+   "name": "LOG_DEBUG",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "LOG_ERROR",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "LOG_FATAL",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "LOG_INFO",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "LOG_TRACE",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  },
+  {
+   "name": "LOG_WARN",
+   "library": "RexxAE",
+   "class": "RexxAE-specific (embedding)",
+   "note": "RexxAE extension (docs/cron-and-logging.md)"
+  }
+ ],
+ "classicFunctions": [
+  {
+   "name": "ABBREV",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "ABS",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "ADDRESS",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "ARG",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "B2X",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "BITAND",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "BITOR",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "BITXOR",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "C2D",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "C2X",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CENTER",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "CENTRE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CHANGESTR",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CHARIN",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CHAROUT",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CHARS",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "COMPARE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "CONDITION",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "COPIES",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "COUNTSTR",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "D2C",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "D2X",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "DATATYPE",
+   "rexxjs": "yes",
+   "rexxae": "no",
+   "class": "RexxJS only"
+  },
+  {
+   "name": "DATE",
+   "rexxjs": "yes",
+   "rexxae": "no",
+   "class": "RexxJS only"
+  },
+  {
+   "name": "DELSTR",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "DELWORD",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "DIGITS",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "ERRORTEXT",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "FORM",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "FORMAT",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "FUZZ",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "INSERT",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "LASTPOS",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "LEFT",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "LENGTH",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "LINEIN",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "LINEOUT",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "LINES",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "MAX",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "MIN",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "OVERLAY",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "POS",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "QUALIFY",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "QUEUED",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "RANDOM",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "REVERSE",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "RIGHT",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "SIGN",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "SOURCELINE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "SPACE",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "STREAM",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "STRIP",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "SUBSTR",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "SUBWORD",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "SYMBOL",
+   "rexxjs": "yes",
+   "rexxae": "no",
+   "class": "RexxJS only"
+  },
+  {
+   "name": "TIME",
+   "rexxjs": "yes",
+   "rexxae": "no",
+   "class": "RexxJS only"
+  },
+  {
+   "name": "TRACE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "TRANSLATE",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "TRUNC",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "VALUE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "VERIFY",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "WORD",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "WORDINDEX",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "WORDLENGTH",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "WORDPOS",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "WORDS",
+   "rexxjs": "yes",
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "name": "X2B",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "X2C",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "X2D",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  },
+  {
+   "name": "XRANGE",
+   "rexxjs": "no",
+   "rexxae": "no",
+   "class": "in neither (classic Rexx)"
+  }
+ ],
+ "language": [
+  {
+   "area": "Instructions",
+   "feature": "SAY of a literal and blank concatenation",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'a' 'b'",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "SAY evaluates an arithmetic expression",
+   "note": "RexxJS prints the expression's text ('5 * 2'): its SAY does not evaluate operators unless the clause has a function call. Classic Rexx evaluates; suggested RexxJS fix.",
+   "class": "in both, known to differ",
+   "probe": "LET n = 5\nSAY n * 2",
+   "observed": "RexxJS said [\"5 * 2\"]"
+  },
+  {
+   "area": "Instructions",
+   "feature": "LET assignment",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET x = 2\nSAY x",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "Plain assignment (name = expression)",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "x = 2\nSAY x",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "IF THEN with ELSE on the next line",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "IF 0 THEN SAY 'a'\nELSE SAY 'b'",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "IF THEN DO ... END",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "IF 1 THEN DO\nSAY 'a'\nSAY 'b'\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "ELSE IF chain",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "IF 0 THEN SAY 'a'\nELSE IF 1 THEN SAY 'b'\nELSE SAY 'c'",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "IF ... ENDIF block (RexxJS form, no DO)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "IF 0 THEN\nSAY 'a'\nELSE\nSAY 'b'\nENDIF",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO n (repeat count)",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "DO 2\nSAY 'r'\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO i = a TO b",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "DO i = 1 TO 3\nSAY i\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO i = a TO b BY c",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "DO i = 5 TO 1 BY -2\nSAY i\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO i = a TO b FOR n",
+   "note": "RexxJS ignores FOR and runs to TO (prints 1 to 10); suggested RexxJS fix.",
+   "class": "RexxJS only",
+   "probe": "DO i = 1 TO 10 FOR 2\nSAY i\nEND",
+   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"10\"]; RexxAE error: invalid range values in DO loop"
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO i = a TO b WHILE cond (controlled loop with a condition)",
+   "note": "RexxJS ignores the WHILE and runs to TO; suggested RexxJS fix.",
+   "class": "in both, known to differ",
+   "probe": "DO i = 1 TO 5 WHILE i < 3\nSAY i\nEND",
+   "observed": "RexxJS said [\"1\", \"2\", \"3\", \"4\", \"5\"]; RexxAE said [\"1\", \"0\"]"
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO WHILE",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "n = 0\nDO WHILE n < 2\nn = n + 1\nEND\nSAY n",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO UNTIL",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "n = 0\nDO UNTIL n = 2\nn = n + 1\nEND\nSAY n",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO FOREVER with LEAVE",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "n = 0\nDO FOREVER\nn = n + 1\nIF n = 3 THEN LEAVE\nEND\nSAY n",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "DO v OVER array (RexxJS)",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET a = JSON_PARSE('[1,2]')\nDO v OVER a\nSAY v\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "ITERATE",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "DO i = 1 TO 3\nIF i = 2 THEN ITERATE\nSAY i\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "LEAVE name / ITERATE name (named loop)",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "DO i = 1 TO 5\nIF i = 3 THEN LEAVE i\nSAY i\nEND",
+   "observed": "RexxJS error: LEAVE i: a named loop is not supported, only the innermost DO loop; RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "Instructions",
+   "feature": "END name",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "DO i = 1 TO 2\nSAY i\nEND i",
+   "observed": "RexxJS error: Missing END for DO statement at line 1; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "SELECT / WHEN / OTHERWISE",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "x = 2\nSELECT\nWHEN x = 1 THEN SAY 'one'\nWHEN x = 2 THEN SAY 'two'\nOTHERWISE SAY 'many'\nEND",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "CALL label / RETURN value / RESULT",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf:\nRETURN 9",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "Label followed by an instruction on the same line",
+   "note": "Classic Rexx allows an instruction after a label on its line. RexxAE rejects it (label must occupy its own clause); RexxJS gives RESULT null.",
+   "class": "RexxJS only",
+   "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf: RETURN 9",
+   "observed": "RexxJS said [\"null\"]; RexxAE error: label must occupy its own clause"
+  },
+  {
+   "area": "Instructions",
+   "feature": "Internal function call of a label: f(x)",
+   "note": "Classic Rexx calls an internal routine as a function. Neither engine does: RexxAE reports an unknown function; RexxJS sends the clause to the default ADDRESS environment.",
+   "class": "in neither (classic Rexx)",
+   "probe": "LET r = sq(3)\nSAY r\nEXIT\nsq:\nARG n\nLET v = n * n\nRETURN v",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unknown or unavailable function: SQ"
+  },
+  {
+   "area": "Instructions",
+   "feature": "PROCEDURE EXPOSE",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "x = 1\ny = 2\nCALL f\nSAY x y\nEXIT\nf: PROCEDURE EXPOSE x\nx = 10\ny = 20\nRETURN",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "ARG instruction",
+   "note": "Classic ARG uppercases (it is PARSE UPPER ARG); both engines keep the case.",
+   "class": "in both, tested equal by parity",
+   "probe": "CALL f 'a'\nEXIT\nf:\nARG v\nSAY v\nRETURN",
+   "observed": "both said [\"a\"]"
+  },
+  {
+   "area": "Instructions",
+   "feature": "EXIT with a return code",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'ok'\nEXIT 2",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "EXIT n UNLESS condition, message (RexxJS)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "EXIT 3 UNLESS 0, 'boom'",
+   "observed": "RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "Instructions",
+   "feature": "NOP",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "NOP\nSAY 'ok'",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "DROP",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "x = 1\nDROP x\nSAY x",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "SIGNAL label (transfer of control)",
+   "note": "RexxJS runs the label's clauses and then the skipped clauses too (here, skipped); suggested RexxJS fix.",
+   "class": "RexxJS only",
+   "probe": "SIGNAL done\nSAY 'skipped'\ndone:\nSAY 'here'",
+   "observed": "RexxJS said [\"here\", \"skipped\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "TRACE option (accepted; trace output is a diagnostic)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "TRACE O\nSAY 'ok'",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "INTERPRET",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "x = 'hello'\nINTERPRET 'SAY x'",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "NO-INTERPRET (RexxJS: forbids INTERPRET afterwards)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "NO-INTERPRET\nSAY 'ok'",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "PUSH / PULL (LIFO; PULL uppercases)",
+   "note": "RexxJS's PULL does not uppercase (gives b); classic PULL is PARSE UPPER PULL. Suggested RexxJS fix.",
+   "class": "RexxJS only",
+   "probe": "PUSH 'a'\nPUSH 'b'\nPULL x\nSAY x",
+   "observed": "RexxJS said [\"b\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "QUEUE / PULL (FIFO)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "QUEUE 'A'\nQUEUE 'B'\nPULL x\nSAY x",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "PULL from an empty queue",
+   "note": "Classic Rexx reads a line from the default input stream here; both engines have no terminal, and give the empty string.",
+   "class": "RexxJS only",
+   "probe": "PULL x\nSAY '[' || x || ']'",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "PARSE PULL",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "PUSH 'Hello World'\nPARSE PULL a b\nSAY a b",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "NUMERIC DIGITS",
+   "note": "RexxJS accepts NUMERIC DIGITS and ignores it (prints 0.6666666666666666).",
+   "class": "RexxJS only",
+   "probe": "NUMERIC DIGITS 5\nLET r = 2 / 3\nSAY r",
+   "observed": "RexxJS said [\"0.6666666666666666\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "NUMERIC FUZZ",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "NUMERIC DIGITS 3\nNUMERIC FUZZ 1\nIF 100 = 101 THEN SAY 'eq'\nELSE SAY 'ne'",
+   "observed": "RexxJS said [\"ne\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "NUMERIC FORM",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "NUMERIC DIGITS 3\nNUMERIC FORM ENGINEERING\nLET r = 12345 * 10\nSAY r",
+   "observed": "RexxJS said [\"123450\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Instructions",
+   "feature": "Clause separator ;",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'a'; SAY 'b'",
+   "observed": ""
+  },
+  {
+   "area": "Instructions",
+   "feature": "Continuation: a comma at the end of a line",
+   "note": "RexxJS prints the two lines separately.",
+   "class": "RexxJS only",
+   "probe": "SAY 'a',\n'b'",
+   "observed": "RexxJS said [\"'a',\", \"b\"]; RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "Instructions",
+   "feature": "Labels end the main program (RexxJS dialect)",
+   "note": "Classic Rexx falls through a label (a, b). Both engines end the main program at the first label (a): RexxJS's dialect, kept.",
+   "class": "in both, not covered by a parity program",
+   "probe": "SAY 'a'\nnext:\nSAY 'b'",
+   "observed": "both said [\"a\"]"
+  },
+  {
+   "area": "Instructions",
+   "feature": "REQUIRE \"module\" [AS prefix]",
+   "note": "In both; RexxAE passes it to a host-mounted resolver. tests/test_require_reference.py compares six REQUIRE/AS requests with RexxJS.",
+   "class": "in both, tested equal by parity"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS env 'command'",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "ADDRESS APP 'go'\nSAY RC",
+   "observed": ""
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS env, then bare string commands",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "ADDRESS APP\n'cmd one'\nSAY RC",
+   "observed": ""
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "Variable-led command after ADDRESS env",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "ADDRESS APP\nc = 'run'\nc 'now'\nSAY RC",
+   "observed": "RexxJS said [\"RC\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS with no operand returns to the previous environment",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "ADDRESS APP 'a'\nADDRESS OTHER 'b'\nADDRESS\n'c'",
+   "observed": "RexxJS said [\"c\"]; RexxAE error: expected ADDRESS environment name"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS env with a heredoc command (RexxJS)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "ADDRESS APP <<END\nhello\nEND",
+   "observed": "RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "RC after a command",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "ADDRESS APP 'x'\nSAY RC",
+   "observed": ""
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "RESULT after a command",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "ADDRESS APP 'x'\nSAY RESULT",
+   "observed": ""
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS to a remote URL (RexxJS)",
+   "note": "HTTP transport to a remote ADDRESS endpoint; in RexxAE a host mounts environments and owns transport.",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "ADDRESS SYSTEM / shell environments (RexxJS)",
+   "note": "Runs operating-system commands through node; RexxAE has no OS effects without a host grant.",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "ADDRESS and environments",
+   "feature": "RETRY_ON_STALE ... END_RETRY (RexxJS)",
+   "note": "Retries a block when a DOM element goes stale: browser-host only.",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "Operators",
+   "feature": "+ - * /",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 2 + 3 * 4 - 6 / 2\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "** power",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 2 ** 10\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "Prefix - and +",
+   "note": "RexxJS leaves -(3) as text.",
+   "class": "in both, known to differ",
+   "probe": "LET r = -(3)\nSAY r",
+   "observed": "RexxJS said [\"-(3)\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "% (RexxJS: remainder)",
+   "note": "Classic Rexx % is integer division (7 % 2 = 3). Both engines keep RexxJS's remainder meaning on purpose (TODO.md).",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 7 % 2\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "// (RexxJS: a comment)",
+   "note": "Classic Rexx // is the remainder. Both engines keep RexxJS's comment meaning on purpose (TODO.md).",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 7 // 2\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "Blank concatenation",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 'a' 'b'\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "Abuttal concatenation",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 'a'\"b\"\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "|| concatenation",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 'a' || 'b'\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "= and \\= (normal comparison)",
+   "note": "RexxJS leaves a comparison of quoted strings in an assignment as text.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 'abc' \\= 'abd'\nSAY r",
+   "observed": "RexxJS said [\"abc' \\\\= 'abd\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "= ignores leading and trailing blanks",
+   "note": "Classic Rexx strips blanks in a normal comparison (1). RexxAE compares exactly (0); RexxJS leaves the text.",
+   "class": "in both, known to differ",
+   "probe": "LET r = ' a ' = 'a'\nSAY r",
+   "observed": "RexxJS said [\" a ' = 'a\"]; RexxAE said [\"0\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "= compares numbers numerically",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 10 = '10.0'\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "<> and ><",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 3 <> 4\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "> < >= <=",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 2 >= 1\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "\\< \\> (not less, not greater)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "LET r = 2 \\< 1\nSAY r",
+   "observed": "RexxJS said [\"2 \\\\< 1\"]; RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "Operators",
+   "feature": "== and \\== (strict comparison)",
+   "note": "RexxJS leaves a strict comparison of quoted strings in an assignment as text.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 'abc' \\== 'abd'\nSAY r",
+   "observed": "RexxJS said [\"abc' \\\\== 'abd\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": ">> << >>= <<= (strict ordering)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "LET r = 'b' >> 'a'\nSAY r",
+   "observed": "RexxJS said [\"b' >> 'a\"]; RexxAE error: expected expression"
+  },
+  {
+   "area": "Operators",
+   "feature": "& and | in an assignment",
+   "note": "RexxJS leaves 1 & 0 as text outside IF.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 1 & 0\nSAY r",
+   "observed": "RexxJS said [\"1 & 0\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "& and | in IF",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "IF 1 & 0 THEN SAY 'y'\nELSE SAY 'n'",
+   "observed": ""
+  },
+  {
+   "area": "Operators",
+   "feature": "&& (exclusive or)",
+   "note": "RexxJS leaves the text in an assignment and reads && as and in IF.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 1 && 1\nSAY r",
+   "observed": "RexxJS said [\"1 && 1\"]"
+  },
+  {
+   "area": "Operators",
+   "feature": "\\ prefix not",
+   "note": "RexxJS reports an unknown comparison operator.",
+   "class": "in both, known to differ",
+   "probe": "IF \\ (1 = 2) THEN SAY 'y'",
+   "observed": "RexxJS said []"
+  },
+  {
+   "area": "Operators",
+   "feature": "Operator precedence",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 2 + 3 * 4\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Special variables",
+   "feature": "RC",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "ADDRESS APP 'x'\nSAY RC",
+   "observed": ""
+  },
+  {
+   "area": "Special variables",
+   "feature": "RESULT",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "CALL f\nLET r = RESULT\nSAY r\nEXIT\nf:\nRETURN 4",
+   "observed": ""
+  },
+  {
+   "area": "Special variables",
+   "feature": "ERRORTEXT after a command (RexxJS)",
+   "note": "RexxAE sets ERRORTEXT (empty after a successful command); RexxJS leaves it unset in this case.",
+   "class": "in both, known to differ",
+   "probe": "ADDRESS APP 'x'\nLET e = ERRORTEXT\nSAY '[' || e || ']'",
+   "observed": "RexxJS said [\"[ERRORTEXT]\"]"
+  },
+  {
+   "area": "Special variables",
+   "feature": "SIGL",
+   "note": "Classic Rexx sets SIGL to the line of the CALL or SIGNAL; neither engine sets it.",
+   "class": "in neither (classic Rexx)",
+   "probe": "CALL f\nEXIT\nf:\nSAY SIGL\nRETURN",
+   "observed": "both said [\"SIGL\"]"
+  },
+  {
+   "area": "Special variables",
+   "feature": "Unset symbol is its own uppercase name",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "SAY abc",
+   "observed": ""
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE VAR with words",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "s = 'a b c'\nPARSE VAR s x y\nSAY y",
+   "observed": ""
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE VAR with a literal delimiter",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "s = 'a,b'\nPARSE VAR s x ',' y\nSAY y x",
+   "observed": ""
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE placeholder .",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "s = 'a b c'\nPARSE VAR s x . z\nSAY x z",
+   "observed": ""
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE VALUE expr WITH template",
+   "note": "RexxJS splits the quoted value wrongly (b | c'); suggested RexxJS fix.",
+   "class": "in both, known to differ",
+   "probe": "PARSE VALUE 'a b c' WITH x y\nSAY x '|' y",
+   "observed": "RexxJS said [\"b | c'\"]"
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE ARG",
+   "note": "Classic PARSE ARG x y splits one argument 'a b' into words; both engines put the whole argument in x.",
+   "class": "in both, tested equal by parity",
+   "probe": "CALL f 'a b'\nEXIT\nf:\nPARSE ARG x y\nSAY y x\nRETURN",
+   "observed": "both said [\" a b\"]"
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE UPPER VAR",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "s = 'Hello World'\nPARSE UPPER VAR s a b\nSAY a b",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE LOWER VAR",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "s = 'Hello World'\nPARSE LOWER VAR s a b\nSAY a b",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+  },
+  {
+   "area": "PARSE",
+   "feature": "Absolute positions in a template",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "s = 'abcdef'\nPARSE VAR s 1 a 3 b\nSAY a '|' b",
+   "observed": "RexxJS said [\" | \"]; RexxAE error: PARSE template requires simple names, '.', or quoted delimiters; positions are not implemented"
+  },
+  {
+   "area": "PARSE",
+   "feature": "Relative positions in a template",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "s = 'abcdef'\nPARSE VAR s a 3 b +2 c\nSAY a '|' b '|' c",
+   "observed": "RexxJS said [\"abcdef |  | \"]; RexxAE error: PARSE template requires simple names, '.', or quoted delimiters; positions are not implemented"
+  },
+  {
+   "area": "PARSE",
+   "feature": "Variable pattern (name) in a template",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "s = 'k=v'\nd = '='\nPARSE VAR s k (d) v\nSAY k v",
+   "observed": "RexxJS said [\"k=v \"]; RexxAE error: PARSE template requires simple names, '.', or quoted delimiters; positions are not implemented"
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE SOURCE",
+   "note": "Classic gives the system and invocation; neither engine has a fixed answer, so this probe only checks the clause is accepted.",
+   "class": "in neither (classic Rexx)",
+   "probe": "PARSE SOURCE a b c\nSAY a",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+  },
+  {
+   "area": "PARSE",
+   "feature": "PARSE VERSION",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "PARSE VERSION v\nSAY 'ok'",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: PARSE requires VAR, VALUE or ARG"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "SIGNAL ON ERROR (a failed command)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "SIGNAL ON ERROR\nLET x = 1\nSAY 'after'\nEXIT\nERROR:\nSAY 'trapped'",
+   "observed": "RexxJS said [\"after\", \"trapped\"]; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "SIGNAL ON ERROR traps a runtime error (RexxJS)",
+   "note": "RexxJS's ERROR condition also catches runtime errors, which classic Rexx raises as SYNTAX.",
+   "class": "RexxJS only",
+   "probe": "SIGNAL ON ERROR\nLET x = 1 / 0\nSAY 'after'\nEXIT\nERROR:\nSAY 'trapped'",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "SIGNAL ON SYNTAX",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "SIGNAL ON SYNTAX\nLET x = 1 / 0\nEXIT\nSYNTAX:\nSAY 'trapped'",
+   "observed": "RexxJS error: Division by zero; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "SIGNAL ON NOVALUE",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "SIGNAL ON NOVALUE\nSAY undefinedvar\nEXIT\nNOVALUE:\nSAY 'trapped'",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "SIGNAL ON HALT / FAILURE / LOSTDIGITS / NOTREADY",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "SIGNAL ON HALT\nSAY 'ok'",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "CALL ON condition",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "CALL ON ERROR\nSAY 'ok'",
+   "observed": "RexxJS error: Subroutine 'ON' not found; RexxAE error: unknown or unavailable function: ON"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "CONDITION() function",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "LET r = CONDITION()\nSAY '[' || r || ']'",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unknown or unavailable function: CONDITION"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "ERRORTEXT(n) function",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "LET r = ERRORTEXT(42)\nSAY r",
+   "observed": "RexxJS said [\"ERRORTEXT\"]; RexxAE error: unknown or unavailable function: ERRORTEXT"
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "Division by zero is an error",
+   "note": "An error in both; RexxAE reports 'division by zero', RexxJS 'Division by zero'. The error tests pin RexxAE's text.",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 1 / 0\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Conditions and errors",
+   "feature": "ERROR_* functions in a handler (RexxJS)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "SIGNAL ON ERROR\nLET x = 1 / 0\nEXIT\nERROR:\nLET l = ERROR_LINE()\nSAY l",
+   "observed": "RexxAE error: unsupported statement (expected assignment)"
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "Integer arithmetic",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 123456789012 + 1\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "Decimal results print as the shortest round-trip double",
+   "note": "Both engines use IEEE doubles (TODO.md); classic Rexx gives 0.333333333 at NUMERIC DIGITS 9.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 1 / 3\nSAY r",
+   "observed": "RexxAE said [\"0.33333333333333331\"]"
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "0.1 + 0.2",
+   "note": "Doubles in both engines; classic Rexx gives 0.3.",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 0.1 + 0.2\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "Large integers print without an exponent below 1e21",
+   "note": "RexxAE printed %.17g text (1.8446744073709552e+19) where JavaScript prints 18446744073709552000.",
+   "class": "in both, known to differ",
+   "probe": "LET r = 2 ** 64\nSAY r",
+   "observed": "RexxAE said [\"1.8446744073709552e+19\"]"
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "Exponent notation in literals",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET r = 1e3 + 1\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "1e21 and above print with an exponent",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 1e21 + 0\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "Arithmetic on non-numeric text is an error",
+   "note": "An error in both engines.",
+   "class": "in both, not covered by a parity program",
+   "probe": "LET r = 1 + 'a'\nSAY r",
+   "observed": ""
+  },
+  {
+   "area": "Numbers and arithmetic",
+   "feature": "DIGITS() / FUZZ() / FORM() functions",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "LET r = DIGITS()\nSAY r",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unknown or unavailable function: DIGITS"
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Compound variable with a constant tail",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "x.1 = 5\nSAY x.1",
+   "observed": ""
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Compound variable with a variable tail",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "i = 2\nx.i = 'two'\nSAY x.2",
+   "observed": ""
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Multi-level tails",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "a.b.c = 1\nSAY a.b.c",
+   "observed": ""
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Unset compound is its derived name",
+   "note": "",
+   "class": "in both, not covered by a parity program",
+   "probe": "SAY x.2",
+   "observed": ""
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Stem default: x. = value",
+   "note": "Classic Rexx gives every unset x.tail the stem's value (0). Both engines give X.5.",
+   "class": "in neither (classic Rexx)",
+   "probe": "x. = 0\nSAY x.5",
+   "observed": "both said [\"X.5\"]"
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Typed array element access a[1] (RexxJS)",
+   "note": "",
+   "class": "in neither (classic Rexx)",
+   "probe": "LET a = JSON_PARSE('[10, 20]')\nLET r = a[1]\nSAY r",
+   "observed": "RexxJS error: Array access syntax 'a[1]' is not supported in expressions. Use ARRAY_GET(a, 1) for REXX 1-based indexing instead.; RexxAE error: unexpected token or unsupported syntax"
+  },
+  {
+   "area": "Stems and compound variables",
+   "feature": "Object property by dot path (RexxJS)",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "LET o = JSON_PARSE('{\"k\": 1}')\nSAY o.k",
+   "observed": ""
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Doubled quotes inside a literal",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'it''s'",
+   "observed": ""
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Comments /* */ and --",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'a' /* c */ 'b' -- d",
+   "observed": ""
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Nested /* /* */ */ comments",
+   "note": "Classic comments nest; RexxJS ends the comment at the first */.",
+   "class": "RexxJS only",
+   "probe": "SAY 'a' /* x /* y */ z */ 'b'",
+   "observed": "RexxJS said [\"a Z */ b\"]; RexxAE error: expected expression"
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Hex and binary literals '41'x '0100 0001'b",
+   "note": "Neither engine has hex or binary string literals (no byte strings, TODO.md).",
+   "class": "in neither (classic Rexx)",
+   "probe": "SAY '41'x",
+   "observed": "both said [\"41X\"]"
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Heredoc <<TAG (RexxJS)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "LET s = <<EOT\nline1\nline2\nEOT\nSAY s",
+   "observed": "RexxAE error: expected expression"
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Interpolation {{x}} in double-quoted strings (RexxJS, SET_INTERPOLATION)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "x = 5\nLET r = SET_INTERPOLATION('handlebars')\nSAY \"v {{x}}\"",
+   "observed": "RexxAE error: double-quoted interpolation and escapes are not implemented"
+  },
+  {
+   "area": "Strings and literals",
+   "feature": "Pipe operator |> (RexxJS)",
+   "note": "",
+   "class": "RexxJS only",
+   "probe": "LET r = 'abc' |> UPPER\nSAY r",
+   "observed": "RexxAE error: expected expression"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "SAY delivers a line to the host",
+   "note": "",
+   "class": "in both, tested equal by parity",
+   "probe": "SAY 'x'",
+   "observed": ""
+  },
+  {
+   "area": "I/O and host",
+   "feature": "LINEIN / LINEOUT / CHARIN / CHAROUT / LINES / CHARS / STREAM",
+   "note": "Classic stream I/O. Neither engine has it; in RexxAE it would be host-mounted functions.",
+   "class": "in neither (classic Rexx)",
+   "probe": "LET r = LINES()\nSAY r",
+   "observed": "RexxJS sent the clause to the default ADDRESS environment; RexxAE error: unknown or unavailable function: LINES"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "Application functions mounted by the host",
+   "note": "rexxae_register_function: a script calls named host functions with typed JSON arguments; the host answers each request.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "No file, network or OS effects without a host grant",
+   "note": "The library build has no fs/net/os capability; tools/check_containment.py and make containment hold it.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "Host requests: COMMAND, FUNCTION, LOG events and suspension",
+   "note": "aether_rexxae_step returns a request and the engine suspends until the host replies; no callbacks into the host.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "EXPORT('label') and rexxae_call: the host calls a script's labels",
+   "note": "The worker serves exported labels over std.guest INVOKE; rexxae_call runs a label of a finished program.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "Cancellation from another thread (rexxae_cancel)",
+   "note": "The one thread-safe entry point; the script cannot catch it.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "Instruction budgets per step",
+   "note": "aether_rexxae_step(ctx, budget) returns RUNNABLE when the budget is spent.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "Sandboxed worker process (worker/, std.guest)",
+   "note": "A separate contained process for scripts; see README \"Worker process\".",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "LOG_TRACE .. LOG_FATAL and CRON_VALID / CRON_NEXT",
+   "note": "RexxAE extensions (docs/cron-and-logging.md); in RexxJS LOG is the logarithm.",
+   "class": "RexxAE-specific (embedding)"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "DOM, browser and Web workers (RexxJS)",
+   "note": "Browser host features (dom-*.js, SHOW, JS_SHOW).",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "REQUIRE of npm and JavaScript libraries (RexxJS)",
+   "note": "Loads JavaScript modules into the interpreter; RexxAE's REQUIRE goes to a host resolver and loads Rexx only.",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "INTERPRET_JS / JS_SHOW (RexxJS)",
+   "note": "Runs JavaScript; RexxAE has no JavaScript runtime by design.",
+   "class": "host-specific to RexxJS, not tracked"
+  },
+  {
+   "area": "I/O and host",
+   "feature": "CHECKPOINT (RexxJS)",
+   "note": "Progress callbacks to a browser parent window.",
+   "class": "host-specific to RexxJS, not tracked"
+  }
+ ],
+ "hostSpecificFunctions": {
+  "core/src/shell-functions.js": [
+   "ARCH",
+   "ASCII",
+   "BASE32",
+   "BASENAME",
+   "CAL",
+   "CAT",
+   "CHGRP",
+   "CHMOD",
+   "CHOWN",
+   "CKSUM",
+   "CMP",
+   "COMM",
+   "CP",
+   "CRC32",
+   "CUT",
+   "DIRNAME",
+   "DNSDOMAINNAME",
+   "DOS2UNIX",
+   "DU",
+   "ENV",
+   "EXIT",
+   "EXPAND",
+   "FACTOR",
+   "FALSE",
+   "FILESPLIT",
+   "FIND",
+   "FMT",
+   "FOLD",
+   "FSYNC",
+   "GETCONF",
+   "GETENV",
+   "GETOPT",
+   "GETPID",
+   "GETPPID",
+   "GREP",
+   "GROUPS",
+   "GUNZIP",
+   "GZIP",
+   "HEAD",
+   "HEXDUMP",
+   "HOST",
+   "HOSTNAME",
+   "IFCONFIG",
+   "INSTALL",
+   "KILL",
+   "KILLALL",
+   "LINK",
+   "LN",
+   "LOGNAME",
+   "LS",
+   "MCOOKIE",
+   "MKDIR",
+   "MKPASSWD",
+   "MKTEMP",
+   "MV",
+   "NICE",
+   "NL",
+   "NPROC",
+   "OD",
+   "PASTE",
+   "PATH_EXTNAME",
+   "PATH_JOIN",
+   "PATH_RESOLVE",
+   "PGREP",
+   "PS",
+   "READLINK",
+   "REV",
+   "RM",
+   "RMDIR",
+   "SEQ",
+   "SETENV",
+   "SHUF",
+   "SLEEP",
+   "SORT",
+   "STAT",
+   "STRINGS",
+   "SUM_BSD",
+   "SYNC",
+   "TAC",
+   "TAIL",
+   "TEE",
+   "TIMEOUT",
+   "TOP",
+   "TOUCH",
+   "TRUE",
+   "TRUNCATE",
+   "TTY",
+   "UNAME",
+   "UNIQ",
+   "UNIX2DOS",
+   "UNLINK",
+   "UNSETENV",
+   "UPTIME",
+   "USERINFO",
+   "UUDECODE",
+   "UUENCODE",
+   "WC",
+   "WHICH",
+   "WHOAMI",
+   "XARGS",
+   "XXD",
+   "YES",
+   "ZCAT"
+  ],
+  "CHECKPOINT": [
+   "CHECKPOINT"
+  ],
+  "core/src/file-functions.js": [
+   "FILE_APPEND",
+   "FILE_BACKUP",
+   "FILE_COPY",
+   "FILE_DELETE",
+   "FILE_EXISTS",
+   "FILE_LIST",
+   "FILE_MOVE",
+   "FILE_READ",
+   "FILE_SIZE",
+   "FILE_WRITE"
+  ],
+  "core/src/dom-pipeline-functions.js": [
+   "FILTER_BY_ATTR",
+   "FILTER_BY_CLASS",
+   "GET_ATTRS",
+   "GET_TEXT",
+   "GET_VALUES"
+  ],
+  "core/src/http-functions.js": [
+   "HTTP_DELETE",
+   "HTTP_GET",
+   "HTTP_POST",
+   "HTTP_PUT"
+  ],
+  "INTERPRET_JS": [
+   "INTERPRET_JS"
+  ],
+  "JS_SHOW": [
+   "JS_SHOW"
+  ],
+  "SHOW": [
+   "SHOW"
+  ]
+ }
+}

@@ -497,5 +497,10 @@ See [design.md](docs/design.md), [compatibility-baseline.md](docs/compatibility-
 [function-policy.md](docs/function-policy.md) and the generated
 [function inventory](docs/function-inventory.md). The inventory covers 386
 core functions, 119 converter helpers and 42 optional manifests.
+[rexxjs-tracking.md](docs/rexxjs-tracking.md) sets RexxJS and RexxAE against
+each other, function by function and language feature by feature, each
+feature probe run on both engines when it is generated (`make tracking`;
+`make parity` fails when it is stale). [rexxjs-suggestions.md](docs/rexxjs-suggestions.md)
+lists what RexxJS could take from RexxAE, and suspected RexxJS bugs.
 [Documentation index](docs/README.md) links the usage guides, contracts and
 archived investigations. [AGENTS.md](AGENTS.md) records contributor and testing rules.

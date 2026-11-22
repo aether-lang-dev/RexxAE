@@ -7,7 +7,7 @@ capability grants. Applications supply effects through explicit host requests;
 there is no JavaScript runtime dependency.
 
 This is a working implementation slice, not a complete port. It has typed
-values, 71 RexxJS builtins with limited profiles, eight RexxAE extensions
+values, 104 RexxJS builtins with limited profiles, eight RexxAE extensions
 (static logging and cron, not in RexxJS), registered application functions, labeled routines with CALL/RETURN,
 comparisons, IF/ELSE, SELECT and DO loops that suspend and resume across host calls.
 
@@ -401,17 +401,28 @@ Supported now:
 - Script-derived compound tails, nested property assignment, uppercase unset
   symbols, zero-based array reads and literal host property access.
 - PARSE VAR word/literal-delimiter templates and explicit PARSE VALUE
-  expressions WITH templates, including suspended host input.
+  expressions WITH templates, including suspended host input; PARSE UPPER and
+  LOWER; PARSE PULL.
+- The external data queue: PUSH, QUEUE, PULL (uppercasing, as in classic
+  Rexx) and RexxJS's STACK_ functions, one queue per context.
+- TRACE (accepted and checked; no trace output) and RexxJS's
+  EXIT [code] UNLESS condition, message.
 - Typed numbers, strings, booleans, arrays, objects and JSON/host nulls.
 - 60 scalar functions plus JSON_PARSE, JSON_STRINGIFY, JSON_GET, JSON_KEYS,
-  ARRAY_GET, ARRAY_LENGTH, ARRAY_PUSH, JOIN, TYPEOF, lazy IF and ARG.
+  ARRAY_GET, ARRAY_LENGTH, ARRAY_PUSH, JOIN, TYPEOF, lazy IF and ARG, and in
+  `src/library.ae` DATATYPE (with the classic option letters), SYMBOL, AND,
+  OR, IFS, the STACK_ functions, twelve ARRAY_ functions, six JSON_ document
+  functions, URL_ENCODE/URL_DECODE and BASE64_ENCODE/BASE64_DECODE.
+- Numbers print as JavaScript prints a double (the shortest text that reads
+  back the same), as RexxJS does; `**` groups left to right.
 - Positional/nested calls and recognized named scalar arguments.
 - Labeled routines with optional PROCEDURE/EXPOSE, CALL (including dynamic targets), RETURN,
   RESULT, ARG() and simple ARG/PARSE ARG argument binding. Routine calls
   preserve pending expressions across host requests and cooperative yields.
 - Comparisons, IF/THEN/ELSE, conditional DO blocks, and SELECT/WHEN/OTHERWISE
   with nested branches and first-match execution.
-- DO ranges/BY, repeat, WHILE, UNTIL, FOREVER and array/object OVER;
+- DO ranges with TO, BY and FOR in any order and a trailing WHILE or UNTIL,
+  repeat, WHILE, UNTIL, FOREVER and array/object OVER;
   innermost LEAVE/ITERATE, with existing loop variables restored as in RexxJS.
 - RexxAE extensions, not in RexxJS and not counted as parity
   ([cron-and-logging.md](docs/cron-and-logging.md)):
@@ -475,15 +486,16 @@ On the supported core compiler, `make test` runs 430 native std.spec cases
 in `make spec` (including 26 in each binary variant, 23 cron and 20 logging
 specs) and 45 containment specs, ctypes protocol checks, twelve Python
 session/console tests, both C examples (commands; logging with a host clock) and the Python host harness. `make parity`
-compares 519 programs, including host-call arguments/results, with RexxJS
+compares 587 programs, including host-call arguments/results, with RexxJS
 `30fce5c`, RexxJS's current `main`. RexxAE tracks RexxJS's current head:
 `make parity` prints the RexxJS commit it compared against, and the Makefile's
 `REXXJS_GREEN` records the commit it was last green against. To move it:
 `git -C ../RexxJS pull --ff-only && make parity`, then record the printed
 commit in `REXXJS_GREEN` and here. The dated standalone/vendor audit records the same results; its
 additional 28 boundary probes match 16 and remain separate from strict parity.
-Ten documented differences (seven compatibility differences and three
-RexxAE extensions) remain separately asserted and are not counted as parity. The same 125 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
+Twenty-three documented differences (twenty compatibility differences, most
+of them suspected RexxJS bugs listed in docs/rexxjs-suggestions.md, and three
+RexxAE extensions) remain separately asserted and are not counted as parity. The same 183 function fixtures run natively, through ctypes and on RexxJS. Valgrind covers
 the C examples and the native spec executables. Twelve compiler
 rejection probes and the pinned guest/import surfaces protect the containment
 contract. The optional calculator's 29 native specs and 30 Python console tests

@@ -572,6 +572,13 @@ invoke(name: string, args: ptr) -> (string, string) {
 // Named arguments follow each implementation's order. Synonyms from
 // RexxJS's converters are accepted; unknown names are diagnosed by the parser.
 parameter_index(name: string, key: string) -> int {
+    if string.starts_with(name, "ARRAY_") != 0 {
+        // RexxJS's array converters: array (arr), then item (value), start, end.
+        if key == "array" || key == "arr" || key == "array1" || key == "arr1" { return 0 }
+        if key == "item" || key == "value" || key == "start" || key == "array2" || key == "arr2" { return 1 }
+        if key == "end" { return 2 }
+        return -1
+    }
     if key == "string" || key == "str" || key == "text" || key == "num" || key == "value" || key == "number" { return 0 }
     if key == "base" {
         if name == "MATH_LOG" { return 1 }

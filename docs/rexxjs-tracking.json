@@ -1,10 +1,10 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 555,
+ "parityPrograms": 570,
  "counts": {
-  "in both, tested equal by parity": 133,
-  "RexxJS only": 203,
-  "in both, known to differ": 16,
+  "in both, tested equal by parity": 140,
+  "RexxJS only": 191,
+  "in both, known to differ": 21,
   "RexxAE-specific (embedding)": 17,
   "in both, not covered by a parity program": 13,
   "in neither (classic Rexx)": 18,
@@ -39,13 +39,13 @@
   {
    "name": "ARRAY_AVERAGE",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "ARRAY_CONCAT",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -75,14 +75,14 @@
   {
    "name": "ARRAY_INCLUDES",
    "library": "array-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json."
   },
   {
    "name": "ARRAY_INDEXOF",
    "library": "array-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json."
   },
   {
    "name": "ARRAY_JOIN",
@@ -105,20 +105,20 @@
   {
    "name": "ARRAY_MAX",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "ARRAY_MIN",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "ARRAY_POP",
    "library": "array-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string."
   },
   {
    "name": "ARRAY_PUSH",
@@ -135,7 +135,7 @@
   {
    "name": "ARRAY_REVERSE",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -147,14 +147,14 @@
   {
    "name": "ARRAY_SHIFT",
    "library": "array-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string."
   },
   {
    "name": "ARRAY_SLICE",
    "library": "array-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Positional start and end: RexxAE slices, RexxJS's converter drops them (named start= end= agree). tests/known_differences.json."
   },
   {
    "name": "ARRAY_SORT",
@@ -165,13 +165,13 @@
   {
    "name": "ARRAY_SUM",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
    "name": "ARRAY_UNIQUE",
    "library": "array-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {

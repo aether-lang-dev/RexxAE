@@ -1,4 +1,9 @@
 {
  "DATATYPE": "Both answer NUM, CHAR and RexxJS's type names alike. RexxAE also answers the classic option letters (A B L M N S U W X) with 1 or 0, where RexxJS answers false; RexxJS counts JavaScript number syntax (0x1F) as NUM. tests/known_differences.json.",
- "SYMBOL": "Equal for variables and non-symbols; classic constant symbols ('12') are LIT in RexxAE and BAD in RexxJS. tests/known_differences.json."
+ "SYMBOL": "Equal for variables and non-symbols; classic constant symbols ('12') are LIT in RexxAE and BAD in RexxJS. tests/known_differences.json.",
+ "ARRAY_SLICE": "Positional start and end: RexxAE slices, RexxJS's converter drops them (named start= end= agree). tests/known_differences.json.",
+ "ARRAY_INCLUDES": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json.",
+ "ARRAY_INDEXOF": "A positional item: RexxAE finds it, RexxJS's converter loses it (named item= agrees). tests/known_differences.json.",
+ "ARRAY_POP": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string.",
+ "ARRAY_SHIFT": "Equal except on an empty array: RexxJS gives JavaScript's undefined (printed undefined), RexxAE the empty string."
 }

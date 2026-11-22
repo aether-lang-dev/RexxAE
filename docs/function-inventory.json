@@ -6,9 +6,9 @@
     "registeredNames": 505,
     "languageFunctions": 386,
     "converterHelpers": 119,
-    "nativeFunctions": 82,
+    "nativeFunctions": 94,
     "nativeScalarFunctions": 60,
-    "nativeValueFunctions": 22,
+    "nativeValueFunctions": 34,
     "rexxaeExtensions": 8,
     "extraPackageManifests": 42
   },
@@ -61,16 +61,16 @@
     {
       "name": "ARRAY_AVERAGE",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_CONCAT",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_FILTER",
@@ -103,16 +103,16 @@
     {
       "name": "ARRAY_INCLUDES",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_INDEXOF",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_JOIN",
@@ -138,23 +138,23 @@
     {
       "name": "ARRAY_MAX",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_MIN",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_POP",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_PUSH",
@@ -173,9 +173,9 @@
     {
       "name": "ARRAY_REVERSE",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_SET",
@@ -187,16 +187,16 @@
     {
       "name": "ARRAY_SHIFT",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_SLICE",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_SORT",
@@ -208,16 +208,16 @@
     {
       "name": "ARRAY_SUM",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_UNIQUE",
       "source": "core/src/array-functions.js",
-      "disposition": "native-typed-values",
-      "aether": "std.json/std.list/std.map; contrib.parsers.xml_expat",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARRAY_UNSHIFT",

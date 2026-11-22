@@ -13,7 +13,7 @@ import src.variables
 
 exports(known, call, stack_push, stack_queue, stack_pull, stack_size)
 
-const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS STACK_PUSH STACK_PULL STACK_QUEUE STACK_SIZE STACK_PEEK STACK_CLEAR "
+const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS STACK_PUSH STACK_PULL STACK_QUEUE STACK_SIZE STACK_PEEK STACK_CLEAR ARRAY_POP ARRAY_SHIFT ARRAY_REVERSE ARRAY_SLICE ARRAY_CONCAT ARRAY_INCLUDES ARRAY_INDEXOF ARRAY_SUM ARRAY_MIN ARRAY_MAX ARRAY_AVERAGE ARRAY_UNIQUE "
 
 known(name: string) -> bool {
     return string.contains(LIBRARY_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
@@ -225,8 +225,178 @@ symbol_(ctx: ptr, args: ptr) -> ptr {
     return values.string_value("VAR")
 }
 
+// An array argument as RexxJS takes one: an array, or text holding a JSON
+// array. An owned typed array, or null after failing.
+array_arg_(ctx: ptr, name: string, value: ptr) -> ptr {
+    if values.kind(value) == 4 { return values.clone(value) }
+    if values.kind(value) == 3 {
+        raw = json.json_parse_raw(values.text(value))
+        if raw != null {
+            converted = values.from_json(raw, 0)
+            json.json_free(raw)
+            if converted != null && values.kind(converted) == 4 { return converted }
+            if converted != null { json.json_free(converted) }
+        }
+    }
+    state.fail(ctx, string.concat(name, " requires an array or a JSON array text"))
+    return null
+}
+
+// JavaScript's Number(value) for a typed value; false for NaN.
+js_number_(value: ptr) -> (float, bool) {
+    k = values.kind(value)
+    if k == 0 { return 0.0, true }
+    if k == 1 {
+        if json.json_get_bool(values.data(value)) != 0 { return 1.0, true }
+        return 0.0, true
+    }
+    if k == 4 || k == 5 { return 0.0, false }
+    s = string.trim(values.text(value))
+    if s == "" { return 0.0, true }
+    if s == "Infinity" || s == "+Infinity" { return 1.0e308 * 10.0, true }
+    if s == "-Infinity" { return -1.0e308 * 10.0, true }
+    if !classic_number_(s) || string.index_of(s, " ") >= 0 { return 0.0, false }
+    if string.string_try_double(s) == 0 { return 0.0, false }
+    return string.string_get_double(s), true
+}
+
+// JavaScript's SameValueZero between two typed values: primitives by type and
+// value, containers never (each is its own object).
+same_value_(a: ptr, b: ptr) -> bool {
+    k = values.kind(a)
+    if k != values.kind(b) || k == 4 || k == 5 { return false }
+    if k == 2 {
+        x, _ok = js_number_(a)
+        y, _ok2 = js_number_(b)
+        return x == y
+    }
+    return values.text(a) == values.text(b)
+}
+
+// JavaScript parseInt(text) || fallback, for slice bounds.
+js_int_(value: ptr, fallback: int) -> int {
+    s = string.trim(values.text(value))
+    n = string.length(s)
+    i = 0
+    negative = false
+    if i < n && (string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45) { negative = string.char_at_n(s, n, i) == 45; i = i + 1 }
+    start = i
+    while i < n && digit_(string.char_at_n(s, n, i)) && i - start < 9 { i = i + 1 }
+    if i == start { return fallback }
+    v = string.string_get_int(string.substring_n(s, n, start, i))
+    if negative { v = -v }
+    return v
+}
+
+array_call_(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if count == 0 { state.fail(ctx, string.concat(name, " requires an array")); return null }
+    arr = array_arg_(ctx, name, argument_(args, 0))
+    if arr == null { return null }
+    defer json.json_free(arr)
+    items = values.data(arr)
+    size = json.json_array_size(items)
+    if name == "ARRAY_POP" || name == "ARRAY_SHIFT" {
+        // RexxJS gives JavaScript's undefined for an empty array; RexxAE "".
+        if size == 0 { return values.string_value("") }
+        if name == "ARRAY_POP" { return values.clone(json.json_array_get_raw(items, size - 1)) }
+        return values.clone(json.json_array_get_raw(items, 0))
+    }
+    if name == "ARRAY_SUM" || name == "ARRAY_MIN" || name == "ARRAY_MAX" || name == "ARRAY_AVERAGE" {
+        // Number() of each item, NaN dropped, as RexxJS does.
+        total = 0.0
+        low = 0.0
+        high = 0.0
+        numbers = 0
+        i = 0
+        while i < size {
+            x, ok = js_number_(json.json_array_get_raw(items, i))
+            if ok {
+                if numbers == 0 || x < low { low = x }
+                if numbers == 0 || x > high { high = x }
+                total = total + x
+                numbers = numbers + 1
+            }
+            i = i + 1
+        }
+        if name == "ARRAY_SUM" { return values.numeric(values.number_text(total)) }
+        if name == "ARRAY_AVERAGE" {
+            if numbers == 0 { return values.numeric("0") }
+            return values.numeric(values.number_text(total / numbers))
+        }
+        if numbers == 0 { return values.null_value() }
+        if name == "ARRAY_MIN" { return values.numeric(values.number_text(low)) }
+        return values.numeric(values.number_text(high))
+    }
+    if name == "ARRAY_INCLUDES" || name == "ARRAY_INDEXOF" {
+        if count < 2 { state.fail(ctx, string.concat(name, " requires an item")); return null }
+        item = argument_(args, 1)
+        i = 0
+        while i < size {
+            if same_value_(json.json_array_get_raw(items, i), item) {
+                if name == "ARRAY_INCLUDES" { return values.boolean(true) }
+                return values.numeric(string.from_int(i))
+            }
+            i = i + 1
+        }
+        if name == "ARRAY_INCLUDES" { return values.boolean(false) }
+        return values.numeric("-1")
+    }
+    result = json.arr()
+    if name == "ARRAY_REVERSE" {
+        i = size - 1
+        while i >= 0 { json.push(result, values.clone(json.json_array_get_raw(items, i))); i = i - 1 }
+    } else if name == "ARRAY_SLICE" {
+        // Array.prototype.slice(start, end): negative counts from the end.
+        first = 0
+        if count > 1 { first = js_int_(argument_(args, 1), 0) }
+        last = size
+        if count > 2 { last = js_int_(argument_(args, 2), 0) }
+        if first < 0 { first = first + size }
+        if first < 0 { first = 0 }
+        if last < 0 { last = last + size }
+        if last > size { last = size }
+        i = first
+        while i < last { json.push(result, values.clone(json.json_array_get_raw(items, i))); i = i + 1 }
+    } else if name == "ARRAY_CONCAT" {
+        i = 0
+        while i < size { json.push(result, values.clone(json.json_array_get_raw(items, i))); i = i + 1 }
+        if count > 1 {
+            other = array_arg_(ctx, name, argument_(args, 1))
+            if other == null { json.json_free(result); return null }
+            j = 0
+            while j < json.json_array_size(values.data(other)) { json.push(result, values.clone(json.json_array_get_raw(values.data(other), j))); j = j + 1 }
+            json.json_free(other)
+        }
+    } else {
+        // ARRAY_UNIQUE: first of each primitive (by type and value), every
+        // container (each is its own object). One pass with a set of keys.
+        seen = map.map_new()
+        defer map.map_free(seen)
+        i = 0
+        while i < size {
+            child = json.json_array_get_raw(items, i)
+            k = values.kind(child)
+            keep = true
+            if k != 4 && k != 5 {
+                key = string.concat(string.from_int(k), string.concat(":", values.text(child)))
+                if k == 2 {
+                    x, _ok = js_number_(child)
+                    key = string.concat("2:", values.number_text(x))
+                }
+                if map.map_has(seen, key) != 0 { keep = false }
+                else { state.write(seen, key, "1") }
+            }
+            if keep { json.push(result, values.clone(child)) }
+            i = i + 1
+        }
+    }
+    return values.wrap(4, result)
+}
+
 call(ctx: ptr, name: string, args: ptr) -> ptr {
     count = json.json_array_size(args)
+    if string.starts_with(name, "ARRAY_") != 0 { return array_call_(ctx, name, args) }
     if name == "DATATYPE" { return datatype_(ctx, args) }
     if name == "SYMBOL" { return symbol_(ctx, args) }
     if name == "AND" || name == "OR" {

@@ -242,6 +242,28 @@
     "reason": "RexxAE evaluates EXIT UNLESS's message as an expression. RexxJS evaluates it only when it contains ||, and otherwise prints its source text. A suspected RexxJS bug."
   },
   {
+    "name": "array_slice_positional",
+    "source": "LET a = JSON_PARSE('[3,1,2,4]')\nLET r = ARRAY_SLICE(a, 1, 3)\nSAY JSON_STRINGIFY(r)",
+    "native_output": [
+      "[1,2]"
+    ],
+    "reference_output": [
+      "[3,1,2,4]"
+    ],
+    "reason": "RexxAE slices positionally as Array.prototype.slice does. RexxJS's positional converter for ARRAY_SLICE drops start and end (named start= and end= work), so the whole array comes back. A suspected RexxJS bug in parameter-converter.js."
+  },
+  {
+    "name": "array_includes_positional",
+    "source": "LET a = JSON_PARSE('[3,1]')\nLET r = ARRAY_INCLUDES(a, 1)\nLET i = ARRAY_INDEXOF(a, 1)\nSAY r i",
+    "native_output": [
+      "true 1"
+    ],
+    "reference_output": [
+      "false -1"
+    ],
+    "reason": "RexxAE finds a positional item by JavaScript's SameValueZero. RexxJS's positional converter for ARRAY_INCLUDES and ARRAY_INDEXOF loses the item (a named item= works). A suspected RexxJS bug in parameter-converter.js."
+  },
+  {
     "name": "extension_cron_valid",
     "kind": "rexxae_extension",
     "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",

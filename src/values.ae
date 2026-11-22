@@ -102,7 +102,7 @@ from_json(value: ptr, depth: int) -> ptr {
         converted = from_json(child, depth + 1)
         if converted == null { return null }
         if k == 4 { json.push(result, converted) }
-        else { json.set(result, json.json_object_key_at(value, i), converted) }
+        else { json.set(result, state.key_at(value, i), converted) }
         i = i + 1
     }
     return wrap(k, state.take_ptr(&result))
@@ -131,7 +131,7 @@ to_json(value: ptr, depth: int) -> ptr {
         converted = to_json(child, depth + 1)
         if converted == null { return null }
         if k == 4 { json.push(result, converted) }
-        else { json.set(result, json.json_object_key_at(payload, i), converted) }
+        else { json.set(result, state.key_at(payload, i), converted) }
         i = i + 1
     }
     return state.take_ptr(&result)

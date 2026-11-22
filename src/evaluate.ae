@@ -97,7 +97,7 @@ typed_call(ctx: ptr, name: string, args: ptr) -> ptr {
         result = json.arr()
         i = 0
         while i < json.json_object_size_raw(values.data(a)) {
-            json.push(result, values.string_value(json.json_object_key_at(values.data(a), i)))
+            json.push(result, values.string_value(state.key_at(values.data(a), i)))
             i = i + 1
         }
         return values.wrap(4, result)
@@ -208,7 +208,7 @@ log_call(ctx: ptr, name: string, args: ptr, node: string) -> ptr {
         while i < json.json_object_size_raw(fields) {
             k = values.kind(json.json_object_value_at(fields, i))
             if k != 1 && k != 2 && k != 3 {
-                state.fail(ctx, string.concat(string.concat(name, ": tag values must be strings, numbers or booleans: "), json.json_object_key_at(fields, i)))
+                state.fail(ctx, string.concat(string.concat(name, ": tag values must be strings, numbers or booleans: "), state.key_at(fields, i)))
                 return null
             }
             i = i + 1

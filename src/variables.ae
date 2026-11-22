@@ -114,7 +114,7 @@ replace(existing: ptr, path: string, value: ptr, depth: int) -> ptr {
     i = 0
     if values.kind(existing) == 5 {
         while i < json.json_object_size_raw(values.data(existing)) {
-            field = json.json_object_key_at(values.data(existing), i)
+            field = state.key_at(values.data(existing), i)
             if field == key { json.set(fields, field, state.take_ptr(&child)); replaced = true }
             else { json.set(fields, field, values.clone(json.json_object_value_at(values.data(existing), i))) }
             i = i + 1

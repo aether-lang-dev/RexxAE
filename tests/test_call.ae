@@ -151,5 +151,25 @@ main() {
             spec.assert_str_eq(if got == null { "(null)" } else { string.from_cstr(got) }, "\"hi\"", "V holds it")
         }
     }
+    spec.describe(fw, "an object key holding U+0000 crosses whole") {
+        // A key used to come back cut at the NUL ({"k\u0000ey":...} as {"k":...}):
+        // keys were read as C strings. They are copied by their length now.
+        spec.it("in a label's argument and its returned value") callback {
+            ctx = engine.rexxae_create("EXIT 0\nBACK:\nRETURN ARG(1)")
+            defer engine.rexxae_destroy(ctx)
+            run(ctx)
+            spec.assert_eq(engine.rexxae_call(ctx, "back", "[{\"k\\u0000ey\":\"v\\u0000al\"}]"), 0, "call")
+            spec.assert_str_eq(run(ctx), "DONE", "the call")
+            spec.assert_str_eq(result(ctx), "{\"k\\u0000ey\":\"v\\u0000al\"}", "key and value whole")
+        }
+        spec.it("through a variable, JSON_KEYS and JSON_GET") callback {
+            ctx = engine.rexxae_create("LET copy = input\nLET keys = JSON_KEYS(input)\nLET k = ARRAY_GET(keys, 0)\nSAY LENGTH(k) LENGTH(JSON_GET(input, k))")
+            defer engine.rexxae_destroy(ctx)
+            spec.assert_eq(engine.rexxae_set_variable_json(ctx, "input", "{\"k\\u0000ey\":\"v\\u0000al\",\"a\":1}"), 0, "set")
+            spec.assert_str_eq(run(ctx), "4 4;DONE", "the key is four characters and finds its four-character value")
+            got = engine.rexxae_get_variable_json(ctx, "copy")
+            spec.assert_str_eq(if got == null { "(null)" } else { string.from_cstr(got) }, "{\"k\\u0000ey\":\"v\\u0000al\",\"a\":1}", "copied whole")
+        }
+    }
     return spec.run_summary(fw)
 }

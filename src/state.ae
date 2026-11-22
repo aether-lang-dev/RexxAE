@@ -4,7 +4,7 @@ import std.json
 import std.mem
 import std.strbuilder
 
-exports(read, write, integer, number, fail, load, save, field, text, index, release_tree, release_builder, take_ptr)
+exports(read, write, integer, number, fail, load, save, field, text, index, release_tree, release_builder, take_ptr, key_at)
 
 // A stack slot owns the tree until its pointer is moved to a consumer.
 release_tree(slot: ptr) { json.json_free(mem.get_ptr(slot, 0)) }
@@ -13,6 +13,13 @@ take_ptr(slot: ptr) -> ptr {
     owned = mem.get_ptr(slot, 0)
     mem.set_ptr(slot, 0, null)
     return owned
+}
+
+// The key at `i` of a JSON object, copied whole by its length: a key may
+// hold U+0000, where json_object_key_at's C string would end.
+key_at(obj: ptr, i: int) -> string {
+    key, _value, _err = json.object_entry(obj, i)
+    return key
 }
 
 read(ctx: ptr, key: string) -> string {

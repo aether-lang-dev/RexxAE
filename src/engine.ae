@@ -135,7 +135,7 @@ over_items_(ctx: ptr, value: ptr) -> ptr {
         chosen = -1
         i = 0
         while i < size {
-            key = json.json_object_key_at(fields, i)
+            key = state.key_at(fields, i)
             if object_index_(key) {
                 n = string.string_get_double(key)
                 if n > previous && n < best { best = n; chosen = i }
@@ -148,7 +148,7 @@ over_items_(ctx: ptr, value: ptr) -> ptr {
     }
     i = 0
     while i < size {
-        if !object_index_(json.json_object_key_at(fields, i)) { json.push(result, values.clone(json.json_object_value_at(fields, i))) }
+        if !object_index_(state.key_at(fields, i)) { json.push(result, values.clone(json.json_object_value_at(fields, i))) }
         i = i + 1
     }
     return values.wrap(4, result)

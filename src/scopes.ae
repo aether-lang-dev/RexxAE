@@ -28,14 +28,14 @@ clear(ctx: ptr) {
     defer json.json_free(saved)
     i = 0
     while i < json.json_object_size_raw(saved) {
-        map.map_remove(ctx, json.json_object_key_at(saved, i))
+        map.map_remove(ctx, state.key_at(saved, i))
         i = i + 1
     }
 }
 restore(ctx: ptr, saved: ptr) {
     i = 0
     while i < json.json_object_size_raw(saved) {
-        key = json.json_object_key_at(saved, i)
+        key = state.key_at(saved, i)
         state.write(ctx, key, state.text(saved, key))
         i = i + 1
     }
@@ -51,7 +51,7 @@ enter(ctx: ptr, exposed: ptr) -> ptr {
     clear(ctx)
     i = 0
     while i < json.json_object_size_raw(saved) {
-        key = json.json_object_key_at(saved, i)
+        key = state.key_at(saved, i)
         if string.starts_with(key, "v:RUNTIME.") != 0 { state.write(ctx, key, state.text(saved, key)) }
         i = i + 1
     }

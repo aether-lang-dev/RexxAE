@@ -14,8 +14,11 @@ endif
 # Otherwise the toolchain AE comes from (<prefix>/bin/ae, or a source tree's
 # build/ae). The worker tests' sandboxed spawn finds libaether_sandbox.so
 # under AETHER_HOME, which `ae run` sets but a program run from here would not.
+# The link is followed first: an ae reached through ~/.local/bin/ae would
+# otherwise name ~/.local, whose share/aether can be an older install's stdlib
+# (ae-x64 had one from 2026-11-08, and every build failed on it).
 ifeq ($(strip $(AETHER_HOME)),)
-export AETHER_HOME := $(abspath $(dir $(shell command -v $(AE)))/..)
+export AETHER_HOME := $(abspath $(dir $(realpath $(shell command -v $(AE))))/..)
 endif
 # AETHER_HOME is not enough where ae is reached through a symlink or the
 # install keeps its libraries elsewhere (~/.aether/current/lib): spawn_socket

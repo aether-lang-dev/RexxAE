@@ -59,14 +59,20 @@ print(f'{len(functions)} guest functions, {len(extensions)} RexxAE extensions an
 # only place it steps the engine.
 worker_source = Path('worker/worker.ae').read_text()
 worker_imports = set(re.findall(r'^import\s+(\S+)', worker_source, re.MULTILINE))
-if worker_imports != {'std.guest.child', 'std.string', 'src.engine'}:
+# std.list (the exported labels' names, guest-invoke) holds values only: no effect.
+if worker_imports != {'std.guest.child', 'std.list', 'std.string', 'src.engine'}:
     raise SystemExit(f'Worker imports changed: {sorted(worker_imports)}; review its effect boundary')
+# The script runs from inside child.run's callback, and so do exported labels:
+# serve_labels (which runs each INVOKE through run_script) is called from
+# there and from nowhere else.
 locked = worker_source.find('child.run(h) callback {')
-first_step = worker_source.find('run_script(ctx, h)')
-if locked < 0 or not (locked < first_step):
+first_step = worker_source.find('run_script(ctx, h, exported)')
+serving = worker_source.find('serve_labels(ctx, h, exported)')
+if locked < 0 or first_step < 0 or serving < 0 or not (locked < first_step and locked < serving):
     raise SystemExit('The worker must run its script inside child.run (no-grant sandbox.enforce)')
-if worker_source.count('run_script(ctx, h)') != 1 or worker_source.count('engine.rexxae_step(') != 1:
-    raise SystemExit('The worker steps the engine from one place, inside child.run')
+if (worker_source.count('run_script(ctx, h,') != 2 or worker_source.count('serve_labels(ctx, h, exported)') != 1
+        or worker_source.count('engine.rexxae_step(') != 1):
+    raise SystemExit('The worker steps the engine from one place, reached only inside child.run')
 host_source = Path('worker/rexxworker/module.ae').read_text()
 host_imports = set(re.findall(r'^import\s+(\S+)', host_source, re.MULTILINE))
 if host_imports != {'std.guest', 'std.sandbox'}:

@@ -1,11 +1,11 @@
 {
  "rexxjsRevision": "30fce5c60b9d6000e4a1b0892bc9bb1d25517f69",
- "parityPrograms": 521,
+ "parityPrograms": 542,
  "counts": {
-  "in both, tested equal by parity": 121,
-  "RexxJS only": 219,
+  "in both, tested equal by parity": 124,
+  "RexxJS only": 214,
+  "in both, known to differ": 15,
   "RexxAE-specific (embedding)": 17,
-  "in both, known to differ": 13,
   "in both, not covered by a parity program": 12,
   "in neither (classic Rexx)": 21,
   "host-specific to RexxJS, not tracked": 133
@@ -26,7 +26,7 @@
   {
    "name": "AND",
    "library": "logic-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -254,8 +254,8 @@
   {
    "name": "DATATYPE",
    "library": "validation-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Both answer NUM, CHAR and RexxJS's type names alike. RexxAE also answers the classic option letters (A B L M N S U W X) with 1 or 0, where RexxJS answers false; RexxJS counts JavaScript number syntax (0x1F) as NUM. tests/known_differences.json."
   },
   {
    "name": "DATE",
@@ -530,7 +530,7 @@
   {
    "name": "IFS",
    "library": "logic-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -1106,7 +1106,7 @@
   {
    "name": "OR",
    "library": "logic-functions.js",
-   "class": "RexxJS only",
+   "class": "in both, tested equal by parity",
    "note": ""
   },
   {
@@ -1430,8 +1430,8 @@
   {
    "name": "SYMBOL",
    "library": "interpreter-builtin-functions.js",
-   "class": "RexxJS only",
-   "note": ""
+   "class": "in both, known to differ",
+   "note": "Equal for variables and non-symbols; classic constant symbols ('12') are LIT in RexxAE and BAD in RexxJS. tests/known_differences.json."
   },
   {
    "name": "TIME",
@@ -1762,8 +1762,8 @@
   {
    "name": "DATATYPE",
    "rexxjs": "yes",
-   "rexxae": "no",
-   "class": "RexxJS only"
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
   },
   {
    "name": "DATE",
@@ -1954,8 +1954,8 @@
   {
    "name": "SYMBOL",
    "rexxjs": "yes",
-   "rexxae": "no",
-   "class": "RexxJS only"
+   "rexxae": "yes",
+   "class": "in both, tested equal by parity"
   },
   {
    "name": "TIME",

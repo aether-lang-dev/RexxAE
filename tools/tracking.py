@@ -78,9 +78,9 @@ def git_revision(repo):
 def rexxae_functions():
     source = '\n'.join(p.read_text() for p in sorted((ROOT / 'src').glob('*.ae')))
     lists = {}
-    for kind, names in re.findall(r'const (TEXT|MATH|VALUE|EXTENSION)_FUNCTIONS = "([^"]+)"', source):
+    for kind, names in re.findall(r'const (TEXT|MATH|VALUE|LIBRARY|EXTENSION)_FUNCTIONS = "([^"]+)"', source):
         lists.setdefault(kind, set()).update(names.split())
-    native = lists.get('TEXT', set()) | lists.get('MATH', set()) | lists.get('VALUE', set())
+    native = lists.get('TEXT', set()) | lists.get('MATH', set()) | lists.get('VALUE', set()) | lists.get('LIBRARY', set())
     return native, lists.get('EXTENSION', set())
 
 

@@ -16,12 +16,12 @@
   ],
   [
     "length_utf16",
-    "LENGTH('\ud83d\ude00\u00e9')",
+    "LENGTH('😀é')",
     "3"
   ],
   [
     "length_combining",
-    "LENGTH('e\u0301')",
+    "LENGTH('é')",
     "2"
   ],
   [
@@ -623,5 +623,105 @@
     "arg_empty",
     "ARG()",
     "0"
+  ],
+  [
+    "datatype_char",
+    "DATATYPE('abc')",
+    "CHAR"
+  ],
+  [
+    "datatype_number_with_blanks",
+    "DATATYPE(' 12 ')",
+    "NUM"
+  ],
+  [
+    "datatype_exponent",
+    "DATATYPE('-1.5e3')",
+    "NUM"
+  ],
+  [
+    "datatype_empty",
+    "DATATYPE('')",
+    "CHAR"
+  ],
+  [
+    "datatype_point_only",
+    "DATATYPE('.')",
+    "CHAR"
+  ],
+  [
+    "datatype_type_name",
+    "DATATYPE('12', 'NUM')",
+    "true"
+  ],
+  [
+    "datatype_type_name_false",
+    "DATATYPE('ab', 'num')",
+    "false"
+  ],
+  [
+    "datatype_array",
+    "DATATYPE(JSON_PARSE('[1]'))",
+    "ARRAY"
+  ],
+  [
+    "datatype_object",
+    "DATATYPE(JSON_PARSE('{\"a\": 1}'))",
+    "OBJECT"
+  ],
+  [
+    "symbol_unset",
+    "SYMBOL('nope')",
+    "LIT"
+  ],
+  [
+    "symbol_bad",
+    "SYMBOL('a b')",
+    "BAD"
+  ],
+  [
+    "and_numbers",
+    "AND(1, 1)",
+    "true"
+  ],
+  [
+    "and_text_one",
+    "AND('1', 1)",
+    "false"
+  ],
+  [
+    "and_true_text",
+    "AND('true', 'TRUE')",
+    "true"
+  ],
+  [
+    "and_none",
+    "AND()",
+    "false"
+  ],
+  [
+    "or_text",
+    "OR(0, 'true')",
+    "true"
+  ],
+  [
+    "or_none",
+    "OR()",
+    "false"
+  ],
+  [
+    "ifs_text_zero_is_true",
+    "IFS(0, 'a', '0', 'b')",
+    "b"
+  ],
+  [
+    "ifs_default",
+    "IFS(0, 'a', 'dflt')",
+    "dflt"
+  ],
+  [
+    "ifs_first",
+    "IFS(1, 'a', 1, 'b')",
+    "a"
   ]
 ]

@@ -1,0 +1,222 @@
+// RexxJS core library functions that take or give typed values, beyond the
+// scalar text and math set in builtins.ae. Each follows RexxJS's behaviour
+// (core/src/*-functions.js), except where RexxJS departs from classic Rexx in
+// a way that looks like a bug; those are recorded in
+// tests/known_differences.json and docs/rexxjs-suggestions.md.
+import std.string
+import std.json
+import std.math
+import src.state
+import src.values
+import src.variables
+
+exports(known, call)
+
+const LIBRARY_FUNCTIONS = " DATATYPE SYMBOL AND OR IFS "
+
+known(name: string) -> bool {
+    return string.contains(LIBRARY_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
+}
+
+argument_(args: ptr, i: int) -> ptr { return json.json_array_get_raw(args, i) }
+
+// JavaScript's Boolean(value) for a typed value: what RexxJS's IFS tests.
+js_truthy_(value: ptr) -> bool {
+    k = values.kind(value)
+    if k == 0 { return false }
+    if k == 1 { return json.json_get_bool(values.data(value)) != 0 }
+    if k == 2 {
+        s = values.text(value)
+        return s != "0" && s != "-0" && s != "NaN"
+    }
+    if k == 3 { return values.text(value) != "" }
+    return true
+}
+
+// What RexxJS's AND and OR count as true: a string only when it reads
+// "true" (in any case), anything else as Boolean(value).
+logic_true_(value: ptr) -> bool {
+    if values.kind(value) == 3 { return string.to_lower(values.text(value)) == "true" }
+    return js_truthy_(value)
+}
+
+blank_(c: int) -> bool { return c == 32 || c == 9 }
+digit_(c: int) -> bool { return c >= 48 && c <= 57 }
+lower_(c: int) -> bool { return c >= 97 && c <= 122 }
+upper_(c: int) -> bool { return c >= 65 && c <= 90 }
+
+// A classic Rexx number: blanks, a sign, blanks, digits with at most one
+// point (at least one digit), an exponent E[sign]digits, blanks.
+classic_number_(s: string) -> bool {
+    n = string.length(s)
+    i = 0
+    while i < n && blank_(string.char_at_n(s, n, i)) { i = i + 1 }
+    if i < n && (string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45) {
+        i = i + 1
+        while i < n && blank_(string.char_at_n(s, n, i)) { i = i + 1 }
+    }
+    digits = 0
+    while i < n && digit_(string.char_at_n(s, n, i)) { i = i + 1; digits = digits + 1 }
+    if i < n && string.char_at_n(s, n, i) == 46 {
+        i = i + 1
+        while i < n && digit_(string.char_at_n(s, n, i)) { i = i + 1; digits = digits + 1 }
+    }
+    if digits == 0 { return false }
+    if i < n && (string.char_at_n(s, n, i) == 69 || string.char_at_n(s, n, i) == 101) {
+        i = i + 1
+        if i < n && (string.char_at_n(s, n, i) == 43 || string.char_at_n(s, n, i) == 45) { i = i + 1 }
+        exponent = 0
+        while i < n && digit_(string.char_at_n(s, n, i)) { i = i + 1; exponent = exponent + 1 }
+        if exponent == 0 { return false }
+    }
+    while i < n && blank_(string.char_at_n(s, n, i)) { i = i + 1 }
+    return i == n
+}
+
+// Every character of `s` (at least one) passes the class test.
+all_of_(s: string, kind: int) -> bool {
+    n = string.length(s)
+    if n == 0 { return false }
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        ok = false
+        if kind == 0 { ok = lower_(c) || upper_(c) || digit_(c) }
+        else if kind == 1 { ok = lower_(c) }
+        else if kind == 2 { ok = upper_(c) }
+        else if kind == 3 { ok = lower_(c) || upper_(c) }
+        else { ok = lower_(c) || upper_(c) || digit_(c) || c == 46 || c == 33 || c == 63 || c == 95 }
+        if !ok { return false }
+        i = i + 1
+    }
+    return true
+}
+
+// A binary (width 4) or hexadecimal (width 2) string as classic Rexx writes
+// one: digits, optionally in groups split by blanks, every group after the
+// first exactly `width` digits; no blank at either end. Empty is valid.
+grouped_digits_(s: string, hex: bool) -> bool {
+    n = string.length(s)
+    if n == 0 { return true }
+    width = 4
+    if hex { width = 2 }
+    if blank_(string.char_at_n(s, n, 0)) || blank_(string.char_at_n(s, n, n - 1)) { return false }
+    group = 0
+    first = true
+    i = 0
+    while i < n {
+        c = string.char_at_n(s, n, i)
+        if blank_(c) {
+            if group > 0 {
+                if !first && group != width { return false }
+                first = false
+                group = 0
+            }
+        } else {
+            ok = c == 48 || c == 49
+            if hex { ok = digit_(c) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102) }
+            if !ok { return false }
+            group = group + 1
+        }
+        i = i + 1
+    }
+    return first || group == width
+}
+
+// DATATYPE(value): RexxJS's names, NUM and CHAR for text (the classic
+// answers) and BOOL, ARRAY, OBJECT or NULL for typed values.
+datatype_name_(value: ptr) -> string {
+    k = values.kind(value)
+    if k == 0 { return "NULL" }
+    if k == 1 { return "BOOL" }
+    if k == 2 { return "NUM" }
+    if k == 4 { return "ARRAY" }
+    if k == 5 { return "OBJECT" }
+    if classic_number_(values.text(value)) { return "NUM" }
+    return "CHAR"
+}
+
+datatype_(ctx: ptr, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if count == 0 || count > 2 { state.fail(ctx, "DATATYPE requires one or two arguments"); return null }
+    value = argument_(args, 0)
+    name = datatype_name_(value)
+    if count == 1 { return values.string_value(name) }
+    option = string.to_upper(string.trim(values.text(argument_(args, 1))))
+    // RexxJS's form: a type name, answered true or false.
+    if option == "NUM" || option == "CHAR" || option == "BOOL" || option == "ARRAY" || option == "OBJECT" || option == "NULL" {
+        return values.boolean(option == name)
+    }
+    // The classic form: one option letter, answered 1 or 0.
+    if string.length(option) != 1 { state.fail(ctx, "DATATYPE option must be one of A B L M N S U W X, or a type name"); return null }
+    s = values.text(value)
+    ok = false
+    if option == "A" { ok = all_of_(s, 0) }
+    else if option == "B" { ok = grouped_digits_(s, false) }
+    else if option == "L" { ok = all_of_(s, 1) }
+    else if option == "U" { ok = all_of_(s, 2) }
+    else if option == "M" { ok = all_of_(s, 3) }
+    else if option == "S" { ok = all_of_(s, 4) }
+    else if option == "N" { ok = classic_number_(s) }
+    else if option == "W" {
+        if classic_number_(s) {
+            trimmed = string.trim(s)
+            if string.string_try_double(trimmed) != 0 {
+                d = string.string_get_double(trimmed)
+                ok = d - d == 0.0 && math.floor(d) == d
+            }
+        }
+    }
+    else if option == "X" { ok = grouped_digits_(s, true) }
+    else { state.fail(ctx, "DATATYPE option must be one of A B L M N S U W X, or a type name"); return null }
+    if ok { return values.numeric("1") }
+    return values.numeric("0")
+}
+
+// SYMBOL(name): BAD when the text is not a Rexx symbol, LIT for a constant
+// symbol (it starts with a digit or a point) or an unset variable, VAR for a
+// set one. Tails are substituted as in a script.
+symbol_(ctx: ptr, args: ptr) -> ptr {
+    if json.json_array_size(args) != 1 { state.fail(ctx, "SYMBOL requires one argument"); return null }
+    name = values.text(argument_(args, 0))
+    if !all_of_(name, 4) { return values.string_value("BAD") }
+    c = string.char_at_n(name, string.length(name), 0)
+    if digit_(c) || c == 46 { return values.string_value("LIT") }
+    found = variables.get(ctx, variables.derived(ctx, name))
+    if found == null { return values.string_value("LIT") }
+    json.json_free(found)
+    return values.string_value("VAR")
+}
+
+call(ctx: ptr, name: string, args: ptr) -> ptr {
+    count = json.json_array_size(args)
+    if name == "DATATYPE" { return datatype_(ctx, args) }
+    if name == "SYMBOL" { return symbol_(ctx, args) }
+    if name == "AND" || name == "OR" {
+        // RexxJS: values.every / values.some; with no arguments both give
+        // false (RexxJS's converter passes one undefined).
+        all = count > 0
+        any = false
+        i = 0
+        while i < count {
+            if logic_true_(argument_(args, i)) { any = true } else { all = false }
+            i = i + 1
+        }
+        if name == "AND" { return values.boolean(all) }
+        return values.boolean(any)
+    }
+    if name == "IFS" {
+        // IFS(test1, value1, test2, value2, ..., [default]): the value after
+        // the first test JavaScript counts as true; the odd last argument as
+        // the default, otherwise "".
+        i = 0
+        while i + 1 < count {
+            if js_truthy_(argument_(args, i)) { return values.clone(argument_(args, i + 1)) }
+            i = i + 2
+        }
+        if count % 2 == 1 { return values.clone(argument_(args, count - 1)) }
+        return values.string_value("")
+    }
+    state.fail(ctx, string.concat("unknown library function: ", name))
+    return null
+}

@@ -1,1 +1,4 @@
-{}
+{
+ "DATATYPE": "Both answer NUM, CHAR and RexxJS's type names alike. RexxAE also answers the classic option letters (A B L M N S U W X) with 1 or 0, where RexxJS answers false; RexxJS counts JavaScript number syntax (0x1F) as NUM. tests/known_differences.json.",
+ "SYMBOL": "Equal for variables and non-symbols; classic constant symbols ('12') are LIT in RexxAE and BAD in RexxJS. tests/known_differences.json."
+}

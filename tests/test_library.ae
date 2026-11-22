@@ -1,0 +1,73 @@
+// The RexxJS core library functions in src/library.ae, natively: the classic
+// forms RexxJS answers differently (tests/known_differences.json) as well as
+// the edges the golden fixtures (tests/function_cases.json) leave out.
+import std.spec
+import std.string
+import std.strbuilder
+import src.engine
+
+said(source: string) -> string {
+    ctx = engine.rexxae_create(source)
+    defer engine.rexxae_destroy(ctx)
+    out = strbuilder.new(32)
+    status = 3
+    count = 0
+    while status > 0 && count < 10000 {
+        status = engine.rexxae_step(ctx, 100)
+        if status == 1 {
+            if strbuilder.length(out) > 0 { strbuilder.append_byte(out, 32) }
+            strbuilder.append(out, string.from_cstr(engine.rexxae_text(ctx)))
+        }
+        if status == 2 || status == 4 { return "unexpected host request" }
+        count = count + 1
+    }
+    if status == -1 { return "ERROR ${string.from_cstr(engine.rexxae_error(ctx))}" }
+    return strbuilder.finish(out)
+}
+
+
+main() {
+    fw = spec.init()
+    spec.describe(fw, "DATATYPE") {
+        spec.it("names text NUM or CHAR by classic number syntax") callback {
+            spec.assert_str_eq(said("SAY DATATYPE('12')\nSAY DATATYPE(' -1.5E+3 ')\nSAY DATATYPE('- 5')\nSAY DATATYPE('.5')\nSAY DATATYPE('5.')"), "NUM NUM NUM NUM NUM", "numbers")
+            spec.assert_str_eq(said("SAY DATATYPE('0x1F')\nSAY DATATYPE('1e')\nSAY DATATYPE('1.2.3')\nSAY DATATYPE('  ')\nSAY DATATYPE('Infinity')\nSAY DATATYPE('--1')"), "CHAR CHAR CHAR CHAR CHAR CHAR", "not numbers")
+        }
+        spec.it("names typed values as RexxJS does") callback {
+            spec.assert_str_eq(said("LET b = true\nSAY DATATYPE(b)\nSAY DATATYPE(JSON_PARSE('null'))\nLET n = 3\nSAY DATATYPE(n)"), "BOOL NULL NUM", "typed")
+        }
+        spec.it("answers the classic option letters with 1 or 0") callback {
+            spec.assert_str_eq(said("SAY DATATYPE('12', 'W') DATATYPE('1.5', 'W') DATATYPE('1E3', 'w') DATATYPE('x', 'W')"), "1 0 1 0", "W")
+            spec.assert_str_eq(said("SAY DATATYPE('aB1', 'A') DATATYPE('a b', 'A') DATATYPE('', 'A')"), "1 0 0", "A")
+            spec.assert_str_eq(said("SAY DATATYPE('ab', 'L') DATATYPE('aB', 'L') DATATYPE('AB', 'U') DATATYPE('aB', 'M') DATATYPE('a1', 'M')"), "1 0 1 1 0", "L U M")
+            spec.assert_str_eq(said("SAY DATATYPE(' 1 ', 'N') DATATYPE('abc', 'N')"), "1 0", "N")
+            spec.assert_str_eq(said("SAY DATATYPE('x.1!?_', 'S') DATATYPE('a-b', 'S') DATATYPE('', 'S')"), "1 0 0", "S")
+            spec.assert_str_eq(said("SAY DATATYPE('101', 'B') DATATYPE('1 0101', 'B') DATATYPE('10 1', 'B') DATATYPE('', 'B') DATATYPE('102', 'B') DATATYPE(' 1', 'B')"), "1 1 0 1 0 0", "B")
+            spec.assert_str_eq(said("SAY DATATYPE('1aF', 'X') DATATYPE('1 aF', 'X') DATATYPE('1 a', 'X') DATATYPE('', 'X') DATATYPE('g', 'X')"), "1 1 0 1 0", "X")
+        }
+        spec.it("rejects an unknown option and a wrong argument count") callback {
+            spec.assert_true(string.starts_with(said("SAY DATATYPE('1', 'Q')"), "ERROR") != 0, "Q")
+            spec.assert_true(string.starts_with(said("SAY DATATYPE('1', 'WORD')"), "ERROR") != 0, "a word that is not a type name")
+            spec.assert_true(string.starts_with(said("SAY DATATYPE()"), "ERROR") != 0, "none")
+        }
+    }
+    spec.describe(fw, "SYMBOL") {
+        spec.it("tells set variables, constant symbols and non-symbols apart") callback {
+            spec.assert_str_eq(said("x = 1\nSAY SYMBOL('x') SYMBOL('X') SYMBOL('nope') SYMBOL('12') SYMBOL('.5') SYMBOL('a b') SYMBOL('')"), "VAR LIT LIT LIT LIT BAD BAD", "classes")
+        }
+        spec.it("substitutes a compound's tail") callback {
+            spec.assert_str_eq(said("i = 2\nx.2 = 'two'\nSAY SYMBOL('x.i') SYMBOL('x.3')"), "VAR LIT", "compound")
+        }
+    }
+    spec.describe(fw, "AND, OR and IFS") {
+        spec.it("count text as true only when it reads true, as RexxJS does") callback {
+            // AND and OR are also infix operators: a call after another term needs its own clause.
+            spec.assert_str_eq(said("SAY AND(1, 'True')\nSAY AND(1, 0)\nSAY AND('yes')\nSAY OR('false', 0)\nSAY OR(JSON_PARSE('[]'))"), "true false false false true", "logic")
+        }
+        spec.it("pick IFS's first true test by JavaScript truthiness") callback {
+            spec.assert_str_eq(said("SAY IFS('', 'a', 'false', 'b')\nSAY IFS(0, 'a', JSON_PARSE('null'), 'b', 'c')"), "b c", "ifs")
+            spec.assert_str_eq(said("LET v = IFS(1, JSON_PARSE('[1, 2]'))\nSAY TYPEOF(v) ARRAY_LENGTH(v)"), "object 2", "a typed value passes through")
+        }
+    }
+    return spec.run_summary(fw)
+}

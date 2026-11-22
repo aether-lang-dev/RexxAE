@@ -25,7 +25,7 @@ allowed_std = {'std.string', 'std.map', 'std.json', 'std.math', 'std.strbuilder'
                 'std.sync', 'std.mem', 'std.bytes'}  # last three: cancel flag only, no authority
 for path in Path('src').glob('*.ae'):
     source = path.read_text()
-    for names in re.findall(r'const (?:TEXT|MATH|VALUE)_FUNCTIONS = "([^"]+)"', source):
+    for names in re.findall(r'const (?:TEXT|MATH|VALUE|LIBRARY)_FUNCTIONS = "([^"]+)"', source):
         functions.update(names.split())
     for names in re.findall(r'const EXTENSION_FUNCTIONS = "([^"]+)"', source):
         extensions.update(names.split())

@@ -6,9 +6,9 @@
     "registeredNames": 505,
     "languageFunctions": 386,
     "converterHelpers": 119,
-    "nativeFunctions": 71,
+    "nativeFunctions": 76,
     "nativeScalarFunctions": 60,
-    "nativeValueFunctions": 11,
+    "nativeValueFunctions": 16,
     "rexxaeExtensions": 8,
     "extraPackageManifests": 42
   },
@@ -40,9 +40,9 @@
     {
       "name": "AND",
       "source": "core/src/logic-functions.js",
-      "disposition": "native-language",
-      "aether": "typed values and lazy expression evaluation",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "ARCH",
@@ -418,9 +418,9 @@
     {
       "name": "DATATYPE",
       "source": "core/src/validation-functions.js",
-      "disposition": "native-patterns",
-      "aether": "std.regex/std.schema; JS RegExp compatibility fixtures",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "DATE",
@@ -1069,9 +1069,9 @@
     {
       "name": "IFS",
       "source": "core/src/logic-functions.js",
-      "disposition": "native-language",
-      "aether": "typed values and lazy expression evaluation",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "INCLUDES",
@@ -1867,9 +1867,9 @@
     {
       "name": "OR",
       "source": "core/src/logic-functions.js",
-      "disposition": "native-language",
-      "aether": "typed values and lazy expression evaluation",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "PAD_END",
@@ -2378,9 +2378,9 @@
     {
       "name": "SYMBOL",
       "source": "core/src/interpreter-builtin-functions.js",
-      "disposition": "native-language-review",
-      "aether": "execution frames, modules, stack and diagnostics",
-      "status": "planned"
+      "disposition": "native-values",
+      "aether": "std.json; typed evaluator and lazy IF",
+      "status": "implemented-profile"
     },
     {
       "name": "SYNC",

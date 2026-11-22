@@ -68,7 +68,7 @@ for (const mod of Object.values(require.cache)) {
 }
 const nativeSource = fs.readdirSync(path.join(here, 'src')).filter(p => p.endsWith('.ae')).sort()
     .map(p => read(path.join(here, 'src', p))).join('\n');
-const implemented = new Set([...nativeSource.matchAll(/const (?:TEXT|MATH|VALUE)_FUNCTIONS = "([^"]+)"/g)]
+const implemented = new Set([...nativeSource.matchAll(/const (?:TEXT|MATH|VALUE|LIBRARY)_FUNCTIONS = "([^"]+)"/g)]
     .flatMap(m => m[1].trim().split(/\s+/)));
 // RexxAE extensions (not in RexxJS, not parity): listed apart, never counted as native ports.
 const extensions = [...new Set([...nativeSource.matchAll(/const EXTENSION_FUNCTIONS = "([^"]+)"/g)]

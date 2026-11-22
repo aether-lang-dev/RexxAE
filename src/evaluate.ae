@@ -9,6 +9,7 @@ import src.values
 import src.variables
 import src.builtins
 import src.cron
+import src.library
 
 exports(run, known, cache_result)
 
@@ -19,7 +20,7 @@ const EXTENSION_FUNCTIONS = " CRON_NEXT CRON_VALID LOG_TRACE LOG_DEBUG LOG_INFO 
 
 known(name: string) -> bool {
     key = string.concat(string.concat(" ", name), " ")
-    return builtins.known(name) || string.contains(VALUE_FUNCTIONS, key) != 0 || string.contains(EXTENSION_FUNCTIONS, key) != 0
+    return builtins.known(name) || library.known(name) || string.contains(VALUE_FUNCTIONS, key) != 0 || string.contains(EXTENSION_FUNCTIONS, key) != 0
 }
 extension_(name: string) -> bool {
     return string.contains(EXTENSION_FUNCTIONS, string.concat(string.concat(" ", name), " ")) != 0
@@ -368,6 +369,7 @@ call(ctx: ptr, expr: ptr, depth: int) -> ptr {
     }
     if known(name) {
         if builtins.known(name) { return scalar_call(ctx, name, args) }
+        if library.known(name) { return library.call(ctx, name, args) }
         return typed_call(ctx, name, args)
     }
     if count < state.index(host, "min") || count > state.index(host, "max") { state.fail(ctx, "host function argument count mismatch"); return null }

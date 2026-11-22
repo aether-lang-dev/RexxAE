@@ -151,6 +151,39 @@
     "reason": "Classic Rexx tests UNTIL after each iteration of a controlled loop. RexxJS reads UNTIL i = 2 into the TO expression (1, then 0); a suspected RexxJS bug (docs/rexxjs-suggestions.md)."
   },
   {
+    "name": "datatype_classic_option",
+    "source": "LET a = DATATYPE('12', 'W')\nSAY a",
+    "native_output": [
+      "1"
+    ],
+    "reference_output": [
+      "false"
+    ],
+    "reason": "Classic DATATYPE(string, option) takes one of the letters A B L M N S U W X and answers 1 or 0. RexxJS compares the option with its type names (NUM, CHAR, ...) and answers false for every letter. RexxAE answers RexxJS's type names as RexxJS does and the letters as classic Rexx does; the letters are a suggested RexxJS addition."
+  },
+  {
+    "name": "datatype_hex_text",
+    "source": "LET a = DATATYPE('0x1F')\nSAY a",
+    "native_output": [
+      "CHAR"
+    ],
+    "reference_output": [
+      "NUM"
+    ],
+    "reason": "RexxJS's DATATYPE takes JavaScript's Number() syntax, so 0x1F (and 0b1, 0o7) is NUM; classic Rexx has no such number syntax (CHAR). A suspected RexxJS bug."
+  },
+  {
+    "name": "symbol_constant",
+    "source": "LET a = SYMBOL('12')\nSAY a",
+    "native_output": [
+      "LIT"
+    ],
+    "reference_output": [
+      "BAD"
+    ],
+    "reason": "Classic SYMBOL gives LIT for a constant symbol (one starting with a digit or a point). RexxJS's name pattern rejects it as BAD. A suspected RexxJS bug."
+  },
+  {
     "name": "extension_cron_valid",
     "kind": "rexxae_extension",
     "source": "LET x = CRON_VALID('0 0 * * *')\nSAY x",

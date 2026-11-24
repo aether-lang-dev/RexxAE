@@ -6,7 +6,10 @@
 # 0.939.0 is a tracking move again: nothing here uses the std.http.client
 # process-wide pool that 0.939.0 removed (the calculator's one request per call
 # keeps a plain request), and no source changed.
-AETHER_RELEASE := 0.939.0
+# 0.941.0 (2026-11-24) is a tracking move again: no new primitive needed and no
+# source change; the 0.940.0 client retry and error-wording changes touch the
+# calculator only through its loopback requests, which its tests cover.
+AETHER_RELEASE := 0.941.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.

@@ -85,6 +85,47 @@ def main(library):
     assert interrupted == {"create", "step"}, interrupted
     print(f"Allocation cleanup passed for {len(sources) * len(caps)} script/cap combinations")
 
+    # The account in use can be a child whose parent runs out first (a host
+    # session's allowance around each run): the refusal trips the parent,
+    # not the account in use, and the export must still give back what it
+    # built instead of returning a handle the ABI then discards.
+    nested_caps = range(16, 24001, 16)
+    nested = set()
+    for label in ("dense parse", "large builtin", "procedure"):
+        encoded = sources[label].encode()
+        for cap in nested_caps:
+            parent = account_new(c.byref(Limits(cap, 0, 0, None)))
+            assert parent
+            child = account_new(c.byref(Limits(131072, 0, 0, parent)))
+            assert child
+            ctx = None
+            stage = "create"
+            try:
+                assert account_use(child, None) == 0
+                ctx = create(encoded)
+                stopped = outcome()
+                if ctx and stopped == 0:
+                    for _ in range(1000):
+                        status = step(ctx, 32)
+                        stopped = outcome()
+                        stage = "step"
+                        if stopped or status in (-1, 0, 2, 4):
+                            break
+                assert stopped in (0, 4), (label, cap, stage, stopped)
+                assert not (stage == "create" and stopped == 4 and ctx), (label, cap, "handle from a stopped create")
+                if stopped == 4:
+                    nested.add(stage)
+            finally:
+                assert account_use(None, None) == 0
+                if ctx:
+                    destroy(ctx)
+                retained = account_used(child), account_used(parent)
+                account_free(child)
+                account_free(parent)
+            assert retained == (0, 0), (label, cap, stage, stopped, retained)
+    assert nested == {"create", "step"}, nested
+    print(f"Allocation cleanup passed for {3 * len(nested_caps)} parent-capped combinations")
+
     # Time one export at a time so a slow parser cannot satisfy the step case.
     for stage in ("create", "step"):
         ctx = None

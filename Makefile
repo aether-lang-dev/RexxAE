@@ -17,7 +17,11 @@
 # source change; its macOS cross-build and merge/typechecker fixes (glob import
 # binds only exports, a local named like an imported function is E0301) hit
 # nothing here.
-AETHER_RELEASE := 0.945.0
+# 0.946.0 (2026-11-25) is a tracking move again: no new primitive needed and no
+# source change. Verified with make test on cachyos (Linux x86_64): EXIT 0. On ghostbsd
+# (FreeBSD 15.1) make test stops at the --shared-runtime library build, because the FreeBSD
+# release install ships no shared runtime (the same on 0.945.0).
+AETHER_RELEASE := 0.946.0
 AETHER_LOCAL := $(abspath build/toolchains/aether-$(AETHER_RELEASE))
 AE ?= $(if $(wildcard $(AETHER_LOCAL)/bin/ae),$(AETHER_LOCAL)/bin/ae,ae)
 # A local extracted release must resolve its own compiler and stdlib.

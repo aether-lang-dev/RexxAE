@@ -199,8 +199,8 @@ datatype_(ctx: ptr, args: ptr) -> ptr {
     else if option == "W" {
         if classic_number_(s) {
             trimmed = string.trim(s)
-            if string.string_try_double(trimmed) != 0 {
-                d = string.string_get_double(trimmed)
+            if string.string_try_float(trimmed) != 0 {
+                d = string.string_get_float(trimmed)
                 ok = d - d == 0.0 && math.floor(d) == d
             }
         }
@@ -257,8 +257,8 @@ js_number_(value: ptr) -> (float, bool) {
     if s == "Infinity" || s == "+Infinity" { return 1.0e308 * 10.0, true }
     if s == "-Infinity" { return -1.0e308 * 10.0, true }
     if !classic_number_(s) || string.index_of(s, " ") >= 0 { return 0.0, false }
-    if string.string_try_double(s) == 0 { return 0.0, false }
-    return string.string_get_double(s), true
+    if string.string_try_float(s) == 0 { return 0.0, false }
+    return string.string_get_float(s), true
 }
 
 // JavaScript's SameValueZero between two typed values: primitives by type and

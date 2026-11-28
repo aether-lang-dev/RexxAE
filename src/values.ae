@@ -81,7 +81,7 @@ number_text(value: float) -> string {
     while p < count {
         candidate, candidate_point = rounded_digits_(digits, count, p, point)
         probe = "0.${candidate}e${candidate_point}"
-        if string.string_try_double(probe) != 0 && string.string_get_double(probe) == math.abs_float(value) {
+        if string.string_try_float(probe) != 0 && string.string_get_float(probe) == math.abs_float(value) {
             best = candidate
             best_point = candidate_point
             break
@@ -223,8 +223,8 @@ to_json(value: ptr, depth: int) -> ptr {
     if k == 1 { return json.boolean(json.json_get_bool(payload)) }
     if k == 2 {
         s = text(value)
-        if string.string_try_double(s) == 0 || s == "NaN" || string.contains(s, "Infinity") != 0 { return null }
-        return json.num(string.string_get_double(s))
+        if string.string_try_float(s) == 0 || s == "NaN" || string.contains(s, "Infinity") != 0 { return null }
+        return json.num(string.string_get_float(s))
     }
     if k == 3 { return json.str(text(value)) }
     result = json.obj()

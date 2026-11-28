@@ -239,8 +239,8 @@ log_call(ctx: ptr, name: string, args: ptr, node: string) -> ptr {
 // UTC text, or epoch milliseconds), or "" when none is within five years.
 integral_text_(value: ptr) -> string {
     text = values.text(value)
-    if string.string_try_double(text) == 0 { return text }
-    n = string.string_get_double(text)
+    if string.string_try_float(text) == 0 { return text }
+    n = string.string_get_float(text)
     if n != math.floor(n) || n > 1.0e15 || n < -1.0e15 { return text }
     return string.from_long(n as long)
 }
@@ -433,9 +433,9 @@ binary(ctx: ptr, expr: ptr, depth: int) -> ptr {
         if ok { return values.numeric("1") }
         return values.numeric("0")
     }
-    if string.string_try_double(a) == 0 || string.string_try_double(b) == 0 || values.kind(left) == 1 || values.kind(right) == 1 || values.kind(left) == 0 || values.kind(right) == 0 { state.fail(ctx, "arithmetic requires numbers"); return null }
-    x = string.string_get_double(a)
-    y = string.string_get_double(b)
+    if string.string_try_float(a) == 0 || string.string_try_float(b) == 0 || values.kind(left) == 1 || values.kind(right) == 1 || values.kind(left) == 0 || values.kind(right) == 0 { state.fail(ctx, "arithmetic requires numbers"); return null }
+    x = string.string_get_float(a)
+    y = string.string_get_float(b)
     result = 0.0
     if op == "+" { result = x + y }
     if op == "-" { result = x - y }
@@ -474,8 +474,8 @@ run_uncached(ctx: ptr, expr: ptr, depth: int) -> ptr {
             return values.numeric("1")
         }
         text = values.text(value)
-        if string.string_try_double(text) == 0 { state.fail(ctx, "unary operator requires a number"); return null }
-        number = string.string_get_double(text)
+        if string.string_try_float(text) == 0 { state.fail(ctx, "unary operator requires a number"); return null }
+        number = string.string_get_float(text)
         if operator == "-" { number = -number }
         return values.numeric(values.number_text(number))
     }

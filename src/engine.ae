@@ -119,8 +119,8 @@ return_call_(ctx: ptr, value: ptr) -> int {
 
 // Object.values order: canonical unsigned integer keys first, then insertion order.
 object_index_(name: string) -> bool {
-    if string.string_try_double(name) == 0 { return false }
-    n = string.string_get_double(name)
+    if string.string_try_float(name) == 0 { return false }
+    n = string.string_get_float(name)
     return n >= 0.0 && n < 4294967295.0 && values.number_text(n) == name && math.floor(n) == n
 }
 over_items_(ctx: ptr, value: ptr) -> ptr {
@@ -138,7 +138,7 @@ over_items_(ctx: ptr, value: ptr) -> ptr {
         while i < size {
             key = state.key_at(fields, i)
             if object_index_(key) {
-                n = string.string_get_double(key)
+                n = string.string_get_float(key)
                 if n > previous && n < best { best = n; chosen = i }
             }
             i = i + 1
@@ -192,12 +192,12 @@ loop_begin_(ctx: ptr, inst: ptr, pc: int) -> int {
         defer json.json_free(last)
         a = values.text(first)
         b = values.text(last)
-        if string.string_try_double(a) == 0 || string.string_try_double(b) == 0 { state.fail(ctx, "invalid range values in DO loop"); return pc }
-        start = math.floor(string.string_get_double(a))
-        finish = math.floor(string.string_get_double(b))
+        if string.string_try_float(a) == 0 || string.string_try_float(b) == 0 { state.fail(ctx, "invalid range values in DO loop"); return pc }
+        start = math.floor(string.string_get_float(a))
+        finish = math.floor(string.string_get_float(b))
         // parseInt truncates toward zero, unlike INT's floor operation.
-        if string.string_get_double(a) < 0.0 { start = math.ceil(string.string_get_double(a)) }
-        if string.string_get_double(b) < 0.0 { finish = math.ceil(string.string_get_double(b)) }
+        if string.string_get_float(a) < 0.0 { start = math.ceil(string.string_get_float(a)) }
+        if string.string_get_float(b) < 0.0 { finish = math.ceil(string.string_get_float(b)) }
         step = 1.0
         if start > finish { step = -1.0 }
         step_expr = state.field(inst, "step")
@@ -206,9 +206,9 @@ loop_begin_(ctx: ptr, inst: ptr, pc: int) -> int {
             if by == null { return pc }
             text = values.text(by)
             json.json_free(by)
-            if string.string_try_double(text) == 0 { state.fail(ctx, "invalid DO step"); return pc }
-            step = math.floor(string.string_get_double(text))
-            if string.string_get_double(text) < 0.0 { step = math.ceil(string.string_get_double(text)) }
+            if string.string_try_float(text) == 0 { state.fail(ctx, "invalid DO step"); return pc }
+            step = math.floor(string.string_get_float(text))
+            if string.string_get_float(text) < 0.0 { step = math.ceil(string.string_get_float(text)) }
         }
         if step == 0.0 { state.fail(ctx, "DO loop step cannot be zero"); return pc }
         json.set(frame, "current", json.num(start))

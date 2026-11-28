@@ -129,7 +129,7 @@ expression(ctx: ptr, minimum: int, depth: int, stops: string) -> ptr {
     } else if kind == 1 && (address_terms || string.to_upper(token) != "NOT") {
         lex.next(ctx)
         if !address_terms && lex.symbol(ctx, "(") { left = call_node(ctx, token, true, depth) }
-        else if !address_terms && named(ctx) && string.string_try_double(token) == 0 && (builtins.known(string.to_upper(token)) || string.contains(stops, "$NAMED") == 0) { left = call_node(ctx, token, false, depth) }
+        else if !address_terms && named(ctx) && string.string_try_float(token) == 0 && (builtins.known(string.to_upper(token)) || string.contains(stops, "$NAMED") == 0) { left = call_node(ctx, token, false, depth) }
         else if !address_terms && builtins.known(string.to_upper(token)) && state.integer(ctx, "blank") != 0 && !stopped(ctx, stops) && (state.integer(ctx, "kind") == 1 || state.integer(ctx, "kind") == 2) {
             left = node(ctx, "call")
             json.set(left, "name", json.str(string.to_upper(token)))
@@ -143,7 +143,7 @@ expression(ctx: ptr, minimum: int, depth: int, stops: string) -> ptr {
             json.set(left, "args", state.take_ptr(&args))
         }
         else if token == "true" || token == "false" { left = literal(ctx, values.boolean(token == "true")) }
-        else if string.string_try_double(token) != 0 { left = literal(ctx, values.numeric(values.number_text(string.string_get_double(token)))) }
+        else if string.string_try_float(token) != 0 { left = literal(ctx, values.numeric(values.number_text(string.string_get_float(token)))) }
         else {
             left = node(ctx, "var")
             json.set(left, "name", json.str(token))
@@ -792,7 +792,7 @@ statement(ctx: ptr, depth: int, loop: int) {
         if state.integer(ctx, "kind") == 2 { statement(ctx, depth + 1, loop) }
         else if state.integer(ctx, "kind") == 1 &&
                 !stopped(ctx, " ELSE MATCHING LINES EXPECT IT SECTION ") &&
-                string.string_try_double(state.read(ctx, "token")) == 0 {
+                string.string_try_float(state.read(ctx, "token")) == 0 {
             command = instruction(ctx, "command")
             defer state.release_tree(&command)
             json.set(command, "value", expression(ctx, 1, 0, " ELSE $ADDRESS "))

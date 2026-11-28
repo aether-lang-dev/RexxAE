@@ -78,8 +78,8 @@ number_prefix(text: string) -> (float, bool) {
         if i == start { i = exponent }
     }
     prefix = string.substring_n(s, n, 0, i)
-    if string.string_try_double(prefix) == 0 { return 0.0, false }
-    return string.string_get_double(prefix), true
+    if string.string_try_float(prefix) == 0 { return 0.0, false }
+    return string.string_get_float(prefix), true
 }
 
 integer(text: string, fallback: int) -> int {
